@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+jspm_packages/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage / nyc
+coverage/
+.nyc_output
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# 代理工具本地缓存 / 测试用 box.dat
+box.dat
+sendNotify.js
+
+# 抓包临时文件
+*.pcap
+*.har
+captures/
+
+# 个人配置(不应提交)
+config.local.*
+secrets/
