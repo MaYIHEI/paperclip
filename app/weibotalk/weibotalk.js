@@ -6,7 +6,13 @@
  * @Original: @Evilbutcher (https://github.com/evilbutcher)
  * @Original: @toulanboy (https://github.com/toulanboy/scripts)
  * @Refactored: MaYIHEI <https://github.com/MaYIHEI/paperclip>
- * @Updated: 2026-05-09
+ * @Updated: 2026-05-09b
+ *
+ * 【更新说明 2026-05-09b】
+ * 修复"已签到仍提示未知响应"的问题:
+ * - 已签判断从单信号改为多信号兜底 (ext_button.type/name + scheme.today_first_checkin
+ *   + button.pic.signed_normal + button.name.连签),任一命中即算已签
+ * - "未知响应"分支无条件打印响应前 300 字,便于诊断风控/异常返回
  *
  * 【更新说明】
  * 适配 2026-05 后的微博 APP 版本:
@@ -239,8 +245,23 @@ function checkin(fid, name) {
             try {
                 const r = JSON.parse(data);
                 const btnName = (r.button && r.button.name) || '';
+                const btnPic = (r.button && r.button.pic) || '';
                 const extType = (r.ext_button && r.ext_button.type) || '';
                 const extName = (r.ext_button && r.ext_button.name) || '';
+                const scheme = r.scheme || '';
+
+                // 多信号判断"已签":
+                // 1. ext_button.type === 'sign_in'  (新版主信号)
+                // 2. ext_button.name 含"已签"
+                // 3. scheme 里 today_first_checkin=0  (今日不是首次签到)
+                // 4. button.pic 含 signed_normal  (按钮图标是已签样式)
+                // 5. button.name 含"连签"且 result=1  (兜底:旧版语义)
+                const alreadyChecked =
+                    extType === 'sign_in'
+                    || /已签/.test(extName)
+                    || /today_first_checkin%3D0/.test(scheme)
+                    || /signed_normal/.test(btnPic)
+                    || (r.result == 1 && /连签/.test(btnName));
 
                 if (r.error_msg) {
                     const m = r.error_msg.match(/\((\d+)\)/);
@@ -251,10 +272,8 @@ function checkin(fid, name) {
                         $.failNum++;
                         $.message.push(`【${name}】❌ ${r.error_msg}`);
                     }
-                } else if (r.result === 1) {
-                    // 关键判断: ext_button.type === 'sign_in' 表示"已签"状态
-                    // 这种情况下 button.name 仍然显示"连签X天",但实际是查看签到记录的入口
-                    if (extType === 'sign_in' || /已签/.test(extName)) {
+                } else if (r.result == 1) {
+                    if (alreadyChecked) {
                         $.alreadyNum++;
                         $.message.push(`【${name}】✨ 今日已签 (${btnName || '连签'})`);
                     } else {
@@ -262,13 +281,15 @@ function checkin(fid, name) {
                         $.message.push(`【${name}】✅ ${btnName || '签到成功'}`);
                     }
                 } else {
+                    // 未知响应: 无条件打印前 300 字以便诊断
                     $.failNum++;
                     $.message.push(`【${name}】❌ 未知响应`);
-                    if ($.debug) $.log(`[签到 ${name}] 响应: ${data}`);
+                    $.log(`[签到 ${name}] 未知响应,完整内容: ${(data || '').substring(0, 300)}`);
                 }
             } catch (e) {
                 $.failNum++;
                 $.message.push(`【${name}】❌ 响应解析失败`);
+                $.log(`[签到 ${name}] 解析失败,响应前 300 字: ${(data || '').substring(0, 300)}`);
             }
             resolve();
         });
