@@ -3,22 +3,26 @@
 @Author: Sliverkiss
 @Modifier: MaYIHEI (https://github.com/MaYIHEI/paperclip)
 @Date: 2024.06.08
-@Updated: 2026-05-08
+@Updated: 2026-05-11
 @Description: 微信小程序 泡泡玛特 签到
 ------------------------------------------
 cron 0 9 * * *
 const $ = new Env("泡泡玛特")
 
+【更新说明 2026-05-11】
+通知精简: 不再展示等级/泡泡值/积分(小程序拆接口后,这些字段散落在不同接口里,
+签到流程不再为此多调请求)。通知只保留: 用户手机号 + 签到结果。
+
 【更新说明 2026-05-08】
-小程序 v5.13.8 起，原 /miniapp/v2/wechat/getUserInfo 接口已下线，
+小程序 v5.13.8 起,原 /miniapp/v2/wechat/getUserInfo 接口已下线,
 鉴权改为 PopVip-Auth Bearer JWT。本脚本改为抓取
 /miniapp/v2/svip_lite/user_info 或 /miniapp/v2/wechat_message/template_info
-（任一进入"我的"页面会触发的接口），从请求头的
+(任一进入"我的"页面会触发的接口),从请求头的
 identity_code (openid) 和 PopVip-Auth (JWT) 中提取所需字段。
-user_id 和 phone 从 JWT payload 解出，因响应体里已不再返回。
+user_id 和 phone 从 JWT payload 解出,因响应体里已不再返回。
 
-重写：打开小程序，进入"我的"页面（任意能触发 svip_lite/user_info 或
-wechat_message/template_info 的页面均可）。
+重写:打开小程序,进入"我的"页面(任意能触发 svip_lite/user_info 或
+wechat_message/template_info 的页面均可)。
 
 [Script]
 http-response ^https:\/\/popvip\.paquapp\.com\/miniapp\/v2\/(svip_lite\/user_info|wechat_message\/template_info) script-path=https://gist.githubusercontent.com/Sliverkiss/3e1fe82fa18dbcff9b2ae7fdad7596a6/raw/ppmt.js, requires-body=true, timeout=60, tag=泡泡玛特获取token
@@ -41,7 +45,7 @@ async function main() {
             if (user.ckStatus) {
                 let userInfo = await user.getUserInfo() || {};
                 const phoneStr = userInfo.phone || user.userName || '';
-                DoubleLog(`用户: ${phone_num(phoneStr)}\n等级: Lv${userInfo.user_level ?? '-'}  泡泡值: ${userInfo.pop_score ?? '-'}  积分: ${userInfo.points ?? '-'}\n签到: ${signMsg}`);
+                DoubleLog(`用户: ${phone_num(phoneStr)}\n签到: ${signMsg}`);
                 $.succCount++;
             } else {
                 DoubleLog(`⛔️ 「${user.userName ?? `账号${user.index}`}」签到失败, 用户需要去登录`)
@@ -92,30 +96,12 @@ class UserInfo {
         }
     }
 
-    // 查询用户信息 (改用 svip_lite/user_info,响应体没有 phone,从 JWT 取)
+    // 仅返回 phone(从 JWT 解),不再调用任何接口,因为通知里已不展示等级/泡泡值/积分
     async getUserInfo() {
-        try {
-            const opts = {
-                url: `/miniapp/v2/svip_lite/user_info/`,
-                params: { user_id: this.userId, openid: this.token, ...getSign({ user_id: this.userId, openid: this.token }) },
-                type: "get",
-            }
-            let res = await this.fetch(opts);
-            // 新接口响应体不再包含 phone / user_level / pop_score / points
-            // 这些信息要么从 JWT 解出 (phone),要么需要调其他接口。
-            // 先返回能解出的部分,字段不全也不影响签到主流程。
-            const jwtPayload = parseJWT(this.jwt) || {};
-            return {
-                phone: jwtPayload.phone || this.userName,
-                user_level: res?.data?.user_level,    // 可能没有
-                pop_score: res?.data?.pop_score,       // 可能没有
-                points: res?.data?.points,             // 可能没有
-                ...res?.data,
-            };
-        } catch (e) {
-            this.ckStatus = false;
-            $.log(`[${this.userName || this.index}][ERROR] ${e}\n`);
-        }
+        const jwtPayload = parseJWT(this.jwt) || {};
+        return {
+            phone: jwtPayload.phone || this.userName,
+        };
     }
 
     // 签到 (接口暂未变,先维持不动观察)
