@@ -248,7 +248,22 @@ function sendSummary() {
     const okCount = $.results.filter(s => s.startsWith('✅')).length;
     const alreadyCount = $.results.filter(s => s.startsWith('✨')).length;
     const failCount = $.results.filter(s => s.startsWith('❌')).length;
-    const title = `笔笔省: 领 ${okCount}, 已领 ${alreadyCount}, 失败 ${failCount}`;
+
+    // 按情况分支,标题尽量自然不啰嗦
+    let title;
+    if (failCount > 0) {
+        // 有失败优先暴露
+        title = `笔笔省: 领 ${okCount}, 失败 ${failCount}`;
+    } else if (okCount > 0 && alreadyCount === 0) {
+        title = `笔笔省: 领到 ${okCount} 张 ✅`;
+    } else if (okCount > 0 && alreadyCount > 0) {
+        title = `笔笔省: 新领 ${okCount} 张, 另 ${alreadyCount} 张已领过`;
+    } else if (okCount === 0 && alreadyCount > 0) {
+        title = `笔笔省: ${alreadyCount} 张今日已领过 ✨`;
+    } else {
+        title = `笔笔省: 无可领券`;
+    }
+
     const body = $.results.length ? $.results.join('\n') : '⚠️ 没有处理任何券';
     $.msg(title, '', body);
 }
