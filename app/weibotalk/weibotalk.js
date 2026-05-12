@@ -6,15 +6,15 @@
  * @Original: @Evilbutcher (https://github.com/evilbutcher)
  * @Original: @toulanboy (https://github.com/toulanboy/scripts)
  * @Refactored: MaYIHEI <https://github.com/MaYIHEI/paperclip>
- * @Updated: 2026-05-11
+ * @Updated: 2026-05-11b
  *
- * 【更新说明 2026-05-11】
- * 修复"已签后再跑提示未知响应"的问题:
- * - 微博存在两种已签响应:
- *   a) 凌晨首次 cron: {result:1, ext_button.type:'sign_in', button.name:'连签X天'}
- *   b) 之后再跑:    {errno:382004, errmsg:'今天已签到', msg:'今天已签到'}
- * - 之前只判断了 result+ext_button(对应 a),没判断 errno=382004(对应 b)
- * - 现在两种格式都识别为"已签",通知不再被污染
+ * 【更新说明 2026-05-11b】
+ * 修复"首次签到却显示已签"的问题:
+ * - 上一版误把 ext_button.type='sign_in' 当作"已签"信号,
+ *   但首次签到成功的响应里也会带这个字段(它是页面"打卡按钮"的链接类型),
+ *   导致凌晨 cron 首次签到时全部被识别成"已签"
+ * - 现在仅用 errno=382004 / errmsg='今天已签到' 判断已签,这两个是重复签到才会返回的
+ * - 首次签到成功 → 新签;重复跑 → 已签
  *
  * 【更新说明】
  * 适配 2026-05 后的微博 APP 版本:
@@ -247,25 +247,18 @@ function checkin(fid, name) {
             try {
                 const r = JSON.parse(data);
                 const btnName = (r.button && r.button.name) || '';
-                const extType = (r.ext_button && r.ext_button.type) || '';
-                const extName = (r.ext_button && r.ext_button.name) || '';
                 const errno = r.errno || r.errcode;
                 const errmsg = r.errmsg || r.error_msg || r.msg || '';
 
-                // 已签信号(任一命中即算已签):
-                // 1. errno === 382004           白天手动跑的响应格式
-                // 2. errmsg 含 "已签"           兜底
-                // 3. ext_button.type === sign_in 凌晨 cron 首次跑的响应格式
-                // 4. ext_button.name 含 "已签"  兜底
+                // 已签信号: errno=382004 是重复签到的明确错误码
+                // 注意: ext_button.type='sign_in' 不是已签信号,首次签到成功响应里也会带
                 const alreadyChecked =
                     String(errno) === '382004'
-                    || /已签/.test(errmsg)
-                    || extType === 'sign_in'
-                    || /已签/.test(extName);
+                    || /已签/.test(errmsg);
 
                 if (alreadyChecked) {
                     $.alreadyNum++;
-                    $.message.push(`【${name}】✨ 今日已签${btnName ? ` (${btnName})` : ''}`);
+                    $.message.push(`【${name}】✨ 今日已签`);
                 } else if (r.result == 1) {
                     $.successNum++;
                     $.message.push(`【${name}】✅ ${btnName || '签到成功'}`);
@@ -313,7 +306,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 function sendSummary() {
     const total = $.successNum + $.alreadyNum + $.failNum;
-    const title = `${$.name}: 成功 ${$.successNum},已签 ${$.alreadyNum},失败 ${$.failNum} (共${total})`;
+    const title = `${$.name}: 新签 ${$.successNum},已签 ${$.alreadyNum},失败 ${$.failNum} (共${total})`;
     if ($.message.length === 0) {
         $.msg(title, '', '⚠️ 没有签到任何超话,请检查 cookie 或关注列表');
         return;
