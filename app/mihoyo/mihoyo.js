@@ -37,10 +37,11 @@ $.delete_cookie = false;
 $.req_interval = 2000;
 $.debug = false;
 
-const KEY_STOKEN_COOKIE = 'mhy_stoken_cookie';
-const KEY_WEB_COOKIE    = 'mhy_web_cookie';
-const KEY_WEB_HEADERS   = 'mhy_web_headers';
-const KEY_BBS_HEADERS   = 'mhy_bbs_headers';
+const KEY_STOKEN_COOKIE  = 'mhy_stoken_cookie';
+const KEY_STOKEN_HEADERS = 'mhy_stoken_headers';
+const KEY_WEB_COOKIE     = 'mhy_web_cookie';
+const KEY_WEB_HEADERS    = 'mhy_web_headers';
+const KEY_BBS_HEADERS    = 'mhy_bbs_headers';
 
 // 各游戏配置: act_id 来自 Womsxd/MihoyoBBSTools setting.py (国服)
 const GAMES = {
@@ -118,7 +119,7 @@ function loadSettings() {
     $.micoin_forum = parseInt($.getdata('mhy_micoin_forum')) || 26;
 
     if ($.delete_cookie) {
-        [KEY_STOKEN_COOKIE, KEY_WEB_COOKIE, KEY_WEB_HEADERS, KEY_BBS_HEADERS].forEach(k => $.setdata('', k));
+        [KEY_STOKEN_COOKIE, KEY_STOKEN_HEADERS, KEY_WEB_COOKIE, KEY_WEB_HEADERS, KEY_BBS_HEADERS].forEach(k => $.setdata('', k));
         $.setdata('false', 'mhy_delete_cookie');
         $.msg($.name, '', '✅ Cookie 已清空,请重新抓取');
         return false;
@@ -127,13 +128,14 @@ function loadSettings() {
 }
 
 function loadCookies() {
-    $.stokenCookie = $.getdata(KEY_STOKEN_COOKIE);
-    $.webCookie    = $.getdata(KEY_WEB_COOKIE);
+    $.stokenCookie  = $.getdata(KEY_STOKEN_COOKIE);
+    $.stokenHeadersStr = $.getdata(KEY_STOKEN_HEADERS);
+    $.webCookie     = $.getdata(KEY_WEB_COOKIE);
     $.webHeadersStr = $.getdata(KEY_WEB_HEADERS);
-    $.bbsHeadersStr = $.getdata(KEY_BBS_HEADERS);  // 可选,只用于米游币任务
+    $.bbsHeadersStr = $.getdata(KEY_BBS_HEADERS);
 
     const missing = [];
-    if (!$.stokenCookie) missing.push('stoken cookie');
+    if (!$.stokenCookie || !$.stokenHeadersStr) missing.push('stoken cookie');
     if (!$.webCookie || !$.webHeadersStr) missing.push('web 签到 cookie');
 
     if (missing.length > 0) {
@@ -146,6 +148,7 @@ function loadCookies() {
     }
 
     try {
+        $.stokenHeaders = JSON.parse($.stokenHeadersStr);
         $.webHeaders = JSON.parse($.webHeadersStr);
         if ($.bbsHeadersStr) {
             $.bbsHeaders = JSON.parse($.bbsHeadersStr);
@@ -164,18 +167,15 @@ function initState() {
     $.message = [];
 }
 
-// 拉游戏角色列表 (用 stoken cookie)
+// 拉游戏角色列表 (用 stoken cookie + 抓到的完整 headers,因为这接口校验 DS)
 function fetchGameRoles() {
     return new Promise((resolve) => {
+        const h = cleanHeaders($.stokenHeaders);
+        // cookie 单独覆盖,避免抓包时的旧 cookie 干扰
+        h['Cookie'] = $.stokenCookie;
         const opts = {
             url: 'https://api-takumi.miyoushe.com/binding/api/getUserGameRolesByStoken',
-            headers: {
-                'Cookie': $.stokenCookie,
-                'User-Agent': 'Hyperion/556 CFNetwork/3860.200.71 Darwin/25.1.0',
-                'Referer': 'https://app.mihoyo.com',
-                'x-rpc-app_version': '2.106.0',
-                'x-rpc-client_type': '1',
-            },
+            headers: h,
         };
         $.get(opts, (err, resp, data) => {
             if (err) {
