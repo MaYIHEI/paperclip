@@ -20,10 +20,11 @@
 
 const $ = new Env("米游社 [Cookie]");
 
-const KEY_STOKEN_COOKIE = 'mhy_stoken_cookie';
-const KEY_WEB_COOKIE    = 'mhy_web_cookie';
-const KEY_WEB_HEADERS   = 'mhy_web_headers';
-const KEY_BBS_HEADERS   = 'mhy_bbs_headers';
+const KEY_STOKEN_COOKIE  = 'mhy_stoken_cookie';
+const KEY_STOKEN_HEADERS = 'mhy_stoken_headers';   // 新增:存 getUserGameRolesByStoken 完整 headers (含 DS)
+const KEY_WEB_COOKIE     = 'mhy_web_cookie';
+const KEY_WEB_HEADERS    = 'mhy_web_headers';
+const KEY_BBS_HEADERS    = 'mhy_bbs_headers';
 
 (function main() {
     if (!$request) {
@@ -40,14 +41,15 @@ const KEY_BBS_HEADERS   = 'mhy_bbs_headers';
     const headers = $request.headers || {};
     const cookie = headers.Cookie || headers.cookie || '';
 
-    // 抓取 1: stoken cookie (游戏角色列表)
+    // 抓取 1: stoken cookie + headers (游戏角色列表)
     if (/api-takumi\.miyoushe\.com\/binding\/api\/getUserGameRolesByStoken/.test(url)) {
         try {
             if (!/stoken=/.test(cookie)) {
                 $.log('[WARN] 没有 stoken,跳过'); $.done(); return;
             }
             $.setdata(cookie, KEY_STOKEN_COOKIE);
-            $.log(`[INFO] stoken cookie 已存: ${cookie.length}字符`);
+            $.setdata(JSON.stringify(headers), KEY_STOKEN_HEADERS);
+            $.log(`[INFO] stoken cookie + headers 已存: cookie ${cookie.length}字符 headers ${Object.keys(headers).length}个`);
             notify();
         } catch (e) { $.log('[ERROR] stoken cookie: ' + e); }
         $.done(); return;
