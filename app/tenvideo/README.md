@@ -75,7 +75,16 @@ cron "5 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip
 5 7 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/tenvideo/tenvideo.js, tag=腾讯视频, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tenvideo.png, enabled=true
 ```
 
-## 变更说明 (2026-05-13)
+## 变更说明
+
+### 2026-05-15 修复
+
+| 改动 | 原因 |
+|---|---|
+| ReadTaskList 参数 `business_id` → `businessId` | 后端新版只在 `businessId`(驼峰)+`platform:5` 时返回完整任务列表(含 task_id=101 和 limit_info),旧的下划线写法返回空 |
+| "本月活跃任务已满"判断更严格 | 旧逻辑里 `month_limit` 为 undefined 时也会触发"已满 nullV力值"假阳性,导致脚本不调 CheckIn 直接退出 |
+
+### 2026-05-13 初版精简
 
 | 改动 | 原因 |
 |---|---|
