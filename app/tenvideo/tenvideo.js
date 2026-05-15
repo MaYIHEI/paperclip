@@ -6,7 +6,13 @@
  * 更新时间：2026-05-15
  * 脚本作者：@WowYiJiu,精简 + 适配新接口 by @MaYIHEI
 
-【更新说明 2026-05-15 by @MaYIHEI】
+【更新说明 2026-05-15 (v2) by @MaYIHEI】
+- 修复 ReadTaskList 仍返回空 task_list / CheckIn 返回 {} 的问题:
+  补齐 H5 完整请求头 (Origin / Accept / Referer / User-Agent),
+  腾讯后端对 VIP 中心 API 做了浏览器白名单校验,只发 Cookie 会被静默拒绝
+- UA 同步到当前 9.03.60 版本
+
+【更新说明 2026-05-15 (v1) by @MaYIHEI】
 - 修复 cron 跑脚本时报 "未找到签到任务(task_id=101)" + "本月活跃任务已满 nullV力值":
   ReadTaskList 参数 business_id 改成 businessId(驼峰),后端新版只对驼峰返回完整任务列表
 - "本月已满"判断收紧: month_limit 必须是有效正整数才进该分支,避免 undefined 时的假阳性
@@ -171,8 +177,12 @@ async function getVipInfo() {
 		let opt = {
 			url: `https://vip.video.qq.com/rpc/trpc.query_vipinfo.vipinfo.QueryVipInfo/GetVipUserInfoH5`,
 			headers: {
-				cookie: txspCookie,
-				'Content-Type': 'application/json'
+				Cookie: txspCookie,
+				'Content-Type': 'application/json',
+				'Accept': 'application/json, text/plain, */*',
+				'Origin': 'https://film.video.qq.com',
+				'Referer': 'https://film.video.qq.com/x/grade/?ptag=usercenter.card&ovscroll=0&hidetitlebar=1&aid=V0$$1:0$2:7$3:9.03.60.25491$4:0$8:999&isDarkMode=0&uiType=REGULAR',
+				'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Mobile/11A465 QQLiveBrowser/9.03.60 AppType/UN WebKitCore/WKWebView iOS cellPhone/iPhone 14 Pro Max AppBuild/25491 ua_vversion_name/9.03.60.25491'
 			},
 			body: JSON.stringify({ "geticon": 1, "viptype": "svip", "platform": 5 })
 		};
@@ -217,8 +227,11 @@ async function readTxspTaskList() {
 		let opt = {
 			url: `https://vip.video.qq.com/rpc/trpc.new_task_system.task_system.TaskSystem/ReadTaskList?rpc_data={"businessId":"1","platform":5}`,
 			headers: {
-				Referer: "https://film.video.qq.com/x/grade/?ptag=usercenter.card&ovscroll=0&hidetitlebar=1&aid=V0$$1:0$2:7$3:9.03.57.25451$4:0$8:999&isDarkMode=0&uiType=REGULAR",
 				Cookie: txspCookie,
+				'Accept': 'application/json, text/plain, */*',
+				'Origin': 'https://film.video.qq.com',
+				'Referer': 'https://film.video.qq.com/x/grade/?ptag=usercenter.card&ovscroll=0&hidetitlebar=1&aid=V0$$1:0$2:7$3:9.03.60.25491$4:0$8:999&isDarkMode=0&uiType=REGULAR',
+				'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Mobile/11A465 QQLiveBrowser/9.03.60 AppType/UN WebKitCore/WKWebView iOS cellPhone/iPhone 14 Pro Max AppBuild/25491 ua_vversion_name/9.03.60.25491'
 			},
 		};
 		$.get(opt, async (error, resp, data) => {
@@ -258,8 +271,11 @@ async function txspCheckIn() {
 		let opt = {
 			url: `https://vip.video.qq.com/rpc/trpc.new_task_system.task_system.TaskSystem/CheckIn?rpc_data={}`,
 			headers: {
-				Referer: "https://film.video.qq.com/x/grade/?ptag=usercenter.card&ovscroll=0&hidetitlebar=1&aid=V0$$1:0$2:7$3:9.03.57.25451$4:0$8:999&isDarkMode=0&uiType=REGULAR",
 				Cookie: txspCookie,
+				'Accept': 'application/json, text/plain, */*',
+				'Origin': 'https://film.video.qq.com',
+				'Referer': 'https://film.video.qq.com/x/grade/?ptag=usercenter.card&ovscroll=0&hidetitlebar=1&aid=V0$$1:0$2:7$3:9.03.60.25491$4:0$8:999&isDarkMode=0&uiType=REGULAR',
+				'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Mobile/11A465 QQLiveBrowser/9.03.60 AppType/UN WebKitCore/WKWebView iOS cellPhone/iPhone 14 Pro Max AppBuild/25491 ua_vversion_name/9.03.60.25491'
 			},
 		};
 		$.get(opt, async (error, resp, data) => {
