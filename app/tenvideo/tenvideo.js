@@ -3,8 +3,13 @@
  * 活动规则：每日签到可获取 V 力值
  * 脚本说明：添加重写后,在腾讯视频 APP 进入"我的 → 视频VIP"会员中心,即可获取 Cookie
  * 环境变量：txspCookie、isSkipTxspCheckIn
- * 更新时间：2026-05-13
+ * 更新时间：2026-05-15
  * 脚本作者：@WowYiJiu,精简 + 适配新接口 by @MaYIHEI
+
+【更新说明 2026-05-15 by @MaYIHEI】
+- 修复 cron 跑脚本时报 "未找到签到任务(task_id=101)" + "本月活跃任务已满 nullV力值":
+  ReadTaskList 参数 business_id 改成 businessId(驼峰),后端新版只对驼峰返回完整任务列表
+- "本月已满"判断收紧: month_limit 必须是有效正整数才进该分支,避免 undefined 时的假阳性
 
 【更新说明 2026-05-13 by @MaYIHEI】
 1. 删除腾讯体育所有功能:
@@ -135,7 +140,7 @@ if ((isGetCookie = typeof $request !== `undefined`)) {
 			} else {
 				await readTxspTaskList();
 				await waitRandom(1000, 2000);
-				if (month_received_score !== "" && month_received_score === month_limit) {
+				if (typeof month_limit === 'number' && month_limit > 0 && month_received_score >= month_limit) {
 					$.info(`本月活跃任务已满${month_limit}V力值, 下个月再来哦`);
 					$.taskInfo = `本月活跃任务已满${month_limit}V力值, 下个月再来哦\n`;
 				} else if (isTxspCheckIn === 1) {
@@ -210,7 +215,7 @@ async function getVipInfo() {
 async function readTxspTaskList() {
 	return new Promise((resolve) => {
 		let opt = {
-			url: `https://vip.video.qq.com/rpc/trpc.new_task_system.task_system.TaskSystem/ReadTaskList?rpc_data={"business_id":"1","platform":5}`,
+			url: `https://vip.video.qq.com/rpc/trpc.new_task_system.task_system.TaskSystem/ReadTaskList?rpc_data={"businessId":"1","platform":5}`,
 			headers: {
 				Referer: "https://film.video.qq.com/x/grade/?ptag=usercenter.card&ovscroll=0&hidetitlebar=1&aid=V0$$1:0$2:7$3:9.03.57.25451$4:0$8:999&isDarkMode=0&uiType=REGULAR",
 				Cookie: txspCookie,
