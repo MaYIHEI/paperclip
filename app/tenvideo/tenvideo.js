@@ -6,7 +6,7 @@
  * 更新时间：2026-05-15
  * 脚本作者：@WowYiJiu,精简 + 适配新接口 by @MaYIHEI
 
-【更新说明 2026-05-15 (v2) by @MaYIHEI】
+【更新说明 2026-05-15 (v3) by @MaYIHEI】
 - 修复 ReadTaskList 仍返回空 task_list / CheckIn 返回 {} 的问题:
   补齐 H5 完整请求头 (Origin / Accept / Referer / User-Agent),
   腾讯后端对 VIP 中心 API 做了浏览器白名单校验,只发 Cookie 会被静默拒绝
