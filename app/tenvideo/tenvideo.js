@@ -6,7 +6,7 @@
  * 更新时间：2026-05-15
  * 脚本作者：@WowYiJiu,精简 + 适配新接口 by @MaYIHEI
 
-【更新说明 2026-05-15 (v3) by @MaYIHEI】
+【更新说明 2026-05-15 (v4) by @MaYIHEI】
 - 修复 ReadTaskList 仍返回空 task_list / CheckIn 返回 {} 的问题:
   补齐 H5 完整请求头 (Origin / Accept / Referer / User-Agent),
   腾讯后端对 VIP 中心 API 做了浏览器白名单校验,只发 Cookie 会被静默拒绝
@@ -169,6 +169,15 @@ if ((isGetCookie = typeof $request !== `undefined`)) {
 		.finally(() => $.done());
 }
 
+function genTraceparent() {
+	const hex = (len) => {
+		let s = '';
+		for (let i = 0; i < len; i++) s += Math.floor(Math.random() * 16).toString(16);
+		return s;
+	};
+	return `00-${hex(32)}-${hex(16)}-01`;
+}
+
 /**
  * 查询会员信息
  * 抓包验证: 接口路径未变, 响应里 vip/level/score/endTime/svip_info 字段全部保留
@@ -188,7 +197,8 @@ async function getVipInfo() {
 				'sec-fetch-dest': 'empty',
 				'sec-fetch-mode': 'cors',
 				'sec-fetch-site': 'same-site',
-				'priority': 'u=3, i'
+				'priority': 'u=3, i',
+				'traceparent': genTraceparent()
 			},
 			body: JSON.stringify({ "geticon": 1, "viptype": "svip", "platform": 5 })
 		};
@@ -245,9 +255,12 @@ async function readTxspTaskList() {
 				'sec-fetch-dest': 'empty',
 				'sec-fetch-mode': 'cors',
 				'sec-fetch-site': 'same-site',
-				'priority': 'u=3, i'
+				'priority': 'u=3, i',
+				'traceparent': genTraceparent()
 			},
 		};
+		$.info(`[ReadTaskList] 实际发出的 header keys: ${Object.keys(opt.headers).join(',')}`);
+		$.info(`[ReadTaskList] Origin: ${opt.headers.Origin}, UA: ${opt.headers['User-Agent'].substring(0,80)}...`);
 		$.get(opt, async (error, resp, data) => {
 			try {
 				if (typeof data === 'string') {
@@ -297,7 +310,8 @@ async function txspCheckIn() {
 				'sec-fetch-dest': 'empty',
 				'sec-fetch-mode': 'cors',
 				'sec-fetch-site': 'same-site',
-				'priority': 'u=3, i'
+				'priority': 'u=3, i',
+				'traceparent': genTraceparent()
 			},
 		};
 		$.get(opt, async (error, resp, data) => {
