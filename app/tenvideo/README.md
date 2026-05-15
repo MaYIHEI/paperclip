@@ -77,12 +77,16 @@ cron "5 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip
 
 ## 变更说明
 
-### 2026-05-15 修复
+### 2026-05-15
 
 | 改动 | 原因 |
 |---|---|
-| ReadTaskList 参数 `business_id` → `businessId` | 后端新版只在 `businessId`(驼峰)+`platform:5` 时返回完整任务列表(含 task_id=101 和 limit_info),旧的下划线写法返回空 |
-| "本月活跃任务已满"判断更严格 | 旧逻辑里 `month_limit` 为 undefined 时也会触发"已满 nullV力值"假阳性,导致脚本不调 CheckIn 直接退出 |
+| ReadTaskList 参数 `business_id` → `businessId` | 后端新版只在 `businessId`(驼峰)+`platform:5` 时返回完整任务列表 |
+| 给 ReadTaskList / CheckIn / GetVipUserInfoH5 补齐 H5 完整请求头(Origin / Accept / Accept-Language / Referer / User-Agent / sec-fetch-* / priority / traceparent) | 腾讯后端按是否"像 H5 浏览器请求"区分返回:伪装不像 → 返回简化版任务列表(剔除 task_id=101 签到),CheckIn 直接返回空 `{}`。补齐头后 body 长度从 3558 字节恢复到 8361 字节 |
+| UA / Referer 同步到当前 9.03.60 版本 | 旧版本号可能被识别为非法客户端 |
+| "本月活跃任务已满"判断更严格 | 旧逻辑里 `month_limit` 为 undefined 时也会触发假阳性 |
+
+**踩坑提示:** 如果脚本签到失败,优先重新抓一次 cookie(进 APP 我的→视频VIP)。腾讯风控可能针对老 vusession 做标记,新 vusession 通常能解除。
 
 ### 2026-05-13 初版精简
 
