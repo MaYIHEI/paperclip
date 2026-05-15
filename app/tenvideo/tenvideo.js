@@ -120,6 +120,7 @@ if ((isGetCookie = typeof $request !== `undefined`)) {
 			$.warn(`未填写 txspCookie 环境变量`);
 			return;
 		}
+		$.info(`[debug] txspCookie 长度 ${txspCookie.length}, 含 vqq_vusession=${/vqq_vusession=/.test(txspCookie)}, 含 turing_ticket=${/turing_ticket=/.test(txspCookie)}, 含 vqq_access_token=${/vqq_access_token=/.test(txspCookie)}`);
 		$.info(`---- 开始 查询会员信息 ----`);
 		await getVipInfo();
 		$.info(`--------- 结束 ---------\n`);
@@ -180,14 +181,22 @@ async function getVipInfo() {
 				Cookie: txspCookie,
 				'Content-Type': 'application/json',
 				'Accept': 'application/json, text/plain, */*',
+				'Accept-Language': 'zh-CN,zh-Hans;q=0.9',
 				'Origin': 'https://film.video.qq.com',
 				'Referer': 'https://film.video.qq.com/x/grade/?ptag=usercenter.card&ovscroll=0&hidetitlebar=1&aid=V0$$1:0$2:7$3:9.03.60.25491$4:0$8:999&isDarkMode=0&uiType=REGULAR',
-				'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Mobile/11A465 QQLiveBrowser/9.03.60 AppType/UN WebKitCore/WKWebView iOS cellPhone/iPhone 14 Pro Max AppBuild/25491 ua_vversion_name/9.03.60.25491'
+				'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Mobile/11A465 QQLiveBrowser/9.03.60 AppType/UN WebKitCore/WKWebView iOS cellPhone/iPhone 14 Pro Max AppBuild/25491 ua_vversion_name/9.03.60.25491',
+				'sec-fetch-dest': 'empty',
+				'sec-fetch-mode': 'cors',
+				'sec-fetch-site': 'same-site',
+				'priority': 'u=3, i'
 			},
 			body: JSON.stringify({ "geticon": 1, "viptype": "svip", "platform": 5 })
 		};
 		$.post(opt, async (error, resp, data) => {
 			try {
+				if (typeof data === 'string') {
+					$.info(`[getVipInfo] HTTP ${resp && resp.statusCode}, body 前 300 字符: ${data.substring(0, 300)}`);
+				}
 				if (safeGet(data)) {
 					var obj = JSON.parse(data);
 					if (!obj.servicetype) {
@@ -229,13 +238,21 @@ async function readTxspTaskList() {
 			headers: {
 				Cookie: txspCookie,
 				'Accept': 'application/json, text/plain, */*',
+				'Accept-Language': 'zh-CN,zh-Hans;q=0.9',
 				'Origin': 'https://film.video.qq.com',
 				'Referer': 'https://film.video.qq.com/x/grade/?ptag=usercenter.card&ovscroll=0&hidetitlebar=1&aid=V0$$1:0$2:7$3:9.03.60.25491$4:0$8:999&isDarkMode=0&uiType=REGULAR',
-				'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Mobile/11A465 QQLiveBrowser/9.03.60 AppType/UN WebKitCore/WKWebView iOS cellPhone/iPhone 14 Pro Max AppBuild/25491 ua_vversion_name/9.03.60.25491'
+				'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Mobile/11A465 QQLiveBrowser/9.03.60 AppType/UN WebKitCore/WKWebView iOS cellPhone/iPhone 14 Pro Max AppBuild/25491 ua_vversion_name/9.03.60.25491',
+				'sec-fetch-dest': 'empty',
+				'sec-fetch-mode': 'cors',
+				'sec-fetch-site': 'same-site',
+				'priority': 'u=3, i'
 			},
 		};
 		$.get(opt, async (error, resp, data) => {
 			try {
+				if (typeof data === 'string') {
+					$.info(`[ReadTaskList] HTTP ${resp && resp.statusCode}, body 长度 ${data.length}, 前 400 字符: ${data.substring(0, 400)}`);
+				}
 				if (safeGet(data)) {
 					var obj = JSON.parse(data);
 					var code = obj.ret;
@@ -273,13 +290,21 @@ async function txspCheckIn() {
 			headers: {
 				Cookie: txspCookie,
 				'Accept': 'application/json, text/plain, */*',
+				'Accept-Language': 'zh-CN,zh-Hans;q=0.9',
 				'Origin': 'https://film.video.qq.com',
 				'Referer': 'https://film.video.qq.com/x/grade/?ptag=usercenter.card&ovscroll=0&hidetitlebar=1&aid=V0$$1:0$2:7$3:9.03.60.25491$4:0$8:999&isDarkMode=0&uiType=REGULAR',
-				'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Mobile/11A465 QQLiveBrowser/9.03.60 AppType/UN WebKitCore/WKWebView iOS cellPhone/iPhone 14 Pro Max AppBuild/25491 ua_vversion_name/9.03.60.25491'
+				'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Mobile/11A465 QQLiveBrowser/9.03.60 AppType/UN WebKitCore/WKWebView iOS cellPhone/iPhone 14 Pro Max AppBuild/25491 ua_vversion_name/9.03.60.25491',
+				'sec-fetch-dest': 'empty',
+				'sec-fetch-mode': 'cors',
+				'sec-fetch-site': 'same-site',
+				'priority': 'u=3, i'
 			},
 		};
 		$.get(opt, async (error, resp, data) => {
 			try {
+				if (typeof data === 'string') {
+					$.info(`[CheckIn] HTTP ${resp && resp.statusCode}, body 长度 ${data.length}, 前 400 字符: ${data.substring(0, 400)}`);
+				}
 				var obj = JSON.parse(data);
 				var code = obj.ret;
 				if (code === 0 && obj.check_in_score != undefined) {
