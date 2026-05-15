@@ -6,16 +6,14 @@
  * 更新时间：2026-05-15
  * 脚本作者：@WowYiJiu,精简 + 适配新接口 by @MaYIHEI
 
-【更新说明 2026-05-15 (v4) by @MaYIHEI】
-- 修复 ReadTaskList 仍返回空 task_list / CheckIn 返回 {} 的问题:
-  补齐 H5 完整请求头 (Origin / Accept / Referer / User-Agent),
-  腾讯后端对 VIP 中心 API 做了浏览器白名单校验,只发 Cookie 会被静默拒绝
-- UA 同步到当前 9.03.60 版本
-
-【更新说明 2026-05-15 (v1) by @MaYIHEI】
-- 修复 cron 跑脚本时报 "未找到签到任务(task_id=101)" + "本月活跃任务已满 nullV力值":
-  ReadTaskList 参数 business_id 改成 businessId(驼峰),后端新版只对驼峰返回完整任务列表
-- "本月已满"判断收紧: month_limit 必须是有效正整数才进该分支,避免 undefined 时的假阳性
+【更新说明 2026-05-15 (v3) by @MaYIHEI】
+- 修复 ReadTaskList 返回简化版任务列表(剔除 task_id=101)的问题:
+  补齐 H5 完整请求头 (Origin / Accept / Referer / User-Agent / sec-fetch-* /
+  priority / traceparent),腾讯后端按完整 H5 浏览器请求识别后才返回完整列表。
+  对比修复前后: body 长度 3558 → 8361 字节,task_id=101 重新出现。
+- 注意: 如果脚本运行后还是返回简化列表,需要进入 APP "我的→视频VIP" 重新抓 cookie,
+  风控可能针对老 vusession 做了标记。
+- UA / Referer 同步到当前版本 9.03.60
 
 【更新说明 2026-05-13 by @MaYIHEI】
 1. 删除腾讯体育所有功能:
@@ -120,7 +118,6 @@ if ((isGetCookie = typeof $request !== `undefined`)) {
 			$.warn(`未填写 txspCookie 环境变量`);
 			return;
 		}
-		$.info(`[debug] txspCookie 长度 ${txspCookie.length}, 含 vqq_vusession=${/vqq_vusession=/.test(txspCookie)}, 含 turing_ticket=${/turing_ticket=/.test(txspCookie)}, 含 vqq_access_token=${/vqq_access_token=/.test(txspCookie)}`);
 		$.info(`---- 开始 查询会员信息 ----`);
 		await getVipInfo();
 		$.info(`--------- 结束 ---------\n`);
@@ -204,9 +201,6 @@ async function getVipInfo() {
 		};
 		$.post(opt, async (error, resp, data) => {
 			try {
-				if (typeof data === 'string') {
-					$.info(`[getVipInfo] HTTP ${resp && resp.statusCode}, body 前 300 字符: ${data.substring(0, 300)}`);
-				}
 				if (safeGet(data)) {
 					var obj = JSON.parse(data);
 					if (!obj.servicetype) {
@@ -259,13 +253,8 @@ async function readTxspTaskList() {
 				'traceparent': genTraceparent()
 			},
 		};
-		$.info(`[ReadTaskList] 实际发出的 header keys: ${Object.keys(opt.headers).join(',')}`);
-		$.info(`[ReadTaskList] Origin: ${opt.headers.Origin}, UA: ${opt.headers['User-Agent'].substring(0,80)}...`);
 		$.get(opt, async (error, resp, data) => {
 			try {
-				if (typeof data === 'string') {
-					$.info(`[ReadTaskList] HTTP ${resp && resp.statusCode}, body 长度 ${data.length}, 前 400 字符: ${data.substring(0, 400)}`);
-				}
 				if (safeGet(data)) {
 					var obj = JSON.parse(data);
 					var code = obj.ret;
@@ -316,9 +305,6 @@ async function txspCheckIn() {
 		};
 		$.get(opt, async (error, resp, data) => {
 			try {
-				if (typeof data === 'string') {
-					$.info(`[CheckIn] HTTP ${resp && resp.statusCode}, body 长度 ${data.length}, 前 400 字符: ${data.substring(0, 400)}`);
-				}
 				var obj = JSON.parse(data);
 				var code = obj.ret;
 				if (code === 0 && obj.check_in_score != undefined) {
