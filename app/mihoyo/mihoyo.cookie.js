@@ -20,8 +20,8 @@
 
 const $ = new Env("米游社 [Cookie]");
 
-const KEY_STOKEN_COOKIE   = 'mhy_stoken_cookie';
-const KEY_STOKEN_HEADERS  = 'mhy_stoken_headers';
+const KEY_STOKEN_COOKIE   = 'mhy_stoken_cookie';     // 仅作记录用,主脚本不再依赖
+const KEY_GAME_ROLES      = 'mhy_game_roles';        // 角色列表 (从 stoken 接口响应抠出来)
 const KEY_WEB_COOKIE      = 'mhy_web_cookie';
 const KEY_WEB_HEADERS     = 'mhy_web_headers';
 const KEY_BBS_HEADERS     = 'mhy_bbs_headers';        // v1 DS (任务相关)
@@ -42,17 +42,32 @@ const KEY_SIGNIN_HEADERS  = 'mhy_signin_headers';     // v2 DS (打卡专用)
     const headers = $request.headers || {};
     const cookie = headers.Cookie || headers.cookie || '';
 
-    // 抓取 1: stoken cookie + headers (游戏角色列表)
+    // 抓取 1: 从 getUserGameRolesByStoken 响应里抠出角色列表
+    // 注意: 这里需要 http-response 模式 (requires-body=true),$response 可用
     if (/api-takumi\.miyoushe\.com\/binding\/api\/getUserGameRolesByStoken/.test(url)) {
         try {
-            if (!/stoken=/.test(cookie)) {
-                $.log('[WARN] 没有 stoken,跳过'); $.done(); return;
+            if (!$response || !$response.body) {
+                $.log('[WARN] stoken 接口没有响应体,可能 Loon 没开 requires-body');
+                $.done(); return;
             }
-            $.setdata(cookie, KEY_STOKEN_COOKIE);
-            $.setdata(JSON.stringify(headers), KEY_STOKEN_HEADERS);
-            $.log(`[INFO] stoken cookie + headers 已存: cookie ${cookie.length}字符 headers ${Object.keys(headers).length}个`);
+            const data = JSON.parse($response.body);
+            if (data.retcode !== 0 || !data.data || !Array.isArray(data.data.list)) {
+                $.log(`[WARN] stoken 接口响应不正常: retcode=${data.retcode}`);
+                $.done(); return;
+            }
+            const roles = data.data.list.map(x => ({
+                game_biz: x.game_biz,
+                region: x.region,
+                game_uid: x.game_uid,
+                nickname: x.nickname,
+                region_name: x.region_name,
+            }));
+            $.setdata(JSON.stringify(roles), KEY_GAME_ROLES);
+            $.setdata(cookie, KEY_STOKEN_COOKIE);  // 仍存一份,供调试参考
+            $.log(`[INFO] 角色列表已存: ${roles.length} 个角色`);
+            roles.forEach(r => $.log(`  ${r.game_biz} ${r.nickname} (${r.game_uid})`));
             notify();
-        } catch (e) { $.log('[ERROR] stoken cookie: ' + e); }
+        } catch (e) { $.log('[ERROR] stoken 响应解析失败: ' + e); }
         $.done(); return;
     }
 
@@ -100,11 +115,11 @@ const KEY_SIGNIN_HEADERS  = 'mhy_signin_headers';     // v2 DS (打卡专用)
 })();
 
 function notify() {
-    const has1 = !!$.getdata(KEY_STOKEN_COOKIE);
+    const has1 = !!$.getdata(KEY_GAME_ROLES);
     const has2 = !!$.getdata(KEY_WEB_COOKIE);
     const has3 = !!$.getdata(KEY_BBS_HEADERS);
     const has4 = !!$.getdata(KEY_SIGNIN_HEADERS);
-    const status = `${has1 ? '✅' : '⏳'}stoken ${has2 ? '✅' : '⏳'}签到 ${has3 ? '✅' : '⏳'}任务 ${has4 ? '✅' : '⏳'}打卡`;
+    const status = `${has1 ? '✅' : '⏳'}角色 ${has2 ? '✅' : '⏳'}签到 ${has3 ? '✅' : '⏳'}任务 ${has4 ? '✅' : '⏳'}打卡`;
 
     let next = '';
     if (!has1) next = '\n👉 米游社 APP → 我的';
