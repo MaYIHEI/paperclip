@@ -38,7 +38,7 @@ $.req_interval = 2000;
 $.debug = false;
 
 const KEY_STOKEN_COOKIE   = 'mhy_stoken_cookie';
-const KEY_STOKEN_HEADERS  = 'mhy_stoken_headers';
+const KEY_GAME_ROLES      = 'mhy_game_roles';
 const KEY_WEB_COOKIE      = 'mhy_web_cookie';
 const KEY_WEB_HEADERS     = 'mhy_web_headers';
 const KEY_BBS_HEADERS     = 'mhy_bbs_headers';
@@ -60,10 +60,10 @@ const GAMES = {
     initState();
 
     try {
-        // 拉游戏角色列表
-        const roles = await fetchGameRoles();
-        if (!roles || roles.length === 0) {
-            $.msg('米游社', '🚫 未获取到游戏角色', '请重新抓 stoken cookie');
+        // 用存储的游戏角色列表 (cookie 抓取时已从 stoken 接口响应里抠出来,绕过 DS 校验)
+        const roles = $.gameRoles || [];
+        if (roles.length === 0) {
+            $.msg('米游社', '🚫 未获取到游戏角色', '请重新抓 cookie:\n打开米游社 APP "我的" 页面');
             return;
         }
         $.log(`📊 找到 ${roles.length} 个游戏角色`);
@@ -120,7 +120,7 @@ function loadSettings() {
     $.micoin_forum = parseInt($.getdata('mhy_micoin_forum')) || 26;
 
     if ($.delete_cookie) {
-        [KEY_STOKEN_COOKIE, KEY_STOKEN_HEADERS, KEY_WEB_COOKIE, KEY_WEB_HEADERS, KEY_BBS_HEADERS, KEY_SIGNIN_HEADERS].forEach(k => $.setdata('', k));
+        [KEY_STOKEN_COOKIE, KEY_GAME_ROLES, KEY_WEB_COOKIE, KEY_WEB_HEADERS, KEY_BBS_HEADERS, KEY_SIGNIN_HEADERS].forEach(k => $.setdata('', k));
         $.setdata('false', 'mhy_delete_cookie');
         $.msg($.name, '', '✅ Cookie 已清空,请重新抓取');
         return false;
@@ -129,28 +129,27 @@ function loadSettings() {
 }
 
 function loadCookies() {
-    $.stokenCookie  = $.getdata(KEY_STOKEN_COOKIE);
-    $.stokenHeadersStr = $.getdata(KEY_STOKEN_HEADERS);
+    $.gameRolesStr  = $.getdata(KEY_GAME_ROLES);
     $.webCookie     = $.getdata(KEY_WEB_COOKIE);
     $.webHeadersStr = $.getdata(KEY_WEB_HEADERS);
     $.bbsHeadersStr = $.getdata(KEY_BBS_HEADERS);
     $.signinHeadersStr = $.getdata(KEY_SIGNIN_HEADERS);
 
     const missing = [];
-    if (!$.stokenCookie || !$.stokenHeadersStr) missing.push('stoken cookie');
+    if (!$.gameRolesStr) missing.push('角色列表');
     if (!$.webCookie || !$.webHeadersStr) missing.push('web 签到 cookie');
 
     if (missing.length > 0) {
         $.msg(
             '米游社',
             `🚫 缺少 ${missing.join(' + ')}`,
-            '请开启 cookie 抓取脚本,然后:\n1️⃣ 打开米游社 APP "我的" 页面\n2️⃣ 进任一游戏签到页面手动签到一次\n3️⃣ (可选) 进米游币页面抓 BBS headers'
+            '请开启 cookie 抓取脚本,然后:\n1️⃣ 打开米游社 APP "我的" 页面\n2️⃣ 进任一游戏签到页面手动签到一次\n3️⃣ (可选) 进米游币页面抓 BBS headers\n4️⃣ (可选) 在米游币页面点一次打卡'
         );
         return false;
     }
 
     try {
-        $.stokenHeaders = JSON.parse($.stokenHeadersStr);
+        $.gameRoles = JSON.parse($.gameRolesStr);
         $.webHeaders = JSON.parse($.webHeadersStr);
         if ($.bbsHeadersStr) {
             $.bbsHeaders = JSON.parse($.bbsHeadersStr);
@@ -170,53 +169,6 @@ function initState() {
     $.failNum = 0;
     $.alreadyNum = 0;
     $.message = [];
-}
-
-// 拉游戏角色列表 (用 stoken cookie + 抓到的完整 headers,因为这接口校验 DS)
-function fetchGameRoles() {
-    return new Promise((resolve) => {
-        const h = cleanHeaders($.stokenHeaders);
-        // cookie 单独覆盖,避免抓包时的旧 cookie 干扰
-        h['Cookie'] = $.stokenCookie;
-        const opts = {
-            url: 'https://api-takumi.miyoushe.com/binding/api/getUserGameRolesByStoken',
-            headers: h,
-        };
-        $.get(opts, (err, resp, data) => {
-            if (err) {
-                $.log(`[角色列表] 请求错误: ${JSON.stringify(err)}`);
-                resolve(null);
-                return;
-            }
-            if (resp && resp.statusCode !== 200) {
-                $.log(`[角色列表] HTTP ${resp.statusCode}: ${(data || '').substring(0, 200)}`);
-                resolve(null);
-                return;
-            }
-            try {
-                const r = JSON.parse(data);
-                if (r.retcode !== 0) {
-                    $.log(`[角色列表] 接口错误 retcode=${r.retcode}: ${r.message}`);
-                    let hint = '\n\n🔍 stoken 可能已过期,请重新抓 cookie:\n打开米游社 APP "我的" 页面';
-                    $.msg('米游社', '🚨 拉取游戏角色失败', `${r.message || 'unknown'}${hint}`);
-                    resolve(null);
-                    return;
-                }
-                const list = (r.data && r.data.list) || [];
-                resolve(list.map(x => ({
-                    game_biz: x.game_biz,
-                    region: x.region,
-                    game_uid: x.game_uid,
-                    nickname: x.nickname,
-                    region_name: x.region_name,
-                })));
-            } catch (e) {
-                $.log(`[角色列表] 解析失败: ${e}`);
-                $.log(`[角色列表] 响应前500: ${(data || '').substring(0, 500)}`);
-                resolve(null);
-            }
-        });
-    });
 }
 
 // 给一个游戏角色签到
