@@ -10,13 +10,28 @@
 - 米游币任务: 打卡 / 浏览 3 帖 / 点赞 5 次(立即取消) / 分享 1 帖,每日 +90 米游币
 - 米游币任务可关闭(默认开启)
 
+## 设计原则
+
+米哈游对 stoken 类接口(getUserGameRolesByStoken)有严格 DS 时效校验,
+抓包到的 DS 头第二天就失效。本脚本采取「**抓 cookie 时把角色列表响应抠出来本地存**」的策略,
+后续 cron 不再调用 stoken 接口,直接读本地存储的 game_uid/region,**完全绕开 DS 校验**。
+
+luna 签到接口(/event/luna/{biz}/sign)对 DS 校验宽松,cookie_token_v2 鉴权为主,
+所以游戏签到的 web cookie 一般能用 30 天(直到 cookie_token_v2 自然过期)。
+
+米游币任务接口需要 DS,**只能复用抓到的当天 DS**,DS 失效后任务部分会报 invalid request,
+但游戏签到不受影响。
+
 ## 安装
 
 ### Loon
 
 ```ini
 [Script]
-http-request https?:\/\/api-takumi(\.miyoushe|\.mihoyo)\.com\/(binding\/api\/getUserGameRolesByStoken|event\/luna\/[a-z0-9]+\/(info|home|sign))|https?:\/\/bbs-api\.miyoushe\.com\/apihub\/(sapi\/getUserMissionsState|app\/api\/signIn) tag=米游社cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.cookie.js, requires-body=0, enable=true
+# stoken 接口要抓响应体里的角色列表,所以是 http-response + requires-body=1
+http-response https?:\/\/api-takumi\.miyoushe\.com\/binding\/api\/getUserGameRolesByStoken tag=米游社角色, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.cookie.js, requires-body=1, enable=true
+# 其他接口抓 headers 即可
+http-request https?:\/\/api-takumi\.mihoyo\.com\/event\/luna\/[a-z0-9]+\/(info|home|sign)|https?:\/\/bbs-api\.miyoushe\.com\/apihub\/(sapi\/getUserMissionsState|app\/api\/signIn) tag=米游社cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.cookie.js, requires-body=0, enable=true
 
 cron "30 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.js, tag=米游社, enable=true
 
@@ -28,7 +43,8 @@ hostname = api-takumi.mihoyo.com, api-takumi.miyoushe.com, bbs-api.miyoushe.com
 
 ```ini
 [Script]
-米游社cookie# = type=http-request, pattern=https?:\/\/api-takumi(\.miyoushe|\.mihoyo)\.com\/(binding\/api\/getUserGameRolesByStoken|event\/luna\/[a-z0-9]+\/(info|home|sign))|https?:\/\/bbs-api\.miyoushe\.com\/apihub\/(sapi\/getUserMissionsState|app\/api\/signIn), requires-body=0, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.cookie.js
+米游社角色# = type=http-response, pattern=https?:\/\/api-takumi\.miyoushe\.com\/binding\/api\/getUserGameRolesByStoken, requires-body=1, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.cookie.js
+米游社cookie# = type=http-request, pattern=https?:\/\/api-takumi\.mihoyo\.com\/event\/luna\/[a-z0-9]+\/(info|home|sign)|https?:\/\/bbs-api\.miyoushe\.com\/apihub\/(sapi\/getUserMissionsState|app\/api\/signIn), requires-body=0, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.cookie.js
 
 米游社 = type=cron, cronexp=30 7 * * *, timeout=60, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.js, script-update-interval=0
 
@@ -64,13 +80,13 @@ hostname = %APPEND% api-takumi.mihoyo.com, api-takumi.miyoushe.com, bbs-api.miyo
 
 | 现象 | 处理 |
 |---|---|
-| 「缺少 stoken cookie」 | 重抓: 米游社 APP → 我的 |
+| 「缺少 角色列表」 | 重抓: 米游社 APP → 我的(注意 Loon 的 stoken 重写 requires-body 要设为 1) |
 | 「缺少 web 签到 cookie」 | 重抓: 任一游戏签到页面手动签到一次 |
 | 「米游币任务: 缺少 BBS headers」 | 重抓: 米游社 → 我的 → 米游币 |
 | 「触发风控(risk_code=N)」 | 米哈游官方风控验证,只能去 APP 手动签一次解除 |
-| 「web cookie 可能已过期」 | 重抓签到页面 cookie |
-| 米游币任务报错 invalid request / DS expired | DS 时效过期了,重抓 BBS headers 或关闭米游币任务 |
-| 没有签到任何游戏 | 检查游戏角色是否绑定米游社,以及 `mhy_games` 过滤是否写错 |
+| 「web cookie 可能已过期」 | 重抓签到页面 cookie (cookie_token_v2 大概 30 天有效) |
+| 米游币任务报错 invalid request | DS 时效过期了,要么重抓 BBS/打卡 headers,要么关闭米游币任务 |
+| 换了游戏角色或新绑定 | 重抓 stoken,本地角色列表会更新 |
 
 ## 致谢
 
