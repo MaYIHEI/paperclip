@@ -1,0 +1,200 @@
+{
+  "id": "MaYIHEI.paperclip",
+  "name": "Paperclip",
+  "author": "@MaYIHEI",
+  "icon": "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/paperclip.png",
+  "repo": "https://github.com/MaYIHEI/paperclip",
+  "apps": [
+
+    {
+      "id": "paperclip.ppmt",
+      "name": "泡泡玛特",
+      "keys": [
+        "ppmt_data",
+        "is_debug"
+      ],
+      "settings": [
+        {
+          "id": "is_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            { "key": "false", "label": "关闭" },
+            { "key": "true",  "label": "开启" }
+          ],
+          "desc": "开启后会打印详细请求/响应日志"
+        }
+      ],
+      "author": "@Sliverkiss, 修复 @MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/ppmt",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/ppmt/ppmt.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/ppmt.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/ppmt.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.tuhu",
+      "name": "途虎养车",
+      "keys": [
+        "tuhu_token",
+        "tuhu_blackbox"
+      ],
+      "settings": [],
+      "author": "@FoKit, blackBox @Sliverkiss, 适配 @MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/tuhu",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/tuhu/tuhu.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tuhu.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tuhu.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.weibotalk",
+      "name": "微博超话",
+      "keys": [
+        "evil_tokenurl",
+        "evil_tokenheaders",
+        "evil_tokenbody",
+        "evil_tokencheckinurl",
+        "evil_tokencheckinheaders",
+        "wb_delete_cookie",
+        "wb_msg_max_num",
+        "wb_request_time"
+      ],
+      "settings": [
+        {
+          "id": "wb_delete_cookie",
+          "name": "清空 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后,运行一次会清空所有已抓的 cookie,完成后会自动复位为关闭"
+        },
+        {
+          "id": "wb_msg_max_num",
+          "name": "单条通知超话数",
+          "val": "30",
+          "type": "text",
+          "placeholder": "30",
+          "desc": "每条通知最多展示几个超话签到结果,关注超话多时建议调大"
+        },
+        {
+          "id": "wb_request_time",
+          "name": "签到间隔(ms)",
+          "val": "700",
+          "type": "text",
+          "placeholder": "700",
+          "desc": "两个超话签到之间的等待毫秒数,过短可能触发风控 418"
+        }
+      ],
+      "author": "@Evilbutcher, @toulanboy, 重写 @MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/weibotalk",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/weibotalk/weibotalk.js",
+      "scripts": [
+        {
+          "name": "主签到",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/weibotalk/weibotalk.js"
+        },
+        {
+          "name": "抓 Cookie",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/weibotalk/weibotalk.cookie.js"
+        }
+      ],
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/weibo.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/weibo.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.mihoyo",
+      "name": "米游社",
+      "keys": [
+        "mhy_stoken_cookie",
+        "mhy_game_roles",
+        "mhy_web_cookie",
+        "mhy_web_headers",
+        "mhy_bbs_headers",
+        "mhy_signin_headers",
+        "mhy_delete_cookie",
+        "mhy_enable_micoin",
+        "mhy_games",
+        "mhy_micoin_forum",
+        "mhy_req_interval"
+      ],
+      "settings": [
+        {
+          "id": "mhy_delete_cookie",
+          "name": "清空 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后,运行一次会清空所有已抓的 cookie 和角色列表,完成后会自动复位为关闭"
+        },
+        {
+          "id": "mhy_enable_micoin",
+          "name": "启用米游币任务",
+          "val": "true",
+          "type": "selects",
+          "items": [
+            { "key": "true",  "label": "开启 (打卡/浏览/点赞/分享)" },
+            { "key": "false", "label": "只签到游戏,不做米游币任务" }
+          ],
+          "desc": "米游币任务需要先抓 BBS headers 和打卡 headers,DS 时效性有限可能不稳"
+        },
+        {
+          "id": "mhy_games",
+          "name": "签到游戏过滤",
+          "val": "",
+          "type": "text",
+          "placeholder": "留空 = 全部游戏",
+          "desc": "逗号分隔: hk4e_cn(原神) hkrpg_cn(星穹铁道) nap_cn(绝区零) bh3_cn(崩坏3)"
+        },
+        {
+          "id": "mhy_micoin_forum",
+          "name": "米游币帖子来源版块",
+          "val": "26",
+          "type": "selects",
+          "items": [
+            { "key": "26", "label": "原神" },
+            { "key": "52", "label": "星穹铁道" },
+            { "key": "57", "label": "绝区零" },
+            { "key": "1",  "label": "崩坏3" },
+            { "key": "30", "label": "崩坏学园2" },
+            { "key": "37", "label": "未定事件簿" },
+            { "key": "34", "label": "大别野" }
+          ],
+          "desc": "米游币任务(浏览/点赞/分享)从哪个版块拉帖子"
+        },
+        {
+          "id": "mhy_req_interval",
+          "name": "游戏签到间隔(ms)",
+          "val": "2000",
+          "type": "text",
+          "placeholder": "2000",
+          "desc": "两个游戏签到之间的等待毫秒数"
+        }
+      ],
+      "author": "@MaYIHEI (业务参考 @kayanouriko / @daye99 / @Womsxd)",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/mihoyo",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.js",
+      "scripts": [
+        {
+          "name": "主签到",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.js"
+        },
+        {
+          "name": "抓 Cookie",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.cookie.js"
+        }
+      ],
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/mihoyo.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/mihoyo.png"
+      ]
+    }
+
+  ]
+}
