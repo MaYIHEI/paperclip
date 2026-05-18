@@ -31,13 +31,24 @@ const KEY_LIST_BODY = 'huisheng_list_body';
         let body = $request.body || '';
 
         // 保存
-        $.setdata(JSON.stringify(headers), KEY_HEADERS);
-        if (body && body.length > 10) $.setdata(body, KEY_LIST_BODY);
+        const okH = $.setdata(JSON.stringify(headers), KEY_HEADERS);
+        let okB = true;
+        if (body && body.length > 10) okB = $.setdata(body, KEY_LIST_BODY);
 
-        $.log(`[OK] headers ${Object.keys(headers).length} 个,body ${body.length} 字符`);
-        $.msg('惠省', '✅ 鉴权数据已抓取', `headers ${Object.keys(headers).length} 项 / body ${body.length} 字符\n可关闭本脚本,主脚本现在可跑`);
+        // 读回校验
+        const verifyH = ($.getdata(KEY_HEADERS) || '').length;
+        const verifyB = ($.getdata(KEY_LIST_BODY) || '').length;
+
+        $.log(`[OK] headers ${Object.keys(headers).length} 个,body ${body.length} 字符;写入返回 H=${okH} B=${okB};读回验证 H=${verifyH} B=${verifyB}`);
+
+        if (verifyH > 0 && verifyB > 0) {
+            $.msg('惠省', '✅ 鉴权数据已落地', `headers ${verifyH} 字符 / body ${verifyB} 字符\n可关闭本脚本,主脚本可跑`);
+        } else {
+            $.msg('惠省', '⚠️ 写入异常', `存储读回为空 (H=${verifyH} B=${verifyB})\n检查 Loon 持久化存储权限`);
+        }
     } catch (e) {
         $.log('[ERROR] ' + e);
+        $.msg('惠省', '❌ 抓取异常', String(e));
     }
     $.done();
 })();
@@ -45,22 +56,23 @@ const KEY_LIST_BODY = 'huisheng_list_body';
 
 function Env(s) {
     this.name = s;
-    this.isSurge = () => typeof $httpClient !== 'undefined';
-    this.isQuanX = () => typeof $task !== 'undefined';
-    this.isLoon = () => typeof $loon !== 'undefined';
+    // 注意:Loon http-request 重写脚本里 $httpClient 是 undefined,只有 $persistentStore / $notification / $done
+    // 所以用 $persistentStore 判断存储能力,而不是 $httpClient
+    this.hasStore = () => typeof $persistentStore !== 'undefined';
+    this.isQuanX = () => typeof $prefs !== 'undefined';
     this.log = (...a) => console.log(a.join('\n'));
     this.msg = (t = this.name, s = '', b = '') => {
-        if (this.isSurge() || this.isLoon()) $notification.post(t, s, b);
-        else if (this.isQuanX()) $notify(t, s, b);
+        if (typeof $notification !== 'undefined') $notification.post(t, s, b);
+        else if (typeof $notify !== 'undefined') $notify(t, s, b);
         console.log(['', '====📣' + t + '====', s, b].filter(Boolean).join('\n'));
     };
     this.getdata = (k) => {
-        if (this.isSurge() || this.isLoon()) return $persistentStore.read(k);
+        if (this.hasStore()) return $persistentStore.read(k);
         if (this.isQuanX()) return $prefs.valueForKey(k);
         return null;
     };
     this.setdata = (v, k) => {
-        if (this.isSurge() || this.isLoon()) return $persistentStore.write(v, k);
+        if (this.hasStore()) return $persistentStore.write(v, k);
         if (this.isQuanX()) return $prefs.setValueForKey(v, k);
         return false;
     };
