@@ -18,7 +18,7 @@
  * @Updated: 2026-05-18
  *
  * [Script]
- * cron 5 0 * * * script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/huixing/huixing.js, tag=惠省红包墙
+ * cron 5 0 * * * script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/huisheng/huisheng.js, tag=惠省红包墙
  *
  * [MITM]
  * hostname = media.meituan.com
@@ -30,8 +30,8 @@ $.delete_cookie = false;
 $.debug = false;
 $.req_interval = 500;
 
-const KEY_HEADERS = 'huixing_headers';
-const KEY_LIST_BODY = 'huixing_list_body';
+const KEY_HEADERS = 'huisheng_headers';
+const KEY_LIST_BODY = 'huisheng_list_body';
 
 (async () => {
     if (!loadSettings()) return;
@@ -55,7 +55,7 @@ const KEY_LIST_BODY = 'huixing_list_body';
 
         await sleep($.req_interval);
 
-        // 2. 一次性领取
+        // 2. 一次性领取 (注意 recallToken 是 listResp.recallToken,grant 里必传,不传会 403)
         const grantResp = await grantActivityCoupon(listResp, tabs);
         if (!grantResp) return;
 
@@ -71,13 +71,13 @@ const KEY_LIST_BODY = 'huixing_list_body';
 
 
 function loadSettings() {
-    $.delete_cookie = JSON.parse($.getdata('huixing_delete_cookie') || $.delete_cookie);
-    $.req_interval = parseInt($.getdata('huixing_request_time')) || $.req_interval;
-    $.debug = JSON.parse($.getdata('huixing_debug') || $.debug);
+    $.delete_cookie = JSON.parse($.getdata('huisheng_delete_cookie') || $.delete_cookie);
+    $.req_interval = parseInt($.getdata('huisheng_request_time')) || $.req_interval;
+    $.debug = JSON.parse($.getdata('huisheng_debug') || $.debug);
 
     if ($.delete_cookie) {
         [KEY_HEADERS, KEY_LIST_BODY].forEach(k => $.setdata('', k));
-        $.setdata('false', 'huixing_delete_cookie');
+        $.setdata('false', 'huisheng_delete_cookie');
         $.msg($.name, '', '✅ Cookie 已清空,请重新抓取');
         return false;
     }
@@ -199,24 +199,36 @@ function grantActivityCoupon(listResp, tabs) {
     });
 }
 
+
+
 function buildGrantBody(listResp, tabs) {
     const cfg = (listResp && listResp.config) || {};
-    // 从 list 响应里捞 activityCode / activityName / connectedActivityConfig 等
+    // list body 是基础模板,拷贝后改字段
     const obj = Object.assign({}, $.listBodyObj);
+
     obj.req_time = Date.now();
+    obj.tabs = tabs;
     obj.activityName = cfg.activityName || '惠省红包墙活动配置';
     obj.activityCode = cfg.activityCode || '101357000';
-    obj.tabs = tabs;
     obj.activityScene = cfg.activityScene || 1;
     obj.preGrantSource = 2;
     obj.osType = 'iOS';
     obj.pageId = 'c_waimai_7hs96y41';
     obj.moduleId = 'b_waimai_gci8oda9_mc';
     obj.distributorChannel = 0;
-    // sessionId / recallToken / unpl 这些如果 list 响应里返回了就用,否则随机
-    if (cfg.recallToken) obj.recallToken = cfg.recallToken;
-    if (!obj.sessionId) obj.sessionId = generateSessionId();
-    if (!obj.expoId) obj.expoId = obj.open_id || '';
+
+    // recallToken 是 list 响应里 data.recallToken,grant 必传,不传 403
+    if (listResp.recallToken) obj.recallToken = listResp.recallToken;
+
+    // sessionId 客户端生成
+    obj.sessionId = generateSessionId();
+
+    // expoId 用 headers 里的 openIdCipher(同一个值),list 抓的 body 里已经有了就用,没有再 fallback
+    if (!obj.expoId) {
+        const ocKey = Object.keys($.headers || {}).find(k => k.toLowerCase() === 'openidcipher');
+        if (ocKey) obj.expoId = $.headers[ocKey];
+    }
+
     return JSON.stringify(obj);
 }
 
