@@ -11,7 +11,7 @@
  * @Updated: 2026-05-18
  *
  * [Script]
- * http-request ^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/huixing/huixing.cookie.js, requires-body=1, tag=惠省 [Cookie]
+ * http-request ^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/huisheng/huisheng.cookie.js, requires-body=1, tag=惠省 [Cookie]
  *
  * [MITM]
  * hostname = media.meituan.com
@@ -19,8 +19,8 @@
 
 const $ = new Env("惠省 [Cookie]");
 
-const KEY_HEADERS = 'huixing_headers';
-const KEY_LIST_BODY = 'huixing_list_body';
+const KEY_HEADERS = 'huisheng_headers';
+const KEY_LIST_BODY = 'huisheng_list_body';
 
 (function main() {
     if (!$request) { $.log('[ERROR] 仅作为 http-request 重写脚本运行'); $.done(); return; }
