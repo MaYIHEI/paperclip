@@ -71,9 +71,10 @@ const KEY_LIST_BODY = 'huisheng_list_body';
 
 
 function loadSettings() {
-    $.delete_cookie = JSON.parse($.getdata('huisheng_delete_cookie') || $.delete_cookie);
-    $.req_interval = parseInt($.getdata('huisheng_request_time')) || $.req_interval;
-    $.debug = JSON.parse($.getdata('huisheng_debug') || $.debug);
+    $.delete_cookie = ($.getdata('huisheng_delete_cookie') === 'true');
+    const ri = parseInt($.getdata('huisheng_request_time'));
+    if (!isNaN(ri) && ri > 0) $.req_interval = ri;
+    $.debug = ($.getdata('huisheng_debug') === 'true');
 
     if ($.delete_cookie) {
         [KEY_HEADERS, KEY_LIST_BODY].forEach(k => $.setdata('', k));
@@ -85,11 +86,13 @@ function loadSettings() {
 }
 
 function loadCookies() {
-    $.headersStr = $.getdata(KEY_HEADERS);
+    $.headersStr = $.getdata(KEY_HEADERS) || '';
     $.listBody = $.getdata(KEY_LIST_BODY) || '';
 
+    $.log(`[diag] headers 读到 ${$.headersStr.length} 字符,body 读到 ${$.listBody.length} 字符`);
+
     if (!$.headersStr || !$.listBody) {
-        $.msg($.name, '🚫 缺少鉴权数据', '请先打开 cookie 抓取脚本,然后:\n1️⃣ 进微信"惠省"小程序\n2️⃣ 在首页停留 3 秒触发列表接口');
+        $.msg($.name, '🚫 缺少鉴权数据', `headers=${$.headersStr.length}字符 body=${$.listBody.length}字符\n请先打开 cookie 抓取脚本,然后:\n1️⃣ 进微信"惠省"小程序\n2️⃣ 在首页停留 3 秒触发列表接口`);
         return false;
     }
     try {
@@ -294,24 +297,25 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 // @Chavy Env
 function Env(s) {
     this.name = s;
+    this.hasStore = () => typeof $persistentStore !== 'undefined';
     this.isSurge = () => typeof $httpClient !== 'undefined';
     this.isQuanX = () => typeof $task !== 'undefined';
     this.isLoon = () => typeof $loon !== 'undefined';
     this.toStr = (o) => { try { return JSON.stringify(o); } catch { return ''; } };
     this.log = (...a) => console.log(a.join('\n'));
     this.msg = (t = this.name, s = '', b = '') => {
-        if (this.isSurge() || this.isLoon()) $notification.post(t, s, b);
-        else if (this.isQuanX()) $notify(t, s, b);
+        if (typeof $notification !== 'undefined') $notification.post(t, s, b);
+        else if (typeof $notify !== 'undefined') $notify(t, s, b);
         console.log(['', '====📣' + t + '====', s, b].filter(Boolean).join('\n'));
     };
     this.getdata = (k) => {
-        if (this.isSurge() || this.isLoon()) return $persistentStore.read(k);
-        if (this.isQuanX()) return $prefs.valueForKey(k);
+        if (this.hasStore()) return $persistentStore.read(k);
+        if (typeof $prefs !== 'undefined') return $prefs.valueForKey(k);
         return null;
     };
     this.setdata = (v, k) => {
-        if (this.isSurge() || this.isLoon()) return $persistentStore.write(v, k);
-        if (this.isQuanX()) return $prefs.setValueForKey(v, k);
+        if (this.hasStore()) return $persistentStore.write(v, k);
+        if (typeof $prefs !== 'undefined') return $prefs.setValueForKey(v, k);
         return false;
     };
     this.post = (req, cb) => {
