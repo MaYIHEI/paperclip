@@ -1,0 +1,404 @@
+{
+  "id": "MaYIHEI.paperclip",
+  "name": "Paperclip",
+  "author": "@MaYIHEI",
+  "icon": "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/paperclip.png",
+  "repo": "https://github.com/MaYIHEI/paperclip",
+  "apps": [
+
+    {
+      "id": "paperclip.ppmt",
+      "name": "泡泡玛特",
+      "keys": [
+        "ppmt_data",
+        "is_debug"
+      ],
+      "settings": [
+        {
+          "id": "is_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            { "key": "false", "label": "关闭" },
+            { "key": "true",  "label": "开启" }
+          ],
+          "desc": "开启后会打印详细请求/响应日志"
+        }
+      ],
+      "author": "@Sliverkiss, 修复 @MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/ppmt",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/ppmt/ppmt.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/popmart.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/popmart.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.tuhu",
+      "name": "途虎养车",
+      "keys": [
+        "tuhu_token",
+        "tuhu_blackbox"
+      ],
+      "settings": [],
+      "author": "@FoKit, blackBox @Sliverkiss, 适配 @MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/tuhu",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/tuhu/tuhu.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tuhu.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tuhu.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.bibisheng",
+      "name": "微信支付笔笔省",
+      "keys": [
+        "bbs_session_token",
+        "bbs_appid",
+        "bbs_module",
+        "bbs_page"
+      ],
+      "settings": [],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/bibisheng",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.js",
+      "scripts": [
+        {
+          "name": "主签到",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.js"
+        },
+        {
+          "name": "抓 Cookie",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.cookie.js"
+        }
+      ],
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/bibisheng.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/bibisheng.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.haidilao",
+      "name": "海底捞",
+      "keys": [
+        "hdl_data",
+        "bark_key",
+        "is_debug"
+      ],
+      "settings": [],
+      "author": "@Sliverkiss, 修复 @MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/haidilao",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/haidilao/haidilao.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/haidilao.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/haidilao.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.huisheng",
+      "name": "惠省红包墙",
+      "keys": [
+        "huisheng_headers",
+        "huisheng_list_body",
+        "huisheng_delete_cookie",
+        "huisheng_request_time",
+        "huisheng_debug"
+      ],
+      "settings": [
+        {
+          "id": "huisheng_delete_cookie",
+          "name": "清空 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后,运行一次会清空所有已抓的 cookie,完成后会自动复位为关闭"
+        },
+        {
+          "id": "huisheng_request_time",
+          "name": "请求间隔(ms)",
+          "val": "500",
+          "type": "text",
+          "placeholder": "500",
+          "desc": "列表和领取接口之间的等待毫秒数"
+        },
+        {
+          "id": "huisheng_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            { "key": "false", "label": "关闭" },
+            { "key": "true",  "label": "开启" }
+          ],
+          "desc": "开启后打印 list/grant 请求体和响应"
+        }
+      ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/huisheng",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/huisheng/huisheng.js",
+      "scripts": [
+        {
+          "name": "主签到",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/huisheng/huisheng.js"
+        },
+        {
+          "name": "抓 Cookie",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/huisheng/huisheng.cookie.js"
+        }
+      ],
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/huisheng.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/huisheng.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.miniso",
+      "name": "名创优品",
+      "keys": [
+        "miniso_data",
+        "mc_debug"
+      ],
+      "settings": [
+        {
+          "id": "mc_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            { "key": "false", "label": "关闭" },
+            { "key": "true",  "label": "开启" }
+          ],
+          "desc": "开启后打印详细请求/响应日志"
+        }
+      ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/miniso",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/miniso/miniso.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/miniso.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/miniso.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.longde",
+      "name": "龙德广场",
+      "keys": [
+        "longde_token"
+      ],
+      "settings": [],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/longde",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/longde/longde.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/longde.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/longde.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.weibotalk",
+      "name": "微博超话",
+      "keys": [
+        "evil_tokenurl",
+        "evil_tokenheaders",
+        "evil_tokenbody",
+        "evil_tokencheckinurl",
+        "evil_tokencheckinheaders",
+        "wb_delete_cookie",
+        "wb_msg_max_num",
+        "wb_request_time"
+      ],
+      "settings": [
+        {
+          "id": "wb_delete_cookie",
+          "name": "清空 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后,运行一次会清空所有已抓的 cookie,完成后会自动复位为关闭"
+        },
+        {
+          "id": "wb_msg_max_num",
+          "name": "单条通知最大数量",
+          "val": "30",
+          "type": "text",
+          "placeholder": "30",
+          "desc": "单条通知显示的超话数量"
+        },
+        {
+          "id": "wb_request_time",
+          "name": "请求间隔(ms)",
+          "val": "700",
+          "type": "text",
+          "placeholder": "700",
+          "desc": "关注超话多时建议调到 1000+"
+        }
+      ],
+      "author": "@Evilbutcher / @toulanboy, 适配 @MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/weibotalk",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/weibotalk/weibotalk.js",
+      "scripts": [
+        {
+          "name": "主签到",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/weibotalk/weibotalk.js"
+        },
+        {
+          "name": "抓 Cookie",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/weibotalk/weibotalk.cookie.js"
+        }
+      ],
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/weibo.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/weibo.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.mihoyo",
+      "name": "米游社",
+      "keys": [
+        "mhy_stoken_cookie",
+        "mhy_web_cookie",
+        "mhy_bbs_headers",
+        "mhy_signin_headers",
+        "mhy_roles",
+        "mhy_delete_cookie",
+        "mhy_games",
+        "mhy_req_interval"
+      ],
+      "settings": [
+        {
+          "id": "mhy_delete_cookie",
+          "name": "清空 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后,运行一次会清空所有已抓的 cookie,完成后会自动复位为关闭"
+        },
+        {
+          "id": "mhy_games",
+          "name": "签到游戏过滤",
+          "val": "",
+          "type": "text",
+          "placeholder": "留空 = 全部游戏",
+          "desc": "逗号分隔: hk4e_cn(原神) hkrpg_cn(星穹铁道) nap_cn(绝区零) bh3_cn(崩坏3)"
+        },
+        {
+          "id": "mhy_req_interval",
+          "name": "游戏签到间隔(ms)",
+          "val": "2000",
+          "type": "text",
+          "placeholder": "2000",
+          "desc": "两个游戏签到之间的等待毫秒数"
+        }
+      ],
+      "author": "@MaYIHEI (业务参考 @kayanouriko / @daye99 / @Womsxd)",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/mihoyo",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.js",
+      "scripts": [
+        {
+          "name": "主签到",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.js"
+        },
+        {
+          "name": "抓 Cookie",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mihoyo/mihoyo.cookie.js"
+        }
+      ],
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/mihoyo.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/mihoyo.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.tenvideo",
+      "name": "腾讯视频",
+      "keys": [
+        "txspCookie",
+        "isSkipTxspCheckIn"
+      ],
+      "settings": [
+        {
+          "id": "isSkipTxspCheckIn",
+          "name": "跳过签到",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后,不再执行 VIP 签到(仅保留 cookie 抓取)"
+        }
+      ],
+      "author": "@WowYiJiu, 精简 + 适配新接口 @MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/tenvideo",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/tenvideo/tenvideo.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tenvideo.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tenvideo.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.newmixc",
+      "name": "一点万象",
+      "keys": [
+        "newmixc_data"
+      ],
+      "settings": [],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/newmixc",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/newmixc/newmixc.js",
+      "scripts": [
+        {
+          "name": "主签到",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/newmixc/newmixc.js"
+        },
+        {
+          "name": "抓 Cookie",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/newmixc/newmixc.cookie.js"
+        }
+      ],
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/newmixc.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/newmixc.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.lhtj",
+      "name": "龙湖天街",
+      "keys": [
+        "lhtj_headers"
+      ],
+      "settings": [],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/lhtj",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/lhtj/lhtj.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/lhtj.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/lhtj.png"
+      ]
+    },
+    
+    {
+      "id": "paperclip.casetify",
+      "name": "CASETiFY",
+      "keys": [
+        "casetify_token",
+        "casetify_hqtoken",
+        "is_debug"
+      ],
+      "settings": [],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/casetify",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/casetify/casetify.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/casetify.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/casetify.png"
+      ]
+    }
+
+  ]
+}
