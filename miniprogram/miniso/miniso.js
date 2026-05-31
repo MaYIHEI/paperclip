@@ -1,66 +1,50 @@
 /**
- * 脚本名称：名创优品(MINISO)小程序签到 + 浏览任务
- * 活动规则：每日签到 20 mini币 + 9 个浏览任务每个 10 mini币,共 110 mini币
- * 脚本说明：进入小程序的"任务中心"页面即可抓取 cookie。支持单账号。
- * 环境变量：MINISO_DATA
- * 更新时间：2026-05-20
- * 脚本作者：MaYIHEI (https://github.com/MaYIHEI/paperclip)
- * Telegram 频道：https://t.me/mayihei
+ * 名创优品 · 微信小程序「名创优品」每日签到 mini 币
  *
- * 反编译来源：基于 wx2a212470bade49bf 小程序 v5.1.70 解包分析,
- * 完整破解 signature 签名算法(salt: ffe232&t%4df!67sx55eas)。
+ * 用法:打开微信小程序「名创优品」→ 进入会员页(自动登录刷 token)
  *
- * ------------------ Surge 配置 -----------------
+ * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
+ * @Channel: Telegram 频道 https://t.me/mayihei
  *
+ * ===== Loon =====
  * [MITM]
- * hostname = api-saas.miniso.com
- *
+ * hostname = mini-cn.miniso.com
  * [Script]
- * 名创优品 Cookie = type=http-request,pattern=^https:\/\/api-saas\.miniso\.com\/task-manage-platform\/api\/(activity|virtualCoin),requires-body=0,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/miniso/miniso.js
+ * http-response https:\/\/mini-cn\.miniso\.com\/api\/v3\/m-mini\/user\/login tag=名创优品 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png
+ * cron "37 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js, tag=名创优品签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png, enable=true
  *
- * 名创优品 = type=cron,cronexp=10 8 * * *,timeout=300,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/miniso/miniso.js,script-update-interval=0
- *
- * ------------------ Loon 配置 ------------------
- *
+ * ===== Surge =====
  * [MITM]
- * hostname = api-saas.miniso.com
- *
+ * hostname = mini-cn.miniso.com
  * [Script]
- * http-request ^https:\/\/api-saas\.miniso\.com\/task-manage-platform\/api\/(activity|virtualCoin) tag=名创优品 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/miniso/miniso.js,requires-body=0
+ * 名创优品 Cookie = type=http-response,pattern=https:\/\/mini-cn\.miniso\.com\/api\/v3\/m-mini\/user\/login,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png
+ * 名创优品签到 = type=cron,cronexp=37 7 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png
  *
- * cron "10 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/miniso/miniso.js,tag=名创优品签到,enable=true
- *
- * -------------- Quantumult X 配置 --------------
- *
+ * ===== Quantumult X =====
  * [MITM]
- * hostname = api-saas.miniso.com
- *
+ * hostname = mini-cn.miniso.com
  * [rewrite_local]
- * ^https:\/\/api-saas\.miniso\.com\/task-manage-platform\/api\/(activity|virtualCoin) url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/miniso/miniso.js
- *
+ * https:\/\/mini-cn\.miniso\.com\/api\/v3\/m-mini\/user\/login url script-response-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js
  * [task_local]
- * 10 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/miniso/miniso.js, tag=名创优品签到, enabled=true
+ * 37 7 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js, tag=名创优品签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png, enabled=true
  *
- * ------------------ Stash 配置 -----------------
- *
+ * ===== Stash =====
  * cron:
  *   script:
- *     - name: 名创优品
- *       cron: '10 8 * * *'
- *       timeout: 300
- *
+ *     - name: 名创优品签到
+ *       cron: '37 7 * * *'
+ *       timeout: 60
  * http:
  *   mitm:
- *     - "api-saas.miniso.com"
+ *     - "mini-cn.miniso.com"
  *   script:
- *     - match: ^https:\/\/api-saas\.miniso\.com\/task-manage-platform\/api\/(activity|virtualCoin)
- *       name: 名创优品
- *       type: request
- *       require-body: false
- *
+ *     - match: https:\/\/mini-cn\.miniso\.com\/api\/v3\/m-mini\/user\/login
+ *       name: 名创优品 Cookie
+ *       type: response
+ *       require-body: true
  * script-providers:
- *   名创优品:
- *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/miniso/miniso.js
+ *   名创优品签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js
  *     interval: 86400
  */
 

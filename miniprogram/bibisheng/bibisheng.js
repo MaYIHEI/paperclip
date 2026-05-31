@@ -1,76 +1,53 @@
 /**
- * 微信支付笔笔省 - 天天领券自动领取
+ * 笔笔省 · 微信支付「笔笔省」小程序  天天领券页面每日免费券自动领取
  *
- * 进小程序"我的-提现笔笔省-天天领"页面,任意请求会触发 cookie 抓取
+ * 用法:微信打开「微信支付笔笔省」小程序 → 进入「我的-提现笔笔省-天天领」页面,自动触发抓取
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Updated: 2026-05-12
-
-【更新说明 2026-05-12】
-首版,适配微信支付笔笔省小程序 wxdb3c0e388702f785,
-接口域名 discount.wxpapp.wechatpay.cn。
-鉴权依赖 session-token,该 token 由 jscode 走 /txbbs-user/user/login 换取,
-但 jscode 是 wx.login() 一次性产物,脚本无法刷新,
-session-token 过期后需要重新进小程序触发抓取。
-
-【已知限制】
-- session-token 有效期未知,可能几小时到几天,需观察 cron 稳定性
-- 一旦提示"token失效",请重新进小程序"天天领"页面
-
------------------- Loon 配置 ------------------
-
-[MITM]
-hostname = discount.wxpapp.wechatpay.cn
-
-[Script]
-http-request ^https:\/\/discount\.wxpapp\.wechatpay\.cn\/txbbs-mall\/coupon\/(querydailygiftcoupons|claimdailygiftcoupon) tag=笔笔省 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.cookie.js, requires-body=0
-
-cron "30 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.js, tag=笔笔省签到, enable=true
-
------------------- Surge 配置 -----------------
-
-[MITM]
-hostname = discount.wxpapp.wechatpay.cn
-
-[Script]
-笔笔省 Cookie = type=http-request,pattern=^https:\/\/discount\.wxpapp\.wechatpay\.cn\/txbbs-mall\/coupon\/(querydailygiftcoupons|claimdailygiftcoupon),requires-body=0,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.cookie.js
-
-笔笔省签到 = type=cron,cronexp=30 7 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.js,script-update-interval=0
-
--------------- Quantumult X 配置 --------------
-
-[MITM]
-hostname = discount.wxpapp.wechatpay.cn
-
-[rewrite_local]
-^https:\/\/discount\.wxpapp\.wechatpay\.cn\/txbbs-mall\/coupon\/(querydailygiftcoupons|claimdailygiftcoupon) url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.cookie.js
-
-[task_local]
-30 7 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.js, tag=笔笔省签到, enabled=true
-
------------------- Stash 配置 -----------------
-
-cron:
-  script:
-    - name: 笔笔省签到
-      cron: '30 7 * * *'
-      timeout: 60
-
-http:
-  mitm:
-    - "discount.wxpapp.wechatpay.cn"
-  script:
-    - match: ^https:\/\/discount\.wxpapp\.wechatpay\.cn\/txbbs-mall\/coupon\/(querydailygiftcoupons|claimdailygiftcoupon)
-      name: 笔笔省 Cookie
-      type: request
-      require-body: false
-
-script-providers:
-  笔笔省签到:
-    url: https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.js
-    interval: 86400
-*/
+ *
+ * ===== Loon =====
+ * [MITM]
+ * hostname = discount.wxpapp.wechatpay.cn
+ * [Script]
+ * http-request ^https:\/\/discount\.wxpapp\.wechatpay\.cn\/txbbs-mall\/coupon\/(querydailygiftcoupons|claimdailygiftcoupon) tag=笔笔省 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bibisheng/bibisheng.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bibisheng.png
+ * cron "30 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bibisheng/bibisheng.js, tag=笔笔省签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bibisheng.png, enable=true
+ *
+ * ===== Surge =====
+ * [MITM]
+ * hostname = discount.wxpapp.wechatpay.cn
+ * [Script]
+ * 笔笔省 Cookie = type=http-request,pattern=^https:\/\/discount\.wxpapp\.wechatpay\.cn\/txbbs-mall\/coupon\/(querydailygiftcoupons|claimdailygiftcoupon),requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bibisheng/bibisheng.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bibisheng.png
+ * 笔笔省签到 = type=cron,cronexp=30 7 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bibisheng/bibisheng.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bibisheng.png
+ *
+ * ===== Quantumult X =====
+ * [MITM]
+ * hostname = discount.wxpapp.wechatpay.cn
+ * [rewrite_local]
+ * ^https:\/\/discount\.wxpapp\.wechatpay\.cn\/txbbs-mall\/coupon\/(querydailygiftcoupons|claimdailygiftcoupon) url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bibisheng/bibisheng.cookie.js
+ * [task_local]
+ * 30 7 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bibisheng/bibisheng.js, tag=笔笔省签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bibisheng.png, enabled=true
+ *
+ * ===== Stash =====
+ * cron:
+ *   script:
+ *     - name: 笔笔省签到
+ *       cron: '30 7 * * *'
+ *       timeout: 60
+ * http:
+ *   mitm:
+ *     - "discount.wxpapp.wechatpay.cn"
+ *   script:
+ *     - match: ^https:\/\/discount\.wxpapp\.wechatpay\.cn\/txbbs-mall\/coupon\/(querydailygiftcoupons|claimdailygiftcoupon)
+ *       name: 笔笔省 Cookie
+ *       type: request
+ *       require-body: false
+ * script-providers:
+ *   笔笔省签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bibisheng/bibisheng.js
+ *     interval: 86400
+ */
 
 const $ = new Env("笔笔省");
 

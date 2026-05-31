@@ -1,72 +1,53 @@
 /**
- * 脚本名称：途虎养车（修复 token 抓取 + blackBox by @Sliverkiss）
- * 活动规则：每日签到可获取积分奖励
- * 脚本说明：添加重写后,进入途虎养车小程序"我的"或"积分中心"页面即可获取 Token,支持多账号,兼容 NE / Node.js 环境
- * 环境变量：TUHU_TOKEN、TUHU_BLACKBOX / CODESERVER_ADDRESS、CODESERVER_FUN
- * 更新时间：2026-05-08
- * 脚本作者：@FoKit,修复 blackBox 参数 by @Sliverkiss,适配新接口 by @MaYIHEI
- * Telegram 频道：https://t.me/mayihei
-
-# BoxJs订阅：https://raw.githubusercontent.com/FoKit/Scripts/main/boxjs/fokit.boxjs.json
-
-【更新说明 2026-05-08】
-途虎小程序更新后,原 /User/GetInternalCenterInfo 接口已下线。
-本脚本改为从 /User/GetMemberSignInInfoAsync 或 /User/GetRightsList 抓取 token,
-任一接口都会在打开"我的"或"积分中心"页面时触发。
-
------------------- Surge 配置 -----------------
-
-[MITM]
-hostname = api.tuhu.cn
-
-[Script]
-途虎养车 Cookie = type=http-request,pattern=https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList),requires-body=0,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/tuhu/tuhu.js
-
-途虎养车 = type=cron,cronexp=17 7 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/tuhu/tuhu.js,script-update-interval=0
-
------------------- Loon 配置 ------------------
-
-[MITM]
-hostname = api.tuhu.cn
-
-[Script]
-http-request https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList) tag=途虎养车 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/tuhu/tuhu.js,requires-body=0
-
-cron "17 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/tuhu/tuhu.js,tag = 途虎养车,enable=true
-
--------------- Quantumult X 配置 --------------
-
-[MITM]
-hostname = api.tuhu.cn
-
-[rewrite_local]
-https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList) url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/tuhu/tuhu.js
-
-[task_local]
-17 7 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/tuhu/tuhu.js, tag=途虎养车签到, img-url=https://raw.githubusercontent.com/FoKit/Scripts/main/images/tuhu.png, enabled=true
-
------------------- Stash 配置 -----------------
-
-cron:
-  script:
-    - name: 途虎养车签到
-      cron: '17 7 * * *'
-      timeout: 10
-
-http:
-  mitm:
-    - "api.tuhu.cn"
-  script:
-    - match: https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList)
-      name: 途虎养车 Cookie
-      type: request
-      require-body: false
-
-script-providers:
-  途虎养车:
-    url: https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/tuhu/tuhu.js
-    interval: 86400
-
+ * 途虎养车 · 微信小程序「途虎养车」每日签到自动获取积分(每日 +5 积分,可抵现)
+ *
+ * 用法:打开微信小程序「途虎养车」→ 进入「我的」或「积分中心」页面 → 触发 `GetMemberSignInInfoAsync` 或 `GetRightsList` 接口
+ *
+ * @Author: @FoKit
+ * @Modifier: @Sliverkiss(修复 blackBox 参数)
+ * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>(适配新接口)
+ * @Channel: Telegram 频道 https://t.me/mayihei
+ *
+ * ===== Loon =====
+ * [MITM]
+ * hostname = api.tuhu.cn
+ * [Script]
+ * http-request https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList) tag=途虎养车 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png
+ * cron "17 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js, tag=途虎养车签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png, enable=true
+ *
+ * ===== Surge =====
+ * [MITM]
+ * hostname = api.tuhu.cn
+ * [Script]
+ * 途虎养车 Cookie = type=http-request,pattern=https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList),requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png
+ * 途虎养车签到 = type=cron,cronexp=17 7 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png
+ *
+ * ===== Quantumult X =====
+ * [MITM]
+ * hostname = api.tuhu.cn
+ * [rewrite_local]
+ * https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList) url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js
+ * [task_local]
+ * 17 7 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js, tag=途虎养车签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png, enabled=true
+ *
+ * ===== Stash =====
+ * cron:
+ *   script:
+ *     - name: 途虎养车签到
+ *       cron: '17 7 * * *'
+ *       timeout: 60
+ * http:
+ *   mitm:
+ *     - "api.tuhu.cn"
+ *   script:
+ *     - match: https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList)
+ *       name: 途虎养车 Cookie
+ *       type: request
+ *       require-body: false
+ * script-providers:
+ *   途虎养车签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js
+ *     interval: 86400
  */
 
 const $ = new Env('途虎养车');

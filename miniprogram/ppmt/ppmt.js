@@ -1,36 +1,55 @@
-/*
-------------------------------------------
-@Author: Sliverkiss
-@Modifier: MaYIHEI (https://github.com/MaYIHEI/paperclip)
-@Channel: Telegram 频道 https://t.me/mayihei
-@Date: 2024.06.08
-@Updated: 2026-05-11
-@Description: 微信小程序 泡泡玛特 签到
-------------------------------------------
-cron 0 9 * * *
-const $ = new Env("泡泡玛特")
-
-【更新说明 2026-05-11】
-通知精简: 不再展示等级/泡泡值/积分(小程序拆接口后,这些字段散落在不同接口里,
-签到流程不再为此多调请求)。通知只保留: 用户手机号 + 签到结果。
-
-【更新说明 2026-05-08】
-小程序 v5.13.8 起,原 /miniapp/v2/wechat/getUserInfo 接口已下线,
-鉴权改为 PopVip-Auth Bearer JWT。本脚本改为抓取
-/miniapp/v2/svip_lite/user_info 或 /miniapp/v2/wechat_message/template_info
-(任一进入"我的"页面会触发的接口),从请求头的
-identity_code (openid) 和 PopVip-Auth (JWT) 中提取所需字段。
-user_id 和 phone 从 JWT payload 解出,因响应体里已不再返回。
-
-重写:打开小程序,进入"我的"页面(任意能触发 svip_lite/user_info 或
-wechat_message/template_info 的页面均可)。
-
-[Script]
-http-response ^https:\/\/popvip\.paquapp\.com\/miniapp\/v2\/(svip_lite\/user_info|wechat_message\/template_info) script-path=https://gist.githubusercontent.com/Sliverkiss/3e1fe82fa18dbcff9b2ae7fdad7596a6/raw/ppmt.js, requires-body=true, timeout=60, tag=泡泡玛特 Cookie
-
-[MITM]
-hostname = popvip.paquapp.com
-*/
+/**
+ * 泡泡玛特 · 微信小程序「泡泡玛特会员俱乐部」每日签到自动 +5 泡泡值
+ *
+ * 用法:打开微信小程序「泡泡玛特会员俱乐部」→ 进入「我的」页面或任意会员相关页面,触发接口
+ *
+ * @Author: Sliverkiss
+ * @Modifier: MaYIHEI (https://github.com/MaYIHEI/paperclip)
+ * @Channel: Telegram 频道 https://t.me/mayihei
+ * @Date: 2024.06.08
+ * @Updated: 2026-05-11
+ *
+ * ===== Loon =====
+ * [MITM]
+ * hostname = popvip.paquapp.com
+ * [Script]
+ * http-response ^https:\/\/popvip\.paquapp\.com\/miniapp\/v2\/(svip_lite\/user_info|wechat_message\/template_info) tag=泡泡玛特 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png
+ * cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js, tag=泡泡玛特签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png, enable=true
+ *
+ * ===== Surge =====
+ * [MITM]
+ * hostname = popvip.paquapp.com
+ * [Script]
+ * 泡泡玛特 Cookie = type=http-response,pattern=^https:\/\/popvip\.paquapp\.com\/miniapp\/v2\/(svip_lite\/user_info|wechat_message\/template_info),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png
+ * 泡泡玛特签到 = type=cron,cronexp=0 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png
+ *
+ * ===== Quantumult X =====
+ * [MITM]
+ * hostname = popvip.paquapp.com
+ * [rewrite_local]
+ * ^https:\/\/popvip\.paquapp\.com\/miniapp\/v2\/(svip_lite\/user_info|wechat_message\/template_info) url script-response-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js
+ * [task_local]
+ * 0 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js, tag=泡泡玛特签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png, enabled=true
+ *
+ * ===== Stash =====
+ * cron:
+ *   script:
+ *     - name: 泡泡玛特签到
+ *       cron: '0 9 * * *'
+ *       timeout: 60
+ * http:
+ *   mitm:
+ *     - "popvip.paquapp.com"
+ *   script:
+ *     - match: ^https:\/\/popvip\.paquapp\.com\/miniapp\/v2\/(svip_lite\/user_info|wechat_message\/template_info)
+ *       name: 泡泡玛特 Cookie
+ *       type: response
+ *       require-body: true
+ * script-providers:
+ *   泡泡玛特签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js
+ *     interval: 86400
+ */
 const $ = new Env("泡泡玛特");
 const ckName = "ppmt_data";
 const userCookie = $.toObj($.isNode() ? process.env[ckName] : $.getdata(ckName)) || [];

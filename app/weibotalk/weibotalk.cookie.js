@@ -9,8 +9,8 @@
  *
  * 抓取完成后请关闭本脚本,避免后续被反复覆盖。
  *
- * @Original: @Evilbutcher / @toulanboy
- * @Refactored: MaYIHEI <https://github.com/MaYIHEI/paperclip>
+ * @Author: @Evilbutcher / @toulanboy
+ * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Updated: 2026-05-09
  */

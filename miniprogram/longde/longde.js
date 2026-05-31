@@ -1,68 +1,51 @@
 /**
- * 脚本名称：龙德广场(芝麻科技 SaaS 通用)签到
- * 脚本说明：龙德广场微信小程序每日签到,送积分。底层是芝麻科技(china-smartech)
- *           SaaS,签名算法已本地复现(HmacSHA256, key = JWT)。JWT 有效期至 2099,
- *           理论上抓一次永久有效。
+ * 龙德广场 · 每日签到(每日签到送积分)
  *
- *           同套 SaaS 服务大量商场小程序,改 mall_id 即可适配其他商场。
- *
- * 环境变量：LONGDE_TOKEN (Bearer 后面那串 JWT)
- * 抓包：进小程序"我的"→"签到"页,即可触发 checkInForm 获取 token
+ * 用法:打开「龙德广场」小程序 → 进入「我的」→「签到」页,即抓到 token(JWT 到 2099,一次永久有效);之后 cron 自动签到。
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Created: 2026-05-23
  *
- * ------------------ Loon 配置 ------------------
- *
+ * ===== Loon =====
  * [MITM]
  * hostname = a.china-smartech.com
- *
  * [Script]
- * http-request https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm tag=龙德广场 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/longde/longde.js, requires-body=0
+ * http-request https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm tag=龙德广场 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/longde/longde.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/longde.png
+ * cron "5 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/longde/longde.js, tag=龙德广场签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/longde.png, enable=true
  *
- * cron "5 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/longde/longde.js, tag=龙德广场签到, enable=true
- *
- * ------------------ Surge 配置 -----------------
- *
+ * ===== Surge =====
  * [MITM]
  * hostname = a.china-smartech.com
- *
  * [Script]
- * 龙德广场 Cookie = type=http-request,pattern=https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm,requires-body=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/longde/longde.js
- * 龙德广场 = type=cron,cronexp=5 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/longde/longde.js,script-update-interval=0
+ * 龙德广场 Cookie = type=http-request,pattern=https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/longde/longde.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/longde.png
+ * 龙德广场签到 = type=cron,cronexp=5 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/longde/longde.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/longde.png
  *
- * -------------- Quantumult X 配置 --------------
- *
+ * ===== Quantumult X =====
  * [MITM]
  * hostname = a.china-smartech.com
- *
  * [rewrite_local]
- * https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/longde/longde.js
- *
+ * https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/longde/longde.js
  * [task_local]
- * 5 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/longde/longde.js, tag=龙德广场签到, enabled=true
+ * 5 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/longde/longde.js, tag=龙德广场签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/longde.png, enabled=true
  *
- * ------------------ Stash 配置 -----------------
- *
+ * ===== Stash =====
  * cron:
  *   script:
- *     - name: 龙德广场
+ *     - name: 龙德广场签到
  *       cron: '5 8 * * *'
- *       timeout: 10
- *
+ *       timeout: 60
  * http:
  *   mitm:
  *     - "a.china-smartech.com"
  *   script:
  *     - match: https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm
- *       name: 龙德广场
+ *       name: 龙德广场 Cookie
  *       type: request
  *       require-body: false
- *
  * script-providers:
- *   龙德广场:
- *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/longde/longde.js
+ *   龙德广场签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/longde/longde.js
  *     interval: 86400
  */
 

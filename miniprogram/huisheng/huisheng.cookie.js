@@ -7,12 +7,12 @@
  * 触发方式:
  *   打开微信"惠省"小程序,首页停留 3 秒(自动调用 listActivityCoupon)即可。
  *
- * @Refactored: MaYIHEI <https://github.com/MaYIHEI/paperclip>
+ * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Updated: 2026-05-18
  *
  * [Script]
- * http-request ^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/huisheng/huisheng.cookie.js, requires-body=1, tag=惠省红包墙 Cookie
+ * http-request ^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon tag=惠省红包墙 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png
  *
  * [MITM]
  * hostname = media.meituan.com

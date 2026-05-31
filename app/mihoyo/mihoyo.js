@@ -1,27 +1,53 @@
 /**
- * 米游社多游戏自动签到
+ * 米游社 · 米游社签到原神/星穹铁道/绝区零/崩坏3
  *
- * 支持游戏:原神、星穹铁道、绝区零、崩坏3 (国服)
+ * 用法:打开「米游社」APP → 进入「米游社首页」+「任意游戏每日签到页」(分别抓 stoken + web cookie)
  *
- * 流程:
- *   1. 抓 cookie 时已把游戏角色列表从 stoken 响应里抠出来本地存(绕过 DS 校验)
- *   2. cron 跑时,用 web cookie + 抓到的 web headers 模板,逐个游戏调 luna info / sign
- *
- * @Refactored: MaYIHEI <https://github.com/MaYIHEI/paperclip>
+ * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Updated: 2026-05-23
  *
- * 【为什么不做米游币任务】
- * 2026-05-22 后米哈游官方将米游币每日任务砍到只剩"打卡 +30",
- * 浏览/点赞/分享接口已下线,米游币日上限从 110 降至 50。
- * 唯一剩下的打卡用 v2 DS,body 固定 {"gids":N} 触发服务器重放检测,
- * 自动化无解,请在 APP 米游币页面手动点一次(1 秒)。
+ * ===== Loon =====
+ * [MITM]
+ * hostname = bbs-api.miyoushe.com, api-takumi.mihoyo.com
+ * [Script]
+ * http-response ^https:\/\/bbs-api\.miyoushe\.com\/(apihub|user|misc)\/ tag=米游社 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png
+ * cron "13 6 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.js, tag=米游社签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png, enable=true
  *
- * 【BoxJS 配置参数】
- * - mhy_delete_cookie:  true 时清空已存储的 cookie
- * - mhy_req_interval:   游戏间签到间隔毫秒数(默认 2000)
- * - mhy_games:          要签到的 game_biz,逗号分隔,留空 = 全部绑定游戏
- *                       可选: hk4e_cn,hkrpg_cn,nap_cn,bh3_cn
+ * ===== Surge =====
+ * [MITM]
+ * hostname = bbs-api.miyoushe.com, api-takumi.mihoyo.com
+ * [Script]
+ * 米游社 Cookie = type=http-response,pattern=^https:\/\/bbs-api\.miyoushe\.com\/(apihub|user|misc)\/,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png
+ * 米游社签到 = type=cron,cronexp=13 6 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png
+ *
+ * ===== Quantumult X =====
+ * [MITM]
+ * hostname = bbs-api.miyoushe.com, api-takumi.mihoyo.com
+ * [rewrite_local]
+ * ^https:\/\/bbs-api\.miyoushe\.com\/(apihub|user|misc)\/ url script-response-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.cookie.js
+ * [task_local]
+ * 13 6 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.js, tag=米游社签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png, enabled=true
+ *
+ * ===== Stash =====
+ * cron:
+ *   script:
+ *     - name: 米游社签到
+ *       cron: '13 6 * * *'
+ *       timeout: 60
+ * http:
+ *   mitm:
+ *     - "bbs-api.miyoushe.com"
+ *     - "api-takumi.mihoyo.com"
+ *   script:
+ *     - match: ^https:\/\/bbs-api\.miyoushe\.com\/(apihub|user|misc)\/
+ *       name: 米游社 Cookie
+ *       type: response
+ *       require-body: true
+ * script-providers:
+ *   米游社签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.js
+ *     interval: 86400
  */
 
 const $ = new Env("米游社");

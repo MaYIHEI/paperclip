@@ -1,48 +1,52 @@
 /**
- * 一点万象 自动签到
+ * 一点万象 · 华润万象生活「一点万象」APP 每日签到,覆盖万象汇/万象城/万象天地等华润商场
  *
- * 一点万象(华润万象生活旗下万象汇/万象城/万象天地 APP)每日签到,积分奖励。
- *
- * 流程:
- *   1. 用 cookie 脚本抓 token + mallNo + 设备参数(进 APP 任意页面停留 1 秒即可)
- *   2. cron 跑本脚本: 查询签到状态 → 未签则签到 → 领阶段奖(如有)
- *
- * 抓包定位 (2026-05-23):
- *   - 网关: POST https://app.mixcapp.com/mixc/gateway
- *   - 签到 action: mixc.app.memberSign.sign
- *   - 状态 action: mixc.app.memberSign.latticeList
- *   - 阶段奖 action: mixc.app.memberSign.nextStep
- *   - sign 算法: md5(sort(params).join('&') + '&' + salt) salt 在 H5 包内
+ * 用法:打开「一点万象」APP → 任意页面停留 1 秒(自动触发 getPersonalData 接口)
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Updated: 2026-05-23
  *
- * ------------------ Surge 配置 -----------------
+ * ===== Loon =====
  * [MITM]
  * hostname = app.mixcapp.com
- *
  * [Script]
- * 一点万象 Cookie = type=http-request,pattern=^https:\/\/app\.mixcapp\.com\/mixc\/api\/v4\/member\/getPersonalData,requires-body=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/newmixc/newmixc.cookie.js
- * 一点万象 = type=cron,cronexp=37 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/newmixc/newmixc.js
+ * http-request ^https:\/\/app\.mixcapp\.com\/mixc\/api\/v4\/member\/getPersonalData tag=一点万象 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png
+ * cron "37 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.js, tag=一点万象签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png, enable=true
  *
- * ------------------ Loon 配置 ------------------
+ * ===== Surge =====
  * [MITM]
  * hostname = app.mixcapp.com
- *
  * [Script]
- * http-request ^https:\/\/app\.mixcapp\.com\/mixc\/api\/v4\/member\/getPersonalData tag=一点万象 Cookie,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/newmixc/newmixc.cookie.js,requires-body=0
- * cron "37 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/newmixc/newmixc.js,tag=一点万象签到,enable=true
+ * 一点万象 Cookie = type=http-request,pattern=^https:\/\/app\.mixcapp\.com\/mixc\/api\/v4\/member\/getPersonalData,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png
+ * 一点万象签到 = type=cron,cronexp=37 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png
  *
- * -------------- Quantumult X 配置 --------------
+ * ===== Quantumult X =====
  * [MITM]
  * hostname = app.mixcapp.com
- *
  * [rewrite_local]
- * ^https:\/\/app\.mixcapp\.com\/mixc\/api\/v4\/member\/getPersonalData url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/newmixc/newmixc.cookie.js
- *
+ * ^https:\/\/app\.mixcapp\.com\/mixc\/api\/v4\/member\/getPersonalData url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.cookie.js
  * [task_local]
- * 37 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/newmixc/newmixc.js, tag=一点万象签到, enabled=true
+ * 37 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.js, tag=一点万象签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png, enabled=true
+ *
+ * ===== Stash =====
+ * cron:
+ *   script:
+ *     - name: 一点万象签到
+ *       cron: '37 8 * * *'
+ *       timeout: 60
+ * http:
+ *   mitm:
+ *     - "app.mixcapp.com"
+ *   script:
+ *     - match: ^https:\/\/app\.mixcapp\.com\/mixc\/api\/v4\/member\/getPersonalData
+ *       name: 一点万象 Cookie
+ *       type: request
+ *       require-body: false
+ * script-providers:
+ *   一点万象签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.js
+ *     interval: 86400
  */
 
 const $ = new Env("一点万象");

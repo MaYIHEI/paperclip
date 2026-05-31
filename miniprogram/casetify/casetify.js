@@ -1,56 +1,40 @@
 /**
- * 脚本名称：CASETiFY 签到
- * 脚本说明：CASETiFY 微信小程序每日签到,送 C 币 (积分)。
+ * CASETiFY · 每日签到(每日签到送 C 币)
  *
- *   鉴权: 请求头 `token: xxx`
- *   抓取: http-response 拦截 /api/v4/estore/member/checkWebToken
- *         从请求头里取 token, 从响应体里顺手取手机号用于通知显示
- *
- *   ⚠️ 已知限制:
- *   - token 服务端 TTL 约 10 小时, 客户端 2 小时缓存
- *   - token 续期依赖小程序内 wx.login(), 脚本环境无法触发
- *   - 实际效果: 用户冷启动小程序自动入库新 token, cron 跑时 token 可能已过期
- *   - 适合"打开过小程序的当天能签"的弱保证场景, 非高可用脚本
- *
- * 环境变量：CASETIFY_TOKEN
+ * ⚠️ 不维护 / 仅存档:token TTL 约 10h、续期依赖小程序内 wx.login(),cron 无法无人值守,仅「打开过小程序的当天」能签。
+ * 用法:打开「CASETiFY」小程序 →「我的」/「积分商城」页,即抓 token;之后 cron 在 10h 窗口内尝试签到。
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  *
- * ------------------ Loon ------------------
+ * ===== Loon =====
  * [MITM]
  * hostname = mini-app-api.casetify.cn
- *
  * [Script]
- * http-response ^https:\/\/mini-app-api\.casetify\.cn\/api\/v4\/estore\/member\/checkWebToken tag=CASETiFY Cookie, requires-body=1, script-path=casetify.js
+ * http-response ^https:\/\/mini-app-api\.casetify\.cn\/api\/v4\/estore\/member\/checkWebToken tag=CASETiFY Cookie, requires-body=1, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/casetify/casetify.js, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/casetify.png
+ * cron "5 0 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/casetify/casetify.js, tag=CASETiFY签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/casetify.png
  *
- * cron "5 0 * * *" tag=CASETiFY签到, script-path=casetify.js
- *
- * ------------------ Surge -----------------
+ * ===== Surge =====
  * [MITM]
  * hostname = mini-app-api.casetify.cn
- *
  * [Script]
- * CASETiFY Cookie = type=http-response, pattern=^https:\/\/mini-app-api\.casetify\.cn\/api\/v4\/estore\/member\/checkWebToken, requires-body=1, script-path=casetify.js
- * CASETiFY签到 = type=cron, cronexp=5 0 * * *, script-path=casetify.js
+ * CASETiFY Cookie = type=http-response, pattern=^https:\/\/mini-app-api\.casetify\.cn\/api\/v4\/estore\/member\/checkWebToken, requires-body=1, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/casetify/casetify.js, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/casetify.png
+ * CASETiFY签到 = type=cron, cronexp=5 0 * * *, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/casetify/casetify.js, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/casetify.png
  *
- * -------------- Quantumult X --------------
+ * ===== Quantumult X =====
  * [MITM]
  * hostname = mini-app-api.casetify.cn
- *
  * [rewrite_local]
- * ^https:\/\/mini-app-api\.casetify\.cn\/api\/v4\/estore\/member\/checkWebToken url script-response-body casetify.js
- *
+ * ^https:\/\/mini-app-api\.casetify\.cn\/api\/v4\/estore\/member\/checkWebToken url script-response-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/casetify/casetify.js
  * [task_local]
- * 5 0 * * * casetify.js, tag=CASETiFY签到, enabled=true
+ * 5 0 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/casetify/casetify.js, tag=CASETiFY签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/casetify.png, enabled=true
  *
- * ------------------ Stash -----------------
+ * ===== Stash =====
  * cron:
  *   script:
  *     - name: CASETiFY签到
  *       cron: '5 0 * * *'
- *       timeout: 10
- *
+ *       timeout: 60
  * http:
  *   mitm:
  *     - "mini-app-api.casetify.cn"

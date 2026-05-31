@@ -1,36 +1,53 @@
 /**
- * 微博超话自动签到
+ * 微博超话 · 微博 APP「超话」每日签到所有关注超话
  *
- * 流程: 列表 cookie 拉关注超话 → 签到 cookie 逐个签到(只替换 fid 和 pageid)
+ * 用法:打开「微博」APP → 进入超话首页 → 任意一个超话点签到一次
  *
- * @Original: @Evilbutcher (https://github.com/evilbutcher)
- * @Original: @toulanboy (https://github.com/toulanboy/scripts)
- * @Refactored: MaYIHEI <https://github.com/MaYIHEI/paperclip>
+ * @Author: @Evilbutcher (https://github.com/evilbutcher) / @toulanboy (https://github.com/toulanboy/scripts)
+ * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Updated: 2026-05-11b
  *
- * 【更新说明 2026-05-11b】
- * 修复"首次签到却显示已签"的问题:
- * - 上一版误把 ext_button.type='sign_in' 当作"已签"信号,
- *   但首次签到成功的响应里也会带这个字段(它是页面"打卡按钮"的链接类型),
- *   导致凌晨 cron 首次签到时全部被识别成"已签"
- * - 现在仅用 errno=382004 / errmsg='今天已签到' 判断已签,这两个是重复签到才会返回的
- * - 首次签到成功 → 新签;重复跑 → 已签
+ * ===== Loon =====
+ * [MITM]
+ * hostname = api.weibo.cn
+ * [Script]
+ * http-request ^https:\/\/api\.weibo\.cn\/2\/(statuses\/container_timeline_topicsub|page\/button) tag=微博超话 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png
+ * cron "0 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.js, tag=微博超话签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png, enable=true
  *
- * 【更新说明】
- * 适配 2026-05 后的微博 APP 版本:
- * - 关注列表接口: /2/cardlist → /2/statuses/container_timeline_topicsub (POST)
- * - 翻页机制: page → since_id (-1_2, -1_3 ...)
- * - 卡片解析: cardlistInfo.cards[0].card_group → 递归提取 card_type:8
- * - 签到接口仍是 /2/page/button,响应结构 {result, button.name, error_msg} 保持
+ * ===== Surge =====
+ * [MITM]
+ * hostname = api.weibo.cn
+ * [Script]
+ * 微博超话 Cookie = type=http-request,pattern=^https:\/\/api\.weibo\.cn\/2\/(statuses\/container_timeline_topicsub|page\/button),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png
+ * 微博超话签到 = type=cron,cronexp=0 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png
  *
- * 关键: 签到必须用专门抓的 /2/page/button cookie,不能用列表 cookie 复用,
- * 因为 X-Validator 风控签名和请求路径强绑定,跨路径无效。
+ * ===== Quantumult X =====
+ * [MITM]
+ * hostname = api.weibo.cn
+ * [rewrite_local]
+ * ^https:\/\/api\.weibo\.cn\/2\/(statuses\/container_timeline_topicsub|page\/button) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.cookie.js
+ * [task_local]
+ * 0 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.js, tag=微博超话签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png, enabled=true
  *
- * 【BoxJS 配置参数】
- * - wb_delete_cookie: true 时清空已存储的 cookie
- * - wb_msg_max_num: 单条通知显示的超话数量(默认 30)
- * - wb_request_time: 签到间隔毫秒数(默认 700)
+ * ===== Stash =====
+ * cron:
+ *   script:
+ *     - name: 微博超话签到
+ *       cron: '0 8 * * *'
+ *       timeout: 60
+ * http:
+ *   mitm:
+ *     - "api.weibo.cn"
+ *   script:
+ *     - match: ^https:\/\/api\.weibo\.cn\/2\/(statuses\/container_timeline_topicsub|page\/button)
+ *       name: 微博超话 Cookie
+ *       type: request
+ *       require-body: true
+ * script-providers:
+ *   微博超话签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.js
+ *     interval: 86400
  */
 
 const $ = new Env("微博超话");

@@ -1,89 +1,52 @@
 /**
- * 脚本名称：腾讯视频（精简版,只保留 VIP 签到 by @MaYIHEI）
- * 活动规则：每日签到可获取 V 力值
- * 脚本说明：添加重写后,在腾讯视频 APP 进入"我的 → 视频VIP"会员中心,即可获取 Cookie
- * 环境变量：txspCookie、isSkipTxspCheckIn
- * 更新时间：2026-05-15
- * 脚本作者：@WowYiJiu,精简 + 适配新接口 by @MaYIHEI
- * Telegram 频道：https://t.me/mayihei
-
-【更新说明 2026-05-15 (v3) by @MaYIHEI】
-- 修复 ReadTaskList 返回简化版任务列表(剔除 task_id=101)的问题:
-  补齐 H5 完整请求头 (Origin / Accept / Referer / User-Agent / sec-fetch-* /
-  priority / traceparent),腾讯后端按完整 H5 浏览器请求识别后才返回完整列表。
-  对比修复前后: body 长度 3558 → 8361 字节,task_id=101 重新出现。
-- 注意: 如果脚本运行后还是返回简化列表,需要进入 APP "我的→视频VIP" 重新抓 cookie,
-  风控可能针对老 vusession 做了标记。
-- UA / Referer 同步到当前版本 9.03.60
-
-【更新说明 2026-05-13 by @MaYIHEI】
-1. 删除腾讯体育所有功能:
-   - 原脚本里"体育签到/领每日球票/领每月球票/抽抽乐"四个任务
-     依赖的 act_id=118561 已被腾讯下线(抓包验证),且 module_id 全换。
-   - 默认大多数用户(包括本人)不是腾讯体育会员,留着只会跑空报错。
-2. 删除 vusession 刷新逻辑:
-   - 原依赖的 pbaccess.video.qq.com/.../WebLoginTrpc/NewRefresh 接口已下线,
-     v.qq.com 改用了新登录流程 (anywhere_door.account.QRCode + WebAccount/Login),
-     抓包验证后发现:只要 txspCookie 里的 vusession 未过期(7200s),
-     签到接口直接可用,无需主动刷新。
-   - 因此环境变量 txspRefreshCookie / txspRefreshBody / dayOfGetMonthTicket /
-     isLottery 全部废弃。
-3. 简化重写规则: 只保留一条 ReadTaskList 抓 cookie,
-   原本的 HotRankHttp 和 NewRefresh 两条重写都已无用。
-
------------------- Surge 配置 -----------------
-
-[MITM]
-hostname = vip.video.qq.com
-
-[Script]
-腾讯视频 Cookie = type=http-request,pattern=https:\/\/vip\.video\.qq\.com\/rpc\/trpc\.new_task_system\.task_system\.TaskSystem\/ReadTaskList,requires-body=0,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/tenvideo/tenvideo.js
-
-腾讯视频 = type=cron,cronexp=5 7 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/tenvideo/tenvideo.js,script-update-interval=0
-
------------------- Loon 配置 ------------------
-
-[MITM]
-hostname = vip.video.qq.com
-
-[Script]
-http-request https:\/\/vip\.video\.qq\.com\/rpc\/trpc\.new_task_system\.task_system\.TaskSystem\/ReadTaskList tag=腾讯视频 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/tenvideo/tenvideo.js,requires-body=0
-
-cron "5 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/tenvideo/tenvideo.js,tag=腾讯视频签到,enable=true
-
--------------- Quantumult X 配置 --------------
-
-[MITM]
-hostname = vip.video.qq.com
-
-[rewrite_local]
-https:\/\/vip\.video\.qq\.com\/rpc\/trpc\.new_task_system\.task_system\.TaskSystem\/ReadTaskList url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/tenvideo/tenvideo.js
-
-[task_local]
-5 7 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/tenvideo/tenvideo.js, tag=腾讯视频签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tenvideo.png, enabled=true
-
------------------- Stash 配置 -----------------
-
-cron:
-  script:
-    - name: 腾讯视频签到
-      cron: '5 7 * * *'
-      timeout: 10
-
-http:
-  mitm:
-    - "vip.video.qq.com"
-  script:
-    - match: https:\/\/vip\.video\.qq\.com\/rpc\/trpc\.new_task_system\.task_system\.TaskSystem\/ReadTaskList
-      name: 腾讯视频 Cookie
-      type: request
-      require-body: false
-
-script-providers:
-  腾讯视频:
-    url: https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/tenvideo/tenvideo.js
-    interval: 86400
-
+ * 腾讯视频 · 腾讯视频 APP VIP 签到(V力值)
+ *
+ * 用法:打开「腾讯视频」APP → 进入「会员」→ 任务列表(触发 ReadTaskList)
+ *
+ * @Author: @WowYiJiu
+ * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
+ * @Channel: Telegram 频道 https://t.me/mayihei
+ *
+ * ===== Loon =====
+ * [MITM]
+ * hostname = vip.video.qq.com
+ * [Script]
+ * http-request https:\/\/vip\.video\.qq\.com\/rpc\/trpc\.new_task_system\.task_system\.TaskSystem\/ReadTaskList tag=腾讯视频 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png
+ * cron "5 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js, tag=腾讯视频签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png, enable=true
+ *
+ * ===== Surge =====
+ * [MITM]
+ * hostname = vip.video.qq.com
+ * [Script]
+ * 腾讯视频 Cookie = type=http-request,pattern=https:\/\/vip\.video\.qq\.com\/rpc\/trpc\.new_task_system\.task_system\.TaskSystem\/ReadTaskList,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png
+ * 腾讯视频签到 = type=cron,cronexp=5 7 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png
+ *
+ * ===== Quantumult X =====
+ * [MITM]
+ * hostname = vip.video.qq.com
+ * [rewrite_local]
+ * https:\/\/vip\.video\.qq\.com\/rpc\/trpc\.new_task_system\.task_system\.TaskSystem\/ReadTaskList url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js
+ * [task_local]
+ * 5 7 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js, tag=腾讯视频签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png, enabled=true
+ *
+ * ===== Stash =====
+ * cron:
+ *   script:
+ *     - name: 腾讯视频签到
+ *       cron: '5 7 * * *'
+ *       timeout: 60
+ * http:
+ *   mitm:
+ *     - "vip.video.qq.com"
+ *   script:
+ *     - match: https:\/\/vip\.video\.qq\.com\/rpc\/trpc\.new_task_system\.task_system\.TaskSystem\/ReadTaskList
+ *       name: 腾讯视频 Cookie
+ *       type: request
+ *       require-body: false
+ * script-providers:
+ *   腾讯视频签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js
+ *     interval: 86400
  */
 const $ = new Env("腾讯视频");
 

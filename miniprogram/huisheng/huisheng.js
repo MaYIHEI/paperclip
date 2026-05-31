@@ -1,28 +1,52 @@
 /**
- * 惠省红包墙自动领券脚本
+ * 惠省红包墙 · 微信小程序「惠省」红包墙活动全部 7 个 tab 可领券自动领取
  *
- * 微信小程序"惠省"(appid wx0b42a347aafbe0d0,亦称"私域福利"/"福利社"前端 fulishemini)的
- * 红包墙活动每日 0 点重置,理论上每天可一次性领取全部 7 个 tab 数十张美团外卖/闪购/丽人医疗等
- * 优惠券(都是 gundam 红包,底层和美团 APP 红包墙是同一套),实测单次总值在 ¥150~¥260 不等。
+ * 用法:微信打开「惠省」小程序,首页停留 3 秒(自动触发 listActivityCoupon)
  *
- * 流程:
- *   1. POST /fulishemini/couponActivity/listActivityCoupon → 拿 tabs + 可领 rightCodes
- *   2. POST /fulishemini/couponActivity/grantActivityCoupon → 一次性领取所有 rightCodes
- *
- * 鉴权:
- *   美团 wmtoken (token 字段) + openId + openIdCipher + mtgsig (v1.2 弱版本)
- *   抓 cookie 脚本会把整个 headers 和 list 接口的 body 模板存下来,
- *   主脚本 cleanHeaders 后整套发出,只动态刷新 mtgsig.a2 时间戳和 body 里的 req_time。
- *
- * @Refactored: MaYIHEI <https://github.com/MaYIHEI/paperclip>
+ * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Updated: 2026-05-18
  *
- * [Script]
- * cron 5 0 * * * script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/huisheng/huisheng.js, tag=惠省红包墙签到
- *
+ * ===== Loon =====
  * [MITM]
  * hostname = media.meituan.com
+ * [Script]
+ * http-request ^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon tag=惠省红包墙 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png
+ * cron "5 0 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.js, tag=惠省红包墙签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png, enable=true
+ *
+ * ===== Surge =====
+ * [MITM]
+ * hostname = media.meituan.com
+ * [Script]
+ * 惠省红包墙 Cookie = type=http-request,pattern=^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png
+ * 惠省红包墙签到 = type=cron,cronexp=5 0 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png
+ *
+ * ===== Quantumult X =====
+ * [MITM]
+ * hostname = media.meituan.com
+ * [rewrite_local]
+ * ^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.cookie.js
+ * [task_local]
+ * 5 0 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.js, tag=惠省红包墙签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png, enabled=true
+ *
+ * ===== Stash =====
+ * cron:
+ *   script:
+ *     - name: 惠省红包墙签到
+ *       cron: '5 0 * * *'
+ *       timeout: 60
+ * http:
+ *   mitm:
+ *     - "media.meituan.com"
+ *   script:
+ *     - match: ^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon
+ *       name: 惠省红包墙 Cookie
+ *       type: request
+ *       require-body: true
+ * script-providers:
+ *   惠省红包墙签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.js
+ *     interval: 86400
  */
 
 const $ = new Env("惠省红包墙");

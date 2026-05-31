@@ -1,40 +1,52 @@
 /**
- * 龙湖天街 · 每日签到(微信小程序)
+ * 龙湖天街 · 微信小程序「龙湖天街」每日签到「日日签 日日赚」,签到得成长值 + 珑珠
  *
- * 签到「日日签 日日赚」,获得成长值 + 珑珠奖励。同一账号每天一次,跨小程序/APP/H5 共享。
- *
- * 仅支持微信小程序通道(C2/C20400/source=5)。
- * APP 通道(L0/L00602/source=2)被顶象风控强制要求交互式图形验证,不在本脚本能力范围。
+ * 用法:打开微信小程序「龙湖天街」→ 底部「会员」→「日日签 日日赚」→ 点击签到按钮一次
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Updated: 2026-05-24
  *
- * ------------------ Loon 配置 ------------------
+ * ===== Loon =====
  * [MITM]
  * hostname = gw2c-hw-open.longfor.com
- *
  * [Script]
- * http-request ^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$ tag=龙湖天街 Cookie,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/lhtj/lhtj.js,requires-body=false
- * cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/lhtj/lhtj.js, tag=龙湖天街签到, enable=true
+ * http-request ^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$ tag=龙湖天街 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lhtj/lhtj.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png
+ * cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lhtj/lhtj.js, tag=龙湖天街签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png, enable=true
  *
- * ------------------ Surge 配置 -----------------
+ * ===== Surge =====
  * [MITM]
  * hostname = gw2c-hw-open.longfor.com
- *
  * [Script]
- * 龙湖天街 Cookie = type=http-request,pattern=^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$,requires-body=false,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/lhtj/lhtj.js
- * 龙湖天街 = type=cron,cronexp=0 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/lhtj/lhtj.js
+ * 龙湖天街 Cookie = type=http-request,pattern=^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lhtj/lhtj.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png
+ * 龙湖天街签到 = type=cron,cronexp=0 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lhtj/lhtj.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png
  *
- * -------------- Quantumult X 配置 --------------
+ * ===== Quantumult X =====
  * [MITM]
  * hostname = gw2c-hw-open.longfor.com
- *
  * [rewrite_local]
- * ^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$ url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/lhtj/lhtj.js
- *
+ * ^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$ url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lhtj/lhtj.js
  * [task_local]
- * 0 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/lhtj/lhtj.js, tag=龙湖天街签到, enabled=true
+ * 0 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lhtj/lhtj.js, tag=龙湖天街签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png, enabled=true
+ *
+ * ===== Stash =====
+ * cron:
+ *   script:
+ *     - name: 龙湖天街签到
+ *       cron: '0 9 * * *'
+ *       timeout: 60
+ * http:
+ *   mitm:
+ *     - "gw2c-hw-open.longfor.com"
+ *   script:
+ *     - match: ^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$
+ *       name: 龙湖天街 Cookie
+ *       type: request
+ *       require-body: false
+ * script-providers:
+ *   龙湖天街签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lhtj/lhtj.js
+ *     interval: 86400
  */
 
 const $ = new Env('龙湖天街');
