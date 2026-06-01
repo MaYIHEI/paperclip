@@ -66,18 +66,23 @@ const UA =
 function getCookie() {
     try {
         const headers = lowerKeys($request.headers);
-        const cookie = headers["cookie"] || "";
+        // HTTP/2 下滔搏用多个独立 cookie: 头,Loon 合并时会残留 "cookie:" 脏前缀,
+        // 不清理的话回放只能解出最前面的 Authorization,doSign 缺 appletsSource/memberId 会 50010(踩坑 #29)
+        const cookie = normalizeCookie(headers["cookie"]);
         if (!/Authorization=/i.test(cookie)) {
             $.log("[WARN] Cookie 里没有 Authorization,跳过");
             return;
+        }
+        // doSign 额外校验小程序来源(appletsSource)+ 会员(memberId),缺了就权限不足
+        if (!/appletsSource=/i.test(cookie) || !/memberId=/i.test(cookie)) {
+            $.log("[WARN] Cookie 缺 appletsSource/memberId,doSign 可能 50010,建议重进每日中心页重抓");
         }
         if (cookie === $.getdata(CK_COOKIE)) {
             $.log("[INFO] Cookie 未变化");
             return;
         }
         $.setdata(cookie, CK_COOKIE);
-        const auth = (cookie.match(/Authorization=([^;]+)/i) || [])[1] || "";
-        $.msg($.name, "🎉 Cookie 抓取成功", `Authorization: ${mask(auth)}\n可关闭抓包,主脚本可跑`);
+        $.msg($.name, "🎉 Cookie 已抓取", "可关闭抓包,主脚本自动签到");
     } catch (e) {
         $.log(`[ERROR] cookie 抓取异常: ${e}`);
     }
@@ -116,9 +121,8 @@ async function checkin() {
             .map((p) => `${p.prizeName || ""}+${p.prizeValue || ""}`)
             .join(", ");
         $.messages.push(`✅ 签到成功${prize ? ": " + prize : ""}`);
-        if (res.data.signInTips) $.messages.push(`💡 ${res.data.signInTips}`);
     } else if (res && (res.bizCode === 20001 || /已签|重复/.test(res.bizMsg || ""))) {
-        $.messages.push(`✨ 今日已签到${res.bizMsg ? ": " + res.bizMsg : ""}`);
+        $.messages.push("✨ 今日已签到");
     } else {
         $.messages.push(`❌ 签到失败: ${res ? res.bizMsg || $.toStr(res) : "无响应"}`);
     }
@@ -157,9 +161,14 @@ function lowerKeys(obj) {
     return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v]));
 }
 
-function mask(s) {
-    if (!s || s.length < 8) return "***";
-    return s.slice(0, 4) + "****" + s.slice(-4);
+// 清理 Loon 合并多 cookie 头时残留的 "cookie:" 脏前缀,拼回标准 "k=v; k=v"
+function normalizeCookie(raw) {
+    if (!raw) return "";
+    const parts = Array.isArray(raw) ? raw : String(raw).split(/\r?\n/);
+    return parts
+        .map((p) => String(p).replace(/^cookie\s*:\s*/i, "").trim())
+        .filter(Boolean)
+        .join("; ");
 }
 
 function debug(content, title = "debug") {
