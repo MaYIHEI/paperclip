@@ -82,7 +82,7 @@ function getCookie() {
         $.setdata(JSON.stringify(headers), CK_HEADERS);
         $.setdata(body, CK_BODY);
 
-        $.msg($.name, "🎉 签到凭据抓取成功", `x-wx-token: ${mask(token)}\nheaders ${Object.keys(headers).length} 项 / body ${body.length} 字符\n可关闭抓包,主脚本可跑`);
+        $.msg($.name, "🎉 签到凭据已抓取", "可关闭抓包,主脚本自动签到");
     } catch (e) {
         $.log(`[ERROR] cookie 抓取异常: ${e}`);
     }
@@ -121,7 +121,7 @@ async function checkin() {
     // 已签到 / token 失效等
     const msg = res.errmsg || $.toStr(res);
     if (/已签|重复|已经签到/.test(msg)) {
-        $.messages.push(`✨ 今日已签到: ${msg}`);
+        $.messages.push("✨ 今日已签到");
     } else if (/登录|token|鉴权|未授权|失效|过期/.test(msg)) {
         $.messages.push(`❌ token 失效,请重新抓取: ${msg}`);
     } else {
