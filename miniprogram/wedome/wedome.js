@@ -83,7 +83,7 @@ function getCookie() {
         $.setdata(token, CK_TOKEN);
         if (brandId) $.setdata(brandId, CK_BRAND);
 
-        $.msg($.name, "🎉 Token 抓取成功", `brandId: ${brandId || "?"}\n可关闭抓包,主脚本可跑`);
+        $.msg($.name, "🎉 Token 已抓取", "可关闭抓包,主脚本自动签到");
     } catch (e) {
         $.log(`[ERROR] cookie 抓取异常: ${e}`);
     }
@@ -130,7 +130,7 @@ async function checkin() {
     if (res && res.ok === true) {
         signLine = "✅ 签到成功 (+2 积分)";
     } else if (res && res.result !== undefined) {
-        signLine = "✨ 今日已签到(或本次未发放,result=" + res.result + ")";
+        signLine = "✨ 今日已签到";
     } else {
         signLine = "❌ 签到失败: " + $.toStr(res);
     }
@@ -143,8 +143,8 @@ async function checkin() {
     );
     debug(logRes, "signInLog");
     const t = logRes && logRes.data && logRes.data.createTime;
-    if (t) {
-        signLine += t.slice(0, 10) === today() ? `\n📅 今日已记录签到 (${t})` : `\n⚠️ 最近签到: ${t}`;
+    if (t && t.slice(0, 10) !== today()) {
+        signLine += "\n⚠️ 今日暂无签到记录,请检查";
     }
     $.messages.push(signLine);
 
