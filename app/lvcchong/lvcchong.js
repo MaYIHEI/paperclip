@@ -1,8 +1,9 @@
 /**
  * 驴充充 · 每日签到(积分中心「签到领积分」)
  *
- * 续命原理: 所有 token 的 JWT 都只写 30/90 秒过期,但服务端不认这个 exp、按 jti 记账,
- *   实测 refreshToken 过期 52 分钟仍能换新。故存下 refreshToken(由 lvcchong.cookie.js 抓取)即可长期续命。
+ * 单脚本: 有 $request 时抓 Cookie(冷启 App 触发 /accessToken/refresh + 进积分页触发 /h5/accessEntrance),
+ *   无 $request 时 cron 签到。续命原理: token 的 JWT 只写 30/90 秒过期,但服务端不认、按 jti 记账,
+ *   实测 refreshToken 过期 52 分钟仍能换新,故存下 refreshToken 即可长期续命。
  * 三步链: /accessToken/refresh → /h5/accessEntrance → /scoreUser/sign/userSign,签到无签名。
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
@@ -12,7 +13,7 @@
 
 const $ = new Env("驴充充");
 
-const CK_AUTH = "lvcchong_auth"; // 由 lvcchong.cookie.js 写入,refreshToken 每次自动滚动更新
+const CK_AUTH = "lvcchong_auth"; // refreshToken 等,抓取写入、每次签到自动滚动更新
 
 $.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("lvcchong_debug")) || "false";
 $.messages = [];
@@ -158,17 +159,103 @@ async function sendMsg(message) {
     }
 }
 
-(async () => {
-    await checkin();
-})()
-    .catch((e) => {
-        $.messages.push(e.message || String(e));
-        $.logErr(e);
-    })
-    .finally(async () => {
-        await sendMsg($.messages.join("\n"));
-        $.done();
-    });
+// ============ Cookie 抓取(rewrite 模式) ============
+
+// 同时匹配 accessToken/refresh 与 h5/accessEntrance,各取所需字段合并入库。
+// refresh 带 refreshToken(body)+ device_* 头;accessEntrance 带 phone+userId(body)。
+function captureAuth() {
+    try {
+        if ($request.method === "OPTIONS") return;
+        const url = $request.url || "";
+        const headers = lowerKeys($request.headers);
+        const body = parseForm($request.body || "");
+        const auth = $.getjson(CK_AUTH, {}) || {};
+        let touched = false;
+
+        if (/accessToken\/refresh/.test(url)) {
+            if (body.refreshToken) (auth.refreshToken = body.refreshToken), (touched = true);
+            pick(auth, headers, "deviceId", "device_id");
+            pick(auth, headers, "deviceType", "device_type");
+            pick(auth, headers, "deviceOs", "device_os");
+            pick(auth, headers, "deviceOsVersion", "device_os_version");
+            pick(auth, headers, "deviceName", "device_name");
+            pick(auth, headers, "appVersion", "app_version");
+            pick(auth, headers, "channel", "channel_name");
+            if (headers["token"]) auth.userToken = headers["token"];
+        } else if (/h5\/accessEntrance/.test(url)) {
+            if (body.phone) (auth.phone = body.phone), (touched = true);
+            if (body.userId) auth.userId = body.userId;
+            if (body.ownerId != null) auth.ownerId = body.ownerId;
+            if (headers["token"]) auth.userToken = headers["token"];
+        }
+
+        if (!touched && !auth.refreshToken) {
+            $.log("[WARN] 本次未抓到关键字段,请先杀进程冷启 App,再进积分签到页");
+            return;
+        }
+        $.setjson(auth, CK_AUTH);
+        const full = auth.refreshToken && auth.phone && auth.userId;
+        $.msg(
+            $.name,
+            full ? "✅ 驴充充 Cookie 获取成功" : "⏳ 驴充充 Cookie 部分获取",
+            full ? "可关掉 App,cron 自动签到" : "缺 " + missing(auth) + ",请冷启 App 并进积分签到页补全"
+        );
+    } catch (e) {
+        $.log(`[ERROR] Cookie 抓取异常: ${e}`);
+    }
+}
+
+function missing(auth) {
+    return [!auth.refreshToken && "refreshToken", !auth.phone && "phone", !auth.userId && "userId"]
+        .filter(Boolean)
+        .join("/");
+}
+
+function parseForm(str) {
+    const out = {};
+    String(str)
+        .split("&")
+        .forEach((kv) => {
+            if (!kv) return;
+            const i = kv.indexOf("=");
+            const k = i < 0 ? kv : kv.slice(0, i);
+            const v = i < 0 ? "" : kv.slice(i + 1);
+            try {
+                out[decodeURIComponent(k)] = decodeURIComponent(v);
+            } catch {
+                out[k] = v;
+            }
+        });
+    return out;
+}
+
+function pick(auth, headers, dstKey, srcKey) {
+    if (headers[srcKey]) auth[dstKey] = headers[srcKey];
+}
+
+function lowerKeys(obj) {
+    if (!obj) return {};
+    return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v]));
+}
+
+// ============ 入口 ============
+
+if (typeof $request !== "undefined") {
+    captureAuth();
+    $.done();
+} else {
+    (async () => {
+        await checkin();
+    })()
+        .catch((e) => {
+            $.messages.push(e.message || String(e));
+            $.logErr(e);
+        })
+        .finally(async () => {
+            await sendMsg($.messages.join("\n"));
+            $.done();
+        });
+}
 
 // prettier-ignore
 function Env(t,e){class s{constructor(t){this.env=t}send(t,e="GET"){t="string"==typeof t?{url:t}:t;let s=this.get;return"POST"===e&&(s=this.post),new Promise((e,a)=>{s.call(this,t,(t,s,r)=>{t?a(t):e(s)})})}get(t){return this.send.call(this.env,t)}post(t){return this.send.call(this.env,t,"POST")}}return new class{constructor(t,e){this.name=t,this.http=new s(this),this.data=null,this.dataFile="box.dat",this.logs=[],this.isMute=!1,this.isNeedRewrite=!1,this.logSeparator="\n",this.encoding="utf-8",this.startTime=(new Date).getTime(),Object.assign(this,e),this.log("",`🔔${this.name}, 开始!`)}getEnv(){return"undefined"!=typeof $environment&&$environment["surge-version"]?"Surge":"undefined"!=typeof $environment&&$environment["stash-version"]?"Stash":"undefined"!=typeof module&&module.exports?"Node.js":"undefined"!=typeof $task?"Quantumult X":"undefined"!=typeof $loon?"Loon":"undefined"!=typeof $rocket?"Shadowrocket":void 0}isNode(){return"Node.js"===this.getEnv()}isQuanX(){return"Quantumult X"===this.getEnv()}isSurge(){return"Surge"===this.getEnv()}isLoon(){return"Loon"===this.getEnv()}isShadowrocket(){return"Shadowrocket"===this.getEnv()}isStash(){return"Stash"===this.getEnv()}toObj(t,e=null){try{return JSON.parse(t)}catch{return e}}toStr(t,e=null){try{return JSON.stringify(t)}catch{return e}}getjson(t,e){let s=e;const a=this.getdata(t);if(a)try{s=JSON.parse(this.getdata(t))}catch{}return s}setjson(t,e){try{return this.setdata(JSON.stringify(t),e)}catch{return!1}}getScript(t){return new Promise(e=>{this.get({url:t},(t,s,a)=>e(a))})}loaddata(){if(!this.isNode())return{};{this.fs=this.fs?this.fs:require("fs"),this.path=this.path?this.path:require("path");const t=this.path.resolve(this.dataFile),e=this.path.resolve(process.cwd(),this.dataFile),s=this.fs.existsSync(t),a=!s&&this.fs.existsSync(e);if(!s&&!a)return{};{const a=s?t:e;try{return JSON.parse(this.fs.readFileSync(a))}catch(t){return{}}}}}writedata(){if(this.isNode()){this.fs=this.fs?this.fs:require("fs"),this.path=this.path?this.path:require("path");const t=this.path.resolve(this.dataFile),e=this.path.resolve(process.cwd(),this.dataFile),s=this.fs.existsSync(t),a=!s&&this.fs.existsSync(e),r=JSON.stringify(this.data);s?this.fs.writeFileSync(t,r):a?this.fs.writeFileSync(e,r):this.fs.writeFileSync(t,r)}}getdata(t){return this.getval(t)}setdata(t,e){return this.setval(t,e)}getval(t){switch(this.getEnv()){case"Surge":case"Loon":case"Stash":case"Shadowrocket":return $persistentStore.read(t);case"Quantumult X":return $prefs.valueForKey(t);case"Node.js":return this.data=this.loaddata(),this.data[t];default:return this.data&&this.data[t]||null}}setval(t,e){switch(this.getEnv()){case"Surge":case"Loon":case"Stash":case"Shadowrocket":return $persistentStore.write(t,e);case"Quantumult X":return $prefs.setValueForKey(t,e);case"Node.js":return this.data=this.loaddata(),this.data[e]=t,this.writedata(),!0;default:return this.data&&this.data[e]||null}}initGotEnv(t){this.got=this.got?this.got:require("got"),this.cktough=this.cktough?this.cktough:require("tough-cookie"),this.ckjar=this.ckjar?this.ckjar:new this.cktough.CookieJar,t&&(t.headers=t.headers?t.headers:{},void 0===t.headers.Cookie&&void 0===t.cookieJar&&(t.cookieJar=this.ckjar))}get(t,e=(()=>{})){switch(t.headers&&(delete t.headers["Content-Type"],delete t.headers["Content-Length"],delete t.headers["content-type"],delete t.headers["content-length"]),t.params&&(t.url+="?"+this.queryStr(t.params)),this.getEnv()){case"Surge":case"Loon":case"Stash":case"Shadowrocket":default:this.isSurge()&&this.isNeedRewrite&&(t.headers=t.headers||{},Object.assign(t.headers,{"X-Surge-Skip-Scripting":!1})),$httpClient.get(t,(t,s,a)=>{!t&&s&&(s.body=a,s.statusCode=s.status?s.status:s.statusCode,s.status=s.statusCode),e(t,s,a)});break;case"Quantumult X":this.isNeedRewrite&&(t.opts=t.opts||{},Object.assign(t.opts,{hints:!1})),$task.fetch(t).then(t=>{const{statusCode:s,statusCode:a,headers:r,body:i,bodyBytes:o}=t;e(null,{status:s,statusCode:a,headers:r,body:i,bodyBytes:o},i,o)},t=>e(t&&t.error||"UndefinedError"));break;case"Node.js":let s=require("iconv-lite");this.initGotEnv(t),this.got(t).on("redirect",(t,e)=>{try{if(t.headers["set-cookie"]){const s=t.headers["set-cookie"].map(this.cktough.Cookie.parse).toString();s&&this.ckjar.setCookieSync(s,null),e.cookieJar=this.ckjar}}catch(t){this.logErr(t)}}).then(t=>{const{statusCode:a,statusCode:r,headers:i,rawBody:o}=t,n=s.decode(o,this.encoding);e(null,{status:a,statusCode:r,headers:i,rawBody:o,body:n},n)},t=>{const{message:a,response:r}=t;e(a,r,r&&s.decode(r.rawBody,this.encoding))})}}post(t,e=(()=>{})){const s=t.method?t.method.toLocaleLowerCase():"post";switch(t.body&&t.headers&&!t.headers["Content-Type"]&&!t.headers["content-type"]&&(t.headers["content-type"]="application/x-www-form-urlencoded"),t.headers&&(delete t.headers["Content-Length"],delete t.headers["content-length"]),this.getEnv()){case"Surge":case"Loon":case"Stash":case"Shadowrocket":default:this.isSurge()&&this.isNeedRewrite&&(t.headers=t.headers||{},Object.assign(t.headers,{"X-Surge-Skip-Scripting":!1})),$httpClient[s](t,(t,s,a)=>{!t&&s&&(s.body=a,s.statusCode=s.status?s.status:s.statusCode,s.status=s.statusCode),e(t,s,a)});break;case"Quantumult X":t.method=s,this.isNeedRewrite&&(t.opts=t.opts||{},Object.assign(t.opts,{hints:!1})),$task.fetch(t).then(t=>{const{statusCode:s,statusCode:a,headers:r,body:i,bodyBytes:o}=t;e(null,{status:s,statusCode:a,headers:r,body:i,bodyBytes:o},i,o)},t=>e(t&&t.error||"UndefinedError"));break;case"Node.js":let a=require("iconv-lite");this.initGotEnv(t);const{url:r,...i}=t;this.got[s](r,i).then(t=>{const{statusCode:s,statusCode:r,headers:i,rawBody:o}=t,n=a.decode(o,this.encoding);e(null,{status:s,statusCode:r,headers:i,rawBody:o,body:n},n)},t=>{const{message:s,response:r}=t;e(s,r,r&&a.decode(r.rawBody,this.encoding))})}}time(t,e=null){const s=e?new Date(e):new Date;let a={"M+":s.getMonth()+1,"d+":s.getDate(),"H+":s.getHours(),"m+":s.getMinutes(),"s+":s.getSeconds(),"q+":Math.floor((s.getMonth()+3)/3),S:s.getMilliseconds()};/(y+)/.test(t)&&(t=t.replace(RegExp.$1,(s.getFullYear()+"").substr(4-RegExp.$1.length)));for(let e in a)new RegExp("("+e+")").test(t)&&(t=t.replace(RegExp.$1,1==RegExp.$1.length?a[e]:("00"+a[e]).substr((""+a[e]).length)));return t}queryStr(t){let e="";for(const s in t){let a=t[s];null!=a&&""!==a&&("object"==typeof a&&(a=JSON.stringify(a)),e+=`${s}=${a}&`)}return e=e.substring(0,e.length-1),e}msg(e=t,s="",a="",r){const i=t=>{switch(typeof t){case void 0:return t;case"string":switch(this.getEnv()){case"Surge":case"Stash":default:return{url:t};case"Loon":case"Shadowrocket":return t;case"Quantumult X":return{"open-url":t};case"Node.js":return}case"object":switch(this.getEnv()){case"Surge":case"Stash":case"Shadowrocket":default:{let e=t.url||t.openUrl||t["open-url"];return{url:e}}case"Loon":{let e=t.openUrl||t.url||t["open-url"],s=t.mediaUrl||t["media-url"];return{openUrl:e,mediaUrl:s}}case"Quantumult X":{let e=t["open-url"]||t.url||t.openUrl,s=t["media-url"]||t.mediaUrl,a=t["update-pasteboard"]||t.updatePasteboard;return{"open-url":e,"media-url":s,"update-pasteboard":a}}case"Node.js":return}default:return}};if(!this.isMute)switch(this.getEnv()){case"Surge":case"Loon":case"Stash":case"Shadowrocket":default:$notification.post(e,s,a,i(r));break;case"Quantumult X":$notify(e,s,a,i(r));break;case"Node.js":}if(!this.isMuteLog){let t=["","==============📣系统通知📣=============="];t.push(e),s&&t.push(s),a&&t.push(a),console.log(t.join("\n")),this.logs=this.logs.concat(t)}}log(...t){t.length>0&&(this.logs=[...this.logs,...t]),console.log(t.join(this.logSeparator))}logErr(t,e){switch(this.getEnv()){case"Surge":case"Loon":case"Stash":case"Shadowrocket":case"Quantumult X":default:this.log("",`❗️${this.name}, 错误!`,t);break;case"Node.js":this.log("",`❗️${this.name}, 错误!`,t.stack)}}wait(t){return new Promise(e=>setTimeout(e,t))}done(t={}){const e=(new Date).getTime(),s=(e-this.startTime)/1e3;switch(this.log("",`🔔${this.name}, 结束! 🕛 ${s} 秒`),this.log(),this.getEnv()){case"Surge":case"Loon":case"Stash":case"Shadowrocket":case"Quantumult X":default:$done(t);break;case"Node.js":process.exit(1)}}}(t,e)}

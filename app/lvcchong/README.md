@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lvcchong.png" width="80" alt="驴充充" />
+</p>
+
 # 驴充充
 
 > 🧪 **待验证** · 依赖「服务端不认 JWT 短过期、按 jti 记账」这一实测行为,跨天能否续命待长期观察(见下)
@@ -6,19 +10,18 @@
 
 ## 文件
 
-- `lvcchong.js` — cron 签到主体
-- `lvcchong.cookie.js` — Cookie 抓取脚本(http-request 重写,抓 `refreshToken` 等入库)
+- `lvcchong.js` — 单脚本架构,既是重写抓 Cookie 也是 cron 签到,根据 `$request` 是否存在区分
 
 ## 使用步骤
 
-1. 按下方平台配置,开启重写脚本 + cron
+1. 按下方对应平台配置,开启重写脚本 + cron
 2. Loon 开抓包,**杀掉驴充充 App 重新冷启动**(触发 `/accessToken/refresh` 拿 `refreshToken`)
 3. 进入「我的 → 积分中心 / 签到」页(触发 `/h5/accessEntrance` 拿 `phone`+`userId`)
 4. 收到 `✅ 驴充充 Cookie 获取成功` 通知即抓取成功
 5. **抓完关掉 App**(避免 App 继续把 `refreshToken` 滚到新值,作废脚本手里的那个)
 6. cron 自动签到
 
-> ⚠️ 只开着进页面、不冷启,通常抓不到 `refreshToken`(它只在 App 冷启动/ token 过期时才发)。必须**杀进程重开**。
+> ⚠️ 只开着进页面、不冷启,通常抓不到 `refreshToken`(它只在 App 冷启动 / token 过期时才发)。必须**杀进程重开**。
 
 ## Loon
 
@@ -27,9 +30,9 @@
 hostname = appapi.lvcchong.com
 
 [Script]
-http-request ^https:\/\/appapi\.lvcchong\.com\/(accessToken\/refresh|appBaseApi\/h5\/accessEntrance) tag=驴充充 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.cookie.js, requires-body=true
+http-request ^https:\/\/appapi\.lvcchong\.com\/(accessToken\/refresh|appBaseApi\/h5\/accessEntrance) tag=驴充充 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lvcchong.png
 
-cron "20 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.js, tag=驴充充签到, enable=true
+cron "20 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.js, tag=驴充充签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lvcchong.png, enable=true
 ```
 
 ## Surge
@@ -39,9 +42,9 @@ cron "20 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/papercli
 hostname = appapi.lvcchong.com
 
 [Script]
-驴充充 Cookie = type=http-request,pattern=^https:\/\/appapi\.lvcchong\.com\/(accessToken\/refresh|appBaseApi\/h5\/accessEntrance),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.cookie.js
+驴充充 Cookie = type=http-request,pattern=^https:\/\/appapi\.lvcchong\.com\/(accessToken\/refresh|appBaseApi\/h5\/accessEntrance),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lvcchong.png
 
-驴充充签到 = type=cron,cronexp=20 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.js
+驴充充签到 = type=cron,cronexp=20 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lvcchong.png
 ```
 
 ## Quantumult X
@@ -51,10 +54,10 @@ hostname = appapi.lvcchong.com
 hostname = appapi.lvcchong.com
 
 [rewrite_local]
-^https:\/\/appapi\.lvcchong\.com\/(accessToken\/refresh|appBaseApi\/h5\/accessEntrance) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.cookie.js
+^https:\/\/appapi\.lvcchong\.com\/(accessToken\/refresh|appBaseApi\/h5\/accessEntrance) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.js
 
 [task_local]
-20 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.js, tag=驴充充签到, enabled=true
+20 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.js, tag=驴充充签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lvcchong.png, enabled=true
 ```
 
 ## Stash
