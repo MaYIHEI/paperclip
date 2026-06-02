@@ -39,6 +39,10 @@ async function checkin() {
         throw new Error("未配置凭证,请先开抓包冷启驴充充 App 并进「积分中心/签到」页");
     }
 
+    // 标尺:记录这个 refreshToken 距签发多久(失败时一并打出来,用来量服务端宽限窗口)
+    const ageMin = tokenAgeMin(auth.refreshToken);
+    $.log(`[INFO] 当前 refreshToken 距签发 ${ageMin == null ? "?" : ageMin} 分钟`);
+
     // 1) refreshToken 换新 token。返回里带【新的】refreshToken(滚动),必须写回,否则下次拿旧的就断链。
     const rf = await postForm(
         "/accessToken/refresh/",
@@ -58,7 +62,8 @@ async function checkin() {
     debug(rf, "accessToken/refresh");
     if (!rf || rf.code !== 200 || !rf.data || !rf.data.userToken) {
         throw new Error(
-            `换 token 失败,refreshToken 已失效: ${rf ? rf.message || $.toStr(rf) : "无响应"}\n` +
+            `换 token 失败,refreshToken 失效(距签发 ${ageMin == null ? "?" : ageMin} 分钟): ` +
+                `${rf ? rf.message || $.toStr(rf) : "无响应"}\n` +
                 "👉 重新开抓包冷启 App 进「积分中心/签到」页重抓 Cookie"
         );
     }
@@ -129,6 +134,32 @@ function postForm(path, form, extraHeaders) {
             }
         });
     });
+}
+
+// 解 JWT payload 的 iat,算出"距签发多少分钟"。自带 base64url 解码,不依赖 atob(Loon/QX 不一定有)。
+function tokenAgeMin(token) {
+    try {
+        const seg = String(token).split(".")[1];
+        if (!seg) return null;
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        const s = seg.replace(/-/g, "+").replace(/_/g, "/");
+        let out = "",
+            bits = 0,
+            buf = 0;
+        for (const c of s) {
+            const i = chars.indexOf(c);
+            if (i < 0) continue;
+            buf = (buf << 6) | i;
+            bits += 6;
+            if (bits >= 8) {
+                bits -= 8;
+                out += String.fromCharCode((buf >> bits) & 0xff);
+            }
+        }
+        const p = JSON.parse(out);
+        if (p && p.iat) return Math.round(Date.now() / 1000 - p.iat);
+    } catch {}
+    return null;
 }
 
 function buildForm(obj) {
