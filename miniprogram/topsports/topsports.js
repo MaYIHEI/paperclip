@@ -52,7 +52,7 @@
 
 const $ = new Env("滔搏");
 
-const SCRIPT_VERSION = "2026-06-02.4"; // 改一次 +1,跑日志可见,确认是否拉到最新版
+const SCRIPT_VERSION = "2026-06-02.5"; // 改一次 +1,跑日志可见,确认是否拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_COOKIE = "topsports_cookie"; // 完整 Cookie(含 Authorization=UUID, memberId)
@@ -129,6 +129,9 @@ async function checkin() {
     }
     const activityId = actInfo.data.activityId;
     $.log(`[INFO] activityId=${activityId}`);
+
+    // [临时诊断] 打 Authorization 末位(脱敏),用于对照重抓前后是否轮换。定位后删除。
+    $.log(`[DIAG] Authorization …${(getCookieVal("Authorization") || "").slice(-6)}`);
 
     // 2) 激活服务端会话:小程序进页面后、doSign 前会先调 getTimeStamp + loginStatus,
     //    doSign 要求这个会话状态"新鲜"。隔一段时间不激活直接 doSign 即 50010「权限不足」
