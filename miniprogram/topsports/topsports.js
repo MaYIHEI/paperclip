@@ -157,6 +157,13 @@ function request(method, path, body) {
                 resolve(null);
                 return;
             }
+            // [临时诊断] 看服务端响应是否在刷新短时效 cookie(尤其阿里云 acw_tc),
+            // 是的话说明脚本该回写 set-cookie 再发 doSign。只打字段名,脱敏。定位后删除。
+            const sc = resp && resp.headers && (resp.headers["Set-Cookie"] || resp.headers["set-cookie"]);
+            if (sc) {
+                const s = String(sc);
+                $.log(`[DIAG] ${path} set-cookie 含: acw_tc=${/acw_tc=/i.test(s)} Authorization=${/Authorization=/i.test(s)} QZ_SID=${/QZ_SID=/i.test(s)}`);
+            }
             try {
                 resolve(typeof data === "string" ? JSON.parse(data) : data);
             } catch (e) {
