@@ -115,6 +115,7 @@ function postForm(path, form, extraHeaders) {
                 "content-type": "application/x-www-form-urlencoded; charset=utf-8",
                 accept: "*/*",
                 "accept-language": "zh-CN,zh-Hans;q=0.9",
+                "x-lcc-self": "1", // 暗号:抓取脚本看到它就跳过,避免截到自己的流量污染存的 token
             },
             extraHeaders || {}
         );
@@ -198,6 +199,12 @@ async function sendMsg(message) {
 function captureAuth() {
     try {
         if ($request && $request.method === "OPTIONS") return;
+        const reqHeaders = lowerKeys(($request && $request.headers) || {});
+        // 跳过 cron 脚本自己发的请求(带暗号),否则会把 cron 刚存的新 token 覆盖成 accessEntrance 里的旧值
+        if (reqHeaders["x-lcc-self"]) {
+            $.log("[capture] 跳过脚本自身请求");
+            return;
+        }
         const url = ($request && $request.url) || "";
         const isResp = typeof $response !== "undefined" && $response;
         const auth = $.getjson(CK_AUTH, {}) || {};
@@ -209,7 +216,17 @@ function captureAuth() {
             try {
                 data = (JSON.parse($response.body || "{}") || {}).data || {};
             } catch {}
-            if (data && data.refreshToken) (auth.refreshToken = data.refreshToken), got.push("refreshToken");
+            if (data && data.refreshToken) {
+                // 只存更新的:新 token 年龄 ≤ 已存的才覆盖,防止 accessEntrance 等返回的旧 token 倒灌
+                const newAge = tokenAgeMin(data.refreshToken);
+                const oldAge = tokenAgeMin(auth.refreshToken);
+                if (oldAge == null || newAge == null || newAge <= oldAge) {
+                    auth.refreshToken = data.refreshToken;
+                    got.push("refreshToken");
+                } else {
+                    $.log(`[capture] 忽略更旧的 refreshToken(新${newAge}分 > 存${oldAge}分)`);
+                }
+            }
             if (data && data.userToken) auth.userToken = data.userToken;
             if (data && data.userId) auth.userId = data.userId;
         } else if (typeof $request !== "undefined") {
