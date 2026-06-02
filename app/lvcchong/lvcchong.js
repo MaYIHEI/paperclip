@@ -168,17 +168,17 @@ function captureAuth() {
     try {
         if ($request && $request.method === "OPTIONS") return;
         const url = ($request && $request.url) || "";
+        const isResp = typeof $response !== "undefined" && $response;
         const auth = $.getjson(CK_AUTH, {}) || {};
-        const wasFull = auth.refreshToken && auth.phone && auth.userId;
-        let touched = false;
+        let got = [];
 
-        if (typeof $response !== "undefined" && $response) {
+        if (isResp) {
             // 响应模式:取服务端【新签发】的 refreshToken(请求体里的旧值用过即废,不能存)
             let data = {};
             try {
                 data = (JSON.parse($response.body || "{}") || {}).data || {};
             } catch {}
-            if (data && data.refreshToken) (auth.refreshToken = data.refreshToken), (touched = true);
+            if (data && data.refreshToken) (auth.refreshToken = data.refreshToken), got.push("refreshToken");
             if (data && data.userToken) auth.userToken = data.userToken;
             if (data && data.userId) auth.userId = data.userId;
         } else if (typeof $request !== "undefined") {
@@ -186,11 +186,11 @@ function captureAuth() {
             const headers = lowerKeys($request.headers);
             const body = parseForm($request.body || "");
             if (/h5\/accessEntrance/.test(url)) {
-                if (body.phone) (auth.phone = body.phone), (touched = true);
+                if (body.phone) (auth.phone = body.phone), got.push("phone");
                 if (body.userId) auth.userId = body.userId;
                 if (body.ownerId != null) auth.ownerId = body.ownerId;
             }
-            if (/accessToken\/refresh/.test(url)) {
+            if (/accessToken\/refresh/.test(url) && headers["device_id"]) {
                 pick(auth, headers, "deviceId", "device_id");
                 pick(auth, headers, "deviceType", "device_type");
                 pick(auth, headers, "deviceOs", "device_os");
@@ -198,19 +198,25 @@ function captureAuth() {
                 pick(auth, headers, "deviceName", "device_name");
                 pick(auth, headers, "appVersion", "app_version");
                 pick(auth, headers, "channel", "channel_name");
+                got.push("device");
             }
         }
 
-        if (!touched) return;
+        // 始终打一行日志,确认脚本被触发了(没反应时先看 Loon 日志有没有这行)
+        const ep = url.split("?")[0].split("/").pop();
+        $.log(`[capture] ${isResp ? "resp" : "req"} ${ep} got=[${got.join(",") || "none"}]`);
+        if (!got.length) return;
         $.setjson(auth, CK_AUTH);
 
+        // 节流通知(12 秒一次),避免 App 每 30 秒刷新就弹一条;但保证一定有反馈
+        const last = +($.getdata("lvcchong_notify_ts") || 0);
+        if (Date.now() - last < 12000) return;
+        $.setdata(String(Date.now()), "lvcchong_notify_ts");
         const full = auth.refreshToken && auth.phone && auth.userId;
-        // 只在「首次集齐」时通知一次;之后 refreshToken 随 App 滚动静默更新(最后一个最新),
-        // 避免每 30 秒一次刷新就弹一条
-        if (full && !wasFull) {
-            $.msg($.name, "✅ 驴充充 Cookie 获取成功", "再停留 2 秒让它存到最新,然后关掉 App");
-        } else if (!full) {
-            $.log(`[INFO] Cookie 部分获取,还缺: ${missing(auth)}`);
+        if (full) {
+            $.msg($.name, "✅ 驴充充 Cookie 已更新", "停 2 秒让它存到最新,然后立刻关 App");
+        } else {
+            $.msg($.name, "⏳ 驴充充 Cookie 还缺 " + missing(auth), "杀进程冷启 App + 进积分签到页");
         }
     } catch (e) {
         $.log(`[ERROR] Cookie 抓取异常: ${e}`);
@@ -252,7 +258,7 @@ function lowerKeys(obj) {
 
 // ============ 入口 ============
 
-if (typeof $request !== "undefined") {
+if (typeof $request !== "undefined" || typeof $response !== "undefined") {
     captureAuth();
     $.done();
 } else {
