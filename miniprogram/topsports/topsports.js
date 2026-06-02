@@ -126,7 +126,13 @@ async function checkin() {
     const activityId = actInfo.data.activityId;
     $.log(`[INFO] activityId=${activityId}`);
 
-    // 2) 签到
+    // 2) 激活服务端会话:小程序进页面后、doSign 前会先调 getTimeStamp + loginStatus,
+    //    doSign 要求这个会话状态"新鲜"。隔一段时间不激活直接 doSign 即 50010「权限不足」
+    //    (acw_tc 已刷新仍 50010 → 卡的是服务端会话窗口,不是 cookie)。这里重放这两个激活调用。
+    await request("GET", "/h5/act/signIn/getTimeStamp", null);
+    await request("GET", "/h5/act/loginStatus", null);
+
+    // 3) 签到
     const res = await request("POST", "/h5/act/signIn/doSign", { activityId, brandCode: BRAND });
     debug(res, "doSign");
 

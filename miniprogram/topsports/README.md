@@ -90,7 +90,8 @@ script-providers:
 |---|---|
 | 2026-05-31 | 初版,Cookie 鉴权,activityId 走 actInfo 动态获取,brandCode=TS |
 | 2026-06-01 | ~~doSign 50010 修复:补 `version` + `sec-fetch-*` 请求头~~(假设有误,见下条) |
-| 2026-06-02 | **doSign 50010 真因定位:`acw_tc` 过期**。acw_tc 是阿里云 WAF cookie(`Max-Age=1800`/30 分钟、HttpOnly),只由会话入口 `/static/setCookieApplets.html` 下发,签到接口不刷新。cron 用旧 acw_tc,过 30 分钟即被 WAF 拦。修复:签到前先重放 setCookieApplets 入口拿新 acw_tc(`refreshAcwTc()`) |
+| 2026-06-02 | doSign 50010 第一刀:补 `refreshAcwTc()` 刷新过期 acw_tc(阿里云 WAF cookie,Max-Age=1800/30分钟,由 `/static/setCookieApplets.html` 下发)。acw_tc 已刷新但仍 50010,**证明 acw_tc 非唯一原因** |
+| 2026-06-02 | doSign 50010 第二刀(假设验证中):请求内容在"刚抓完成功"与"过段时间失败"两次间完全相同,唯一变量是时间 → 卡服务端会话窗口。doSign 前补 `getTimeStamp` + `loginStatus` 两个激活调用(复刻小程序进页面流程) |
 
 ## doSign 50010 排查结论(抓包还原)
 
