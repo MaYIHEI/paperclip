@@ -89,11 +89,21 @@ script-providers:
 | 日期 | 变更 |
 |---|---|
 | 2026-05-31 | 初版,Cookie 鉴权,activityId 走 actInfo 动态获取,brandCode=TS |
-| 2026-06-01 | doSign 50010 修复:补 `version` + `sec-fetch-*` 请求头(actInfo 宽容、doSign 严格,缺头即「小程序权限不足」) |
+| 2026-06-01 | ~~doSign 50010 修复:补 `version` + `sec-fetch-*` 请求头~~(假设有误,见下条) |
+| 2026-06-02 | **doSign 50010 真因定位:`acw_tc` 过期**。acw_tc 是阿里云 WAF cookie(`Max-Age=1800`/30 分钟、HttpOnly),只由会话入口 `/static/setCookieApplets.html` 下发,签到接口不刷新。cron 用旧 acw_tc,过 30 分钟即被 WAF 拦。修复:签到前先重放 setCookieApplets 入口拿新 acw_tc(`refreshAcwTc()`) |
+
+## doSign 50010 排查结论(抓包还原)
+
+小程序进「每日中心」页的时序:**先** GET `/static/setCookieApplets.html?url=...&Authorization=..&appletsSource=..&memberId=..&version=..` → 响应 `Set-Cookie: acw_tc=..;Max-Age=1800` → **再**走 actInfo / doSign。
+- `acw_tc` 30 分钟过期,且**只有这个入口接口会下发**,actInfo/doSign 响应都不刷新它
+- 旧 acw_tc 失效后:`actInfo` 校验宽松仍能拿到 activityId,`doSign` 走 WAF 严格校验 → 50010「小程序权限不足」
+- 所以现象是「刚抓完成功、过 30 分钟只挂 doSign」
+- `refreshAcwTc()` 用 cookie 里已有的 Authorization/appletsSource/memberId/version 重放该入口,拿新 acw_tc 回写
 
 ## 已知限制
 
 - 单脚本架构(`$request` 是否存在区分抓 cookie / cron)
 - `Authorization` 为 UUID 会话票据,过期后 `actInfo` 失败、脚本提示「Cookie 失效」,需重新进小程序「每日中心」页重抓
-- doSign 需 `version` 请求头(从 cookie 的 `version=` 取,兜底 4.15.1)+ 完整 cookie(含 `appletsSource`/`memberId`,靠 normalizeCookie 拆脏前缀);**修后必须重进每日中心页重抓覆盖旧脏 cookie**
+- **依赖代理内核把 `setCookieApplets.html` 响应的 `Set-Cookie`(HttpOnly)暴露给脚本**;若内核屏蔽,`refreshAcwTc()` 拿不到新 acw_tc,日志会 WARN,此时只能临近签到时间重抓 cookie
+- 完整 cookie 需含 `appletsSource`/`memberId`(靠 normalizeCookie 拆脏前缀)
 - `brandCode` 固定 `TS`

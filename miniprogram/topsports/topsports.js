@@ -91,9 +91,10 @@ function getCookie() {
 // ============ 业务 ============
 
 function commonHeaders() {
-    // doSign 严格校验完整请求头:缺 version / sec-fetch-* 会报 50010「小程序权限不足」
-    // (actInfo 宽容所以能过)。version 从 cookie 里取,app 升版自动跟,兜底 4.15.1。
-    const version = (/(?:^|; )version=([^;]+)/.exec($.cookie || "") || [])[1] || "4.15.1";
+    // 对齐小程序真实请求头(version + sec-fetch-* 等),与浏览器一致即可。
+    // 注:doSign 50010 的真正原因是 acw_tc 过期(见 refreshAcwTc),不是这些头。
+    // version 从 cookie 里取,app 升版自动跟,兜底 4.15.1。
+    const version = getCookieVal("version") || "4.15.1";
     return {
         accept: "application/json, text/plain, */*",
         "content-type": "application/json",
@@ -112,9 +113,9 @@ function commonHeaders() {
 }
 
 async function checkin() {
-    // [临时诊断] 定位 doSign 50010:只打 cookie 的 key 名(不打值,脱敏)+ version 取值,
-    // 确认 appletsSource/memberId/version 是否真的在 cookie 里。定位后删除本段。
-    diagCookie();
+    // 0) 先刷新 acw_tc(详见 refreshAcwTc 注释):doSign 受阿里云 WAF 保护,
+    //    需有效 acw_tc,而它只由会话入口下发、签到接口不刷新,cron 旧值过 30 分钟即失效。
+    await refreshAcwTc();
 
     // 1) 取活动信息(动态 activityId)
     const actInfo = await request("GET", `/h5/act/signIn/actInfo?brandCode=${BRAND}`, null);
@@ -157,13 +158,6 @@ function request(method, path, body) {
                 resolve(null);
                 return;
             }
-            // [临时诊断] 看服务端响应是否在刷新短时效 cookie(尤其阿里云 acw_tc),
-            // 是的话说明脚本该回写 set-cookie 再发 doSign。只打字段名,脱敏。定位后删除。
-            const sc = resp && resp.headers && (resp.headers["Set-Cookie"] || resp.headers["set-cookie"]);
-            if (sc) {
-                const s = String(sc);
-                $.log(`[DIAG] ${path} set-cookie 含: acw_tc=${/acw_tc=/i.test(s)} Authorization=${/Authorization=/i.test(s)} QZ_SID=${/QZ_SID=/i.test(s)}`);
-            }
             try {
                 resolve(typeof data === "string" ? JSON.parse(data) : data);
             } catch (e) {
@@ -174,15 +168,71 @@ function request(method, path, body) {
     });
 }
 
+// ============ acw_tc 刷新 ============
+
+// doSign 受阿里云 WAF 保护,必须带有效 acw_tc(Set-Cookie 下发,Max-Age=1800/30 分钟、HttpOnly)。
+// 关键:acw_tc 只由会话入口 /static/setCookieApplets.html 下发,签到接口本身不刷新它。
+// 所以小程序每次进「每日中心」页都先请求这个入口拿新 acw_tc;而 cron 用的是抓包时存下的旧 acw_tc,
+// 过 30 分钟即失效 → doSign 被 WAF 拦 50010「权限不足」(actInfo 校验宽松仍能过,所以只挂 doSign)。
+// 这里在签到前重放该入口请求,拿新 acw_tc 回写进 $.cookie。
+function refreshAcwTc() {
+    return new Promise((resolve) => {
+        const auth = getCookieVal("Authorization");
+        const src = getCookieVal("appletsSource");
+        const mid = getCookieVal("memberId");
+        const ver = getCookieVal("version") || "4.15.1";
+        if (!auth) {
+            $.log("[WARN] cookie 缺 Authorization,无法刷新 acw_tc");
+            return resolve(false);
+        }
+        const landing = encodeURIComponent(`${HOST}/m/dailycenter?brandCode=${BRAND}&share=true&minienv=1`);
+        const url =
+            `${HOST}/static/setCookieApplets.html?url=${landing}` +
+            `&Authorization=${auth}&appletsSource=${src}&memberId=${mid}&version=${ver}`;
+        // 不带旧 acw_tc 请求,逼 WAF 重新下发(WAF 在 acw_tc 缺失/过期时才 Set-Cookie)
+        const ckNoAcw = ($.cookie || "").replace(/(^|;\s*)acw_tc=[^;]*/i, "").replace(/^;\s*/, "");
+        const headers = {
+            accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "accept-language": "zh-CN,zh-Hans;q=0.9",
+            "User-Agent": UA,
+            Cookie: ckNoAcw,
+        };
+        $.get({ url, headers }, (err, resp) => {
+            if (err || !resp) {
+                $.log(`[WARN] 刷新 acw_tc 请求失败,doSign 可能仍 50010: ${$.toStr(err)}`);
+                return resolve(false);
+            }
+            const sc = resp.headers && (resp.headers["Set-Cookie"] || resp.headers["set-cookie"]);
+            const m = sc && /acw_tc=([^;,\s]+)/i.exec(String(sc));
+            if (m) {
+                setCookieVal("acw_tc", m[1]);
+                $.log(`[INFO] acw_tc 已刷新 (…${m[1].slice(-6)})`);
+                resolve(true);
+            } else {
+                // 代理内核可能未把 HttpOnly 的 Set-Cookie 暴露给脚本,此时无解,需重抓 cookie
+                $.log("[WARN] 响应未拿到 acw_tc(内核可能屏蔽 Set-Cookie),doSign 可能仍 50010");
+                resolve(false);
+            }
+        });
+    });
+}
+
 // ============ 工具 ============
 
-// [临时诊断] 列出 cookie 结构,定位 doSign 50010 用,定位后删除
-function diagCookie() {
-    const ck = $.cookie || "";
-    const keys = ck.split(/;\s*/).map((p) => p.split("=")[0].trim()).filter(Boolean);
-    const ver = (/(?:^|;\s*)version=([^;]+)/.exec(ck) || [])[1] || "(无→兜底4.15.1)";
-    $.log(`[DIAG] cookie keys: ${keys.join(", ")}`);
-    $.log(`[DIAG] version=${ver} | appletsSource=${/appletsSource=/i.test(ck)} memberId=${/memberId=/i.test(ck)} Authorization=${/Authorization=/i.test(ck)}`);
+// 从 $.cookie 取某字段值
+function getCookieVal(name) {
+    const m = new RegExp(`(?:^|;\\s*)${name}=([^;]+)`, "i").exec($.cookie || "");
+    return m ? m[1] : "";
+}
+
+// 替换或追加 $.cookie 里的某字段
+function setCookieVal(name, value) {
+    const re = new RegExp(`(^|;\\s*)${name}=[^;]*`, "i");
+    if (re.test($.cookie || "")) {
+        $.cookie = $.cookie.replace(re, `$1${name}=${value}`);
+    } else {
+        $.cookie = ($.cookie ? $.cookie + "; " : "") + `${name}=${value}`;
+    }
 }
 
 function lowerKeys(obj) {
