@@ -12,7 +12,7 @@
 
 const $ = new Env("特来电");
 
-const SCRIPT_VERSION = "2026-06-03.poc2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-03.poc3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_AUTH = "teld_auth"; // telda/teldb/ip/userId 等,抓取写入
@@ -140,6 +140,9 @@ async function checkin() {
         } else {
             $.messages.push(`✨ 今日已签到(连续 ${res.data.ContinuousDays} 天)`);
         }
+    } else if (res && (res.errcode === "12904" || /已打卡|已签/.test(res.errmsg || ""))) {
+        // 12904「今日已打卡」= 服务端已接受请求(WVER/telda 都对),只是今天签过了 → 视为成功
+        $.messages.push(`✨ 今日已打卡(${res.errmsg})`);
     } else if (!res) {
         $.messages.push(`${tag} ❌ 无响应(网络错误或被加速乐拦截)`);
     } else if (/token|登录|权限|未授权|unauthor|expire/i.test(JSON.stringify(res))) {
