@@ -2,22 +2,28 @@
  * 特来电 · 每日签到(「签到365天领手机」活动,H5 在小程序内)
  *
  * 单脚本: 有 $request 时抓 Cookie(进签到页触发 sgi.teld.cc 接口,抓 telda/teldb 等),
- *   无 $request 时 cron 打卡。签名 WVER = RSA-1024 PKCS#1v15(WTS) 十六进制,本地用 BigInt 算;
+ *   无 $request 时 cron:先用 teldb 刷新 telda(telda 仅 20 分钟),再打卡。
+ *   签名 WVER = RSA-1024 PKCS#1v15(WTS) 十六进制(BigInt);刷新用 AES-CBC(纯 JS,自带);
  *   Sign/t 为旧版遗留、当前官方 H5 已不发,服务端不校验,故省略。
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-03
+ * @Updated: 2026-06-04
  */
 
 const $ = new Env("特来电");
 
-const SCRIPT_VERSION = "2026-06-03.poc3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-04.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
-const CK_AUTH = "teld_auth"; // telda/teldb/ip/userId 等,抓取写入
+const CK_AUTH = "teld_auth"; // telda/teldb/ip/userId 等,抓取写入、刷新后自动滚动更新
 
 const API = "https://sgi.teld.cc/api/invoke";
+const REFRESH_URL = "https://sgi.teld.cn/api/Invoke?SID=UserAPI-WEBUI-SRefreshToken";
+
+// cajess 默认 AES key/iv(藏在 teld-thirdpart.min.js;注意 cajess 函数里 _a/_b 是诱饵,差一字符)
+const AES_KEY = "7fb498553e3c462988c3b9573692bd5f"; // 32 字节 → AES-256
+const AES_IV = "98d71fe589499967"; // 16 字节
 const UA =
     "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.74(0x18004a25) NetType/WIFI Language/zh_CN miniProgram/wx8d32c1a71ecd965d";
 
@@ -59,6 +65,245 @@ function buildWVER(wts) {
     return hex;
 }
 
+// ============ AES-CBC-Pkcs7(纯 JS,key/iv 为 UTF8 字符串,密文 base64)============
+// 已用抓包数据验证:加密匹配服务端 Data、解密能还原响应里的新 telda。
+
+const _SB = [],
+    _ISB = [];
+(function () {
+    const p = [],
+        l = [];
+    let x = 1;
+    for (let i = 0; i < 256; i++) {
+        p[i] = x;
+        x ^= (x << 1) ^ (x & 0x80 ? 0x11b : 0);
+        p[i] &= 0xff;
+    }
+    for (let i = 0; i < 255; i++) l[p[i]] = i;
+    let si = 0;
+    for (let i = 0; i < 256; i++) {
+        let xx = si ? p[255 - l[si]] : 0;
+        let t = xx;
+        for (let r = 0; r < 4; r++) {
+            t = ((t << 1) | (t >>> 7)) & 0xff;
+            xx ^= t;
+        }
+        xx = (xx ^ 0x63) & 0xff;
+        _SB[si] = xx;
+        _ISB[xx] = si;
+        si = si ? p[(l[si] + 1) % 255] : 1;
+    }
+})();
+const _RCON = [1, 2, 4, 8, 16, 32, 64, 128, 27, 54];
+function _xt(a) {
+    return ((a << 1) ^ (a & 0x80 ? 0x11b : 0)) & 0xff;
+}
+function _mul(a, b) {
+    let r = 0;
+    for (; b; b >>= 1) {
+        if (b & 1) r ^= a;
+        a = _xt(a);
+    }
+    return r;
+}
+function _keyExp(key) {
+    const Nk = key.length / 4,
+        Nr = Nk + 6,
+        w = [];
+    for (let i = 0; i < Nk; i++) w[i] = [key[4 * i], key[4 * i + 1], key[4 * i + 2], key[4 * i + 3]];
+    for (let i = Nk; i < 4 * (Nr + 1); i++) {
+        let t = w[i - 1].slice();
+        if (i % Nk === 0) {
+            t.push(t.shift());
+            t = t.map((b) => _SB[b]);
+            t[0] ^= _RCON[i / Nk - 1];
+        } else if (Nk > 6 && i % Nk === 4) {
+            t = t.map((b) => _SB[b]);
+        }
+        w[i] = w[i - Nk].map((b, j) => b ^ t[j]);
+    }
+    return { w, Nr };
+}
+function _enc(inp, ks) {
+    let s = [[], [], [], []];
+    for (let i = 0; i < 16; i++) s[i % 4][i >> 2] = inp[i];
+    const ar = (k) => {
+        for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) s[r][c] ^= k[c][r];
+    };
+    ar(ks.w.slice(0, 4));
+    for (let rd = 1; rd < ks.Nr; rd++) {
+        for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) s[r][c] = _SB[s[r][c]];
+        for (let r = 1; r < 4; r++) {
+            const row = s[r].slice();
+            for (let c = 0; c < 4; c++) s[r][c] = row[(c + r) % 4];
+        }
+        for (let c = 0; c < 4; c++) {
+            const a = [s[0][c], s[1][c], s[2][c], s[3][c]];
+            s[0][c] = _mul(a[0], 2) ^ _mul(a[1], 3) ^ a[2] ^ a[3];
+            s[1][c] = a[0] ^ _mul(a[1], 2) ^ _mul(a[2], 3) ^ a[3];
+            s[2][c] = a[0] ^ a[1] ^ _mul(a[2], 2) ^ _mul(a[3], 3);
+            s[3][c] = _mul(a[0], 3) ^ a[1] ^ a[2] ^ _mul(a[3], 2);
+        }
+        ar(ks.w.slice(4 * rd, 4 * rd + 4));
+    }
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) s[r][c] = _SB[s[r][c]];
+    for (let r = 1; r < 4; r++) {
+        const row = s[r].slice();
+        for (let c = 0; c < 4; c++) s[r][c] = row[(c + r) % 4];
+    }
+    ar(ks.w.slice(4 * ks.Nr, 4 * ks.Nr + 4));
+    const out = [];
+    for (let i = 0; i < 16; i++) out[i] = s[i % 4][i >> 2];
+    return out;
+}
+function _dec(inp, ks) {
+    let s = [[], [], [], []];
+    for (let i = 0; i < 16; i++) s[i % 4][i >> 2] = inp[i];
+    const ar = (k) => {
+        for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) s[r][c] ^= k[c][r];
+    };
+    ar(ks.w.slice(4 * ks.Nr, 4 * ks.Nr + 4));
+    for (let rd = ks.Nr - 1; rd > 0; rd--) {
+        for (let r = 1; r < 4; r++) {
+            const row = s[r].slice();
+            for (let c = 0; c < 4; c++) s[r][c] = row[(c - r + 4) % 4];
+        }
+        for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) s[r][c] = _ISB[s[r][c]];
+        ar(ks.w.slice(4 * rd, 4 * rd + 4));
+        for (let c = 0; c < 4; c++) {
+            const a = [s[0][c], s[1][c], s[2][c], s[3][c]];
+            s[0][c] = _mul(a[0], 14) ^ _mul(a[1], 11) ^ _mul(a[2], 13) ^ _mul(a[3], 9);
+            s[1][c] = _mul(a[0], 9) ^ _mul(a[1], 14) ^ _mul(a[2], 11) ^ _mul(a[3], 13);
+            s[2][c] = _mul(a[0], 13) ^ _mul(a[1], 9) ^ _mul(a[2], 14) ^ _mul(a[3], 11);
+            s[3][c] = _mul(a[0], 11) ^ _mul(a[1], 13) ^ _mul(a[2], 9) ^ _mul(a[3], 14);
+        }
+    }
+    for (let r = 1; r < 4; r++) {
+        const row = s[r].slice();
+        for (let c = 0; c < 4; c++) s[r][c] = row[(c - r + 4) % 4];
+    }
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) s[r][c] = _ISB[s[r][c]];
+    ar(ks.w.slice(0, 4));
+    const out = [];
+    for (let i = 0; i < 16; i++) out[i] = s[i % 4][i >> 2];
+    return out;
+}
+function utf8Bytes(str) {
+    const out = [];
+    for (const ch of unescape(encodeURIComponent(str))) out.push(ch.charCodeAt(0));
+    return out;
+}
+function bytesUtf8(b) {
+    let s = "";
+    for (const x of b) s += String.fromCharCode(x);
+    return decodeURIComponent(escape(s));
+}
+const _B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+function b64enc(bytes) {
+    let s = "";
+    for (let i = 0; i < bytes.length; i += 3) {
+        const b0 = bytes[i],
+            b1 = bytes[i + 1],
+            b2 = bytes[i + 2];
+        s += _B64[b0 >> 2] + _B64[((b0 & 3) << 4) | (b1 >> 4)];
+        s += i + 1 < bytes.length ? _B64[((b1 & 15) << 2) | (b2 >> 6)] : "=";
+        s += i + 2 < bytes.length ? _B64[b2 & 63] : "=";
+    }
+    return s;
+}
+function b64dec(str) {
+    const out = [];
+    let buf = 0,
+        bits = 0;
+    for (const c of str) {
+        if (c === "=") break;
+        const v = _B64.indexOf(c);
+        if (v < 0) continue;
+        buf = (buf << 6) | v;
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            out.push((buf >> bits) & 0xff);
+        }
+    }
+    return out;
+}
+function aesEncrypt(plain, keyStr, ivStr) {
+    const ks = _keyExp(utf8Bytes(keyStr));
+    const data = utf8Bytes(plain);
+    const pad = 16 - (data.length % 16);
+    for (let i = 0; i < pad; i++) data.push(pad);
+    let prev = utf8Bytes(ivStr);
+    const out = [];
+    for (let i = 0; i < data.length; i += 16) {
+        const blk = data.slice(i, i + 16).map((b, j) => b ^ prev[j]);
+        prev = _enc(blk, ks);
+        out.push(...prev);
+    }
+    return b64enc(out);
+}
+function aesDecrypt(b64, keyStr, ivStr) {
+    const ks = _keyExp(utf8Bytes(keyStr));
+    const data = b64dec(b64);
+    let prev = utf8Bytes(ivStr);
+    const out = [];
+    for (let i = 0; i < data.length; i += 16) {
+        const blk = data.slice(i, i + 16);
+        const d = _dec(blk, ks).map((b, j) => b ^ prev[j]);
+        prev = blk;
+        out.push(...d);
+    }
+    const pad = out[out.length - 1];
+    return bytesUtf8(out.slice(0, out.length - pad));
+}
+
+// ============ teldb 刷新 telda(telda 仅 20 分钟,cron 前先刷新)============
+
+function rand16() {
+    const c = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let s = "";
+    for (let i = 0; i < 16; i++) s += c[Math.floor(Math.random() * c.length)];
+    return s;
+}
+
+async function refresh(auth) {
+    if (!auth.teldb) throw new Error(`[${SCRIPT_VERSION}] 缺 teldb,无法刷新,请重进签到页抓取`);
+    const ip = auth.teldz || "0.0.0.0";
+    const param = JSON.stringify({ DeviceType: "WEB", ReqSource: 100, RefreshToken: auth.teldb, ClientIP: ip });
+    const uts = String(Math.round(Date.now() / 1000));
+    const uver = rand16(); // IV,任意 16 字符,服务端按发来的 UVER 解
+    const dataEnc = aesEncrypt(param, uts + "000000", uver);
+    const blob = JSON.stringify({ Data: dataEnc, UTS: uts, UVER: uver, UUID: Date.now() + "" + Math.floor(Math.random() * 1e10) });
+
+    const wts = Math.round(Date.now() / 1000);
+    const form = buildForm({
+        refreshToken: blob,
+        "X-Token": auth.telda || "",
+        WTS: wts,
+        WVER: buildWVER(wts),
+        WSDI: ip,
+        WRS: "WEB",
+        WCOI: "",
+        WCOL: "",
+        "Teld-RequestID": `${auth.userId || ""}_${Date.now()}_WRF`,
+        "Teld-RpcID": "0.1",
+    });
+
+    const res = await post(REFRESH_URL, form, auth);
+    if (!res || !res.data || typeof res.data !== "string") {
+        throw new Error(`[${SCRIPT_VERSION}] 刷新失败(teldb 可能过期): ${res ? JSON.stringify(res).slice(0, 150) : "无响应"}\n👉 重进签到页重抓 Cookie`);
+    }
+    // 解两层:外层默认 key/iv → {Data,UTS,UVER} → 内层 → {AccessToken,RefreshToken}
+    const outer = JSON.parse(aesDecrypt(res.data, AES_KEY, AES_IV));
+    const inner = JSON.parse(aesDecrypt(outer.Data, outer.UTS + "000000", outer.UVER));
+    if (!inner.AccessToken) throw new Error(`[${SCRIPT_VERSION}] 刷新响应无 AccessToken: ${JSON.stringify(inner).slice(0, 150)}`);
+    auth.telda = inner.AccessToken;
+    if (inner.RefreshToken) auth.teldb = inner.RefreshToken; // teldb 也滚动,写回
+    $.setjson(auth, CK_AUTH);
+    $.log(`[刷新] 新 telda 末8=${auth.telda.slice(-8)}  teldb 末8=${(auth.teldb || "").slice(-8)}`);
+    return auth;
+}
+
 // ============ Cookie 抓取(rewrite 模式)============
 
 // 进签到页时 sgi.teld.cc 的接口请求里带齐 telda/teldb/teldz(IP)/cna/__jsluid_s + body 里的 X-Token
@@ -72,13 +317,14 @@ function captureAuth() {
             return m ? m[1] : "";
         };
         const telda = get("telda");
-        if (!telda) {
-            $.log("[capture] 本次请求没有 telda,跳过");
+        const teldb = get("teldb");
+        if (!teldb) {
+            $.log("[capture] 本次请求没有 teldb(刷新必需),跳过");
             return;
         }
         const auth = {
             telda,
-            teldb: get("teldb"),
+            teldb, // ~15 天,刷新 telda 必需
             teldz: get("teldz"), // 公网 IP,作 WSDI
             cna: get("cna"),
             jsluid: get("__jsluid_s"),
@@ -94,28 +340,20 @@ function captureAuth() {
 // ============ 打卡 ============
 
 async function checkin() {
-    const auth = $.getjson(CK_AUTH, {});
-    if (!auth || !auth.telda) throw new Error(`[${SCRIPT_VERSION}] 未配置 Cookie,请先进特来电「签到365天」页抓取`);
+    let auth = $.getjson(CK_AUTH, {});
+    if (!auth || !auth.teldb) throw new Error(`[${SCRIPT_VERSION}] 未配置 Cookie(缺 teldb),请先进特来电「签到365天」页抓取`);
+
+    // telda 仅 20 分钟,cron 时早过期 → 先用 teldb(~15 天)刷新拿新 telda
+    $.log(`[检测] 版本=${SCRIPT_VERSION}  teldb末8=${auth.teldb.slice(-8)}  userId=${auth.userId || "空"}`);
+    auth = await refresh(auth);
 
     const wts = Math.round(Date.now() / 1000);
     const wver = buildWVER(wts);
     const ip = auth.teldz || "0.0.0.0";
     const rid = `${auth.userId || ""}_${Date.now()}_WRF`;
 
-    // telda 剩余有效期(诊断:失败时先看是不是 telda 过期了)
-    const teldaPayload = jwtPayload(auth.telda);
-    const teldaRemain =
-        teldaPayload && teldaPayload.exp ? Math.round((teldaPayload.exp - wts) / 60) : null;
-
-    // 逐项打印检测参数,失败时直接对照
-    $.log(`[检测] 版本=${SCRIPT_VERSION}`);
     $.log(`[检测] WTS=${wts}  WVER长度=${wver.length}(应256) 前16=${wver.slice(0, 16)}`);
-    $.log(`[检测] telda 末8=${(auth.telda || "").slice(-8)}  剩余=${teldaRemain == null ? "?" : teldaRemain}分钟`);
-    $.log(`[检测] WSDI(IP)=${ip}  userId=${auth.userId || "空"}  teldb=${auth.teldb ? "有" : "无"}`);
-    $.log(`[检测] cna=${auth.cna ? "有" : "无"}  __jsluid_s=${auth.jsluid ? "有" : "无"}  RequestID=${rid}`);
-    if (teldaRemain != null && teldaRemain < 0) {
-        $.log(`[检测] ⚠️ telda 已过期 ${-teldaRemain} 分钟,大概率打卡会被拒,建议重抓`);
-    }
+    $.log(`[检测] telda(新)末8=${auth.telda.slice(-8)}  WSDI=${ip}`);
 
     const form = buildForm({
         request: "{}",
@@ -146,8 +384,7 @@ async function checkin() {
     } else if (!res) {
         $.messages.push(`${tag} ❌ 无响应(网络错误或被加速乐拦截)`);
     } else if (/token|登录|权限|未授权|unauthor|expire/i.test(JSON.stringify(res))) {
-        const ageHint = teldaRemain != null && teldaRemain < 0 ? `(telda 已过期${-teldaRemain}分)` : "";
-        $.messages.push(`${tag} ❌ 鉴权失败${ageHint}: errcode=${res.errcode} ${res.errmsg || ""}\n👉 重进签到页重抓 Cookie`);
+        $.messages.push(`${tag} ❌ 鉴权失败(刷新后 telda 仍被拒?): errcode=${res.errcode} ${res.errmsg || ""}\n👉 重进签到页重抓 Cookie`);
     } else if (/sign|签名|wver|验签|verif/i.test(JSON.stringify(res))) {
         $.messages.push(`${tag} ❌ 疑似签名问题(WVER/Sign): errcode=${res.errcode} ${res.errmsg || ""}`);
     } else {

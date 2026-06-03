@@ -4,7 +4,7 @@
 
 # 特来电
 
-> 🧪 **待验证(PoC)** · WVER 签名已逆向+本地验证通过;telda 直接打卡是否被服务端接受、teldb 隔天续期是否有效,待实测
+> 🧪 **待验证** · WVER 签名 + teldb 刷新 telda + 打卡全链路已逆向,crypto 用真实抓包逐字节验证通过;打卡机制已实测(服务端返回 12904)。teldb 隔天续期是否稳定,待长期观察
 
 特来电(充电桩)微信小程序「签到365天领手机」每日打卡。打卡接口 `ProSrv-CompleteCheckInTask` 跑在内嵌 H5(`c2.teld.cc` / `sgi.teld.cc`),鉴权用 Cookie 里的 `telda`(X-Token),签名 `WVER` 本地算。
 
@@ -87,8 +87,9 @@ script-providers:
 
 - **WVER 签名(已逆向 + 本地验证通过)** — `WVER = hex( RSA-1024-PKCS#1v15( WTS的ASCII ) )`,256 hex。公钥(指数 `010001`、模数 `C2D84A72…17FC55959`)硬编码在 H5 库 `teld-thirdpart.min.js`。用 iOS JavaScriptCore 原生 `BigInt` 做 modpow,纯本地、无联网。已用自生成密钥对做加密→私钥解密的闭环验证,确认实现正确
 - **Sign / t 省略** — 旧版 H5 还发 `Sign`(4×SHA256)+ `t`,但当前官方 `teld-core.min.js` 的 `_webSgParamSetting` 已不发这俩,服务端不再校验,故省略
-- **鉴权** — Cookie 里的 `telda`(X-Token,WEB 访问令牌)直接放进 body 的 `X-Token`;`teldb` 是 ~15 天的 refresh token(后续续期用)
-- **打卡判定** — `state==="1"` 且 `data.IsCheckInSuccess` 为成功,读 `ContinuousDays`/`TotalDays`;重复签按已签处理
+- **鉴权 + 续期(已实现)** — `telda`(X-Token)仅 ~20 分钟,cron 时早过期;故每次先用 `teldb`(~15 天 refresh token)走 `UserAPI-WEBUI-SRefreshToken` 换新 `telda`。刷新请求体 `Data` 用 **AES-128-CBC**(key=`UTS+"000000"`、iv=随机 16 字符)加密 `{DeviceType,ReqSource,RefreshToken:teldb,ClientIP}`;响应两层 AES 解密(外层默认 key/iv `7fb4…`/`98d7…`,内层用响应的 UTS/UVER)拿到新 `AccessToken`(telda)+ 新 `RefreshToken`(teldb,**滚动写回**)
+- **AES 纯 JS 自带** — Loon 无 crypto,脚本内置 AES-CBC(加/解密),已用抓包数据验证:加密结果与服务端 `Data` 逐字节一致、解密能还原响应
+- **打卡判定** — `state==="1"` 且 `data.IsCheckInSuccess` 为成功,读 `ContinuousDays`/`TotalDays`;`12904 今日已打卡` 按已签处理
 
 ## 维护记录
 
@@ -96,6 +97,8 @@ script-providers:
 |---|---|
 | 2026-06-03 | PoC 初版:逆向 WVER(RSA-1024 PKCS1v15)本地验证通过,省略 Sign/t,telda 直接打卡 |
 | 2026-06-03 | **核心机制实测通过**:服务端返回 `12904 今日已打卡`,证明 WVER 被接受、Sign/t 不需、telda 可用。修 12904 误判为失败 |
+| 2026-06-03 | 实测 telda 真 20 分钟即失效(`Token自身已过期`),确认必须做 teldb 刷新 |
+| 2026-06-04 | r1:逆向并实现 teldb 刷新 telda(cajess=AES-CBC,默认 key/iv 找到、cajess 内 `_a/_b` 为诱饵)。内置纯 JS AES,抓包数据逐字节验证通过。telda/teldb 滚动写回,可日常 cron |
 
 ## 已知限制
 
