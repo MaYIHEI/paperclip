@@ -8,6 +8,35 @@
 
 特来电(充电桩)微信小程序「签到365天领手机」每日打卡。打卡接口 `ProSrv-CompleteCheckInTask` 跑在内嵌 H5(`c2.teld.cc` / `sgi.teld.cc`),鉴权用 Cookie 里的 `telda`(X-Token),签名 `WVER` 本地算。
 
+## 当前进度(跨机接力用)
+
+**已完成 + 已验证**:
+- WVER 签名(RSA-1024 PKCS#1v15)逆向 + 数学闭环验证通过
+- 打卡接口实测通过(服务端返回 `12904 今日已打卡`,证明 WVER 被接受、Sign/t 不需、telda 可用)
+- telda 实测真 20 分钟过期(`Token自身已过期`)
+- teldb 刷新 telda(cajess=AES-CBC)逆向 + **用抓包数据逐字节验证**(加密匹配、解密还原新 telda)
+- 全部 crypto 已内置纯 JS,无外部依赖
+
+**待办(下一步,在 Win 上接着做)**:
+1. **抓 Cookie 还没跑通**——`r2` 刚加了 `normalizeCookie`(多行 cookie 头)+ `[capture]` 诊断日志。先按「使用步骤」抓一次,看 Loon 日志 `[capture]` 行定位(没触发 / 触发没 cookie / 只有 telda)。若 `sgi.teld.cc` 始终不带 cookie,改抓 `c2.teld.cc` 请求(H5 页面本身必带 cookie)
+2. **验证刷新链路**:抓到后**等 30 分钟以上再跑 cron**(模拟隔天),看日志出现 `[刷新] 新 telda 末8=…` 且最后 `✨已打卡`/`✅签到成功` → 日常自动化成立
+3. **teldb 跨天续期稳定性**:teldb 滚动(每次刷新换新、自动写回),长期能否续命待观察。注意别在脚本周期内手动开小程序签到页(会把 teldb 滚走、作废脚本存的)
+4. 传 `teld.png` 图标到 pin 仓库 `app/teld.png`
+
+**调试钩子**:脚本第一行打印 `脚本版本`(对版本号确认拉到最新);`teld_debug=true` 开详细日志;关键日志前缀 `[capture]`/`[刷新]`/`[检测]`/`[响应]`。
+
+**硬编码常量速查**(都在 `teld.js`,逆向自 H5 库,无抓包也能续):
+| 用途 | 值 | 来源 |
+|---|---|---|
+| WVER RSA 模数 | `C2D84A72…17FC55959`(1024位) | `teld-thirdpart.min.js` `window.__d` |
+| WVER RSA 指数 | `010001`(65537) | `window.__c` |
+| cajess AES key | `7fb498553e3c462988c3b9573692bd5f` | `thirdpart.js` `window.__a`(注:cajess 函数里 `_a=6fb…` 是诱饵) |
+| cajess AES iv | `98d71fe589499967` | `window.__b`(诱饵 `_b=…968`) |
+| 刷新内层 key | `UTS + "000000"`、iv = `UVER`(随机16字符,服务端按发来的解) | core.js `_refreshToken` |
+| 打卡接口 | `sgi.teld.cc/api/invoke?SID=ProSrv-CompleteCheckInTask` | — |
+| 刷新接口 | `sgi.teld.cn/api/Invoke?SID=UserAPI-WEBUI-SRefreshToken` | — |
+| 小程序 appid | `wx8d32c1a71ecd965d` | — |
+
 ## 文件
 
 - `teld.js` — 单脚本架构,既是重写抓 Cookie 也是 cron 打卡,根据 `$request` 是否存在区分
