@@ -33,6 +33,7 @@
 | cajess AES key | `7fb498553e3c462988c3b9573692bd5f` | `thirdpart.js` `window.__a`(注:cajess 函数里 `_a=6fb…` 是诱饵) |
 | cajess AES iv | `98d71fe589499967` | `window.__b`(诱饵 `_b=…968`) |
 | 刷新内层 key | `UTS + "000000"`、iv = `UVER`(随机16字符,服务端按发来的解) | core.js `_refreshToken` |
+| **teldb 颠倒序** | cookie/响应里 teldb 都是 `签名.载荷.A01头` 颠倒存,发 param 前要 `split(".").reverse().join(".")` 还原成正常 JWT | r3 实测确认 |
 | 打卡接口 | `sgi.teld.cc/api/invoke?SID=ProSrv-CompleteCheckInTask` | — |
 | 刷新接口 | `sgi.teld.cn/api/Invoke?SID=UserAPI-WEBUI-SRefreshToken` | — |
 | 小程序 appid | `wx8d32c1a71ecd965d` | — |
