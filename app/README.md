@@ -10,7 +10,7 @@
 | 脚本 | 功能 | 状态 |
 |---|---|---|
 | [`weibotalk/`](./weibotalk/) | 微博超话 - 每日签到(所有关注超话) | ✅ 维护中 |
-| [`tenvideo/`](./tenvideo/) | 腾讯视频签到（V力值）| 📦 已归档 |
+| [`tenvideo/`](./tenvideo/) | 腾讯视频 - VIP 签到(V力值) | 🧪 待验证 |
 | [`mihoyo/`](./mihoyo/) | 米游社 - 游戏每日签到 | ✅ 维护中 |
 | [`newmixc/`](./newmixc/) | 一点万象(华润万象 APP) - 每日签到 | ✅ 维护中 |
 | [`mishop/`](./mishop/) | 小米商城 - 每日签到 | ✅ 维护中 |
