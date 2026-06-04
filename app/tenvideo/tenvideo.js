@@ -13,13 +13,13 @@
 
 const $ = new Env("腾讯视频");
 
-const SCRIPT_VERSION = "2026-06-05.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-05.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK = "tenvideo_cookie"; // 完整 cookie(含 vqq_refresh_token 等),刷新后滚动更新
 
-const REFRESH_URL =
-    "https://pbaccess.video.qq.com/trpc.video_account_login.web_login_trpc.WebLoginTrpc/NewRefresh?video_appid=3000010&vversion_platform=2";
+// 用小程序的账号刷新接口(只需 vuid/vusession/vurefresh,不要 qimei,网页/小程序 cookie 都适用)
+const REFRESH_URL = "https://pbaccess.video.qq.com/trpc.anywhere_door.account.Account/Refresh?vplatform=5";
 const CHECKIN_URL = "https://vip.video.qq.com/rpc/trpc.new_task_system.task_system.TaskSystem/CheckIn?rpc_data={}";
 const UA =
     "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
@@ -57,24 +57,34 @@ async function checkin() {
     let cookie = $.getdata(CK);
     if (!cookie) throw new Error(`[${SCRIPT_VERSION}] 未配置 Cookie,请先登录 v.qq.com 抓取`);
 
-    // 1) NewRefresh:用 refresh_token 换新 vusession(vusession 仅 2 小时)
-    const h38 = getCookieVal(cookie, "_qimei_uuid42") || getCookieVal(cookie, "vdevice_h38") || getCookieVal(cookie, "vdevice_h42");
-    $.log(`[检测] 版本=${SCRIPT_VERSION}  h38=${h38 ? h38.slice(0, 12) + "…" : "空"}  refresh_token=${getCookieVal(cookie, "vqq_refresh_token") ? "有" : "无"}`);
+    // 1) Account/Refresh:用 refresh_token 换新 vusession(vusession 仅 2 小时)
+    const vuid = getCookieVal(cookie, "vqq_vuserid") || getCookieVal(cookie, "v_vuserid");
+    const vusession = getCookieVal(cookie, "vqq_vusession") || getCookieVal(cookie, "v_vusession");
+    const vurefresh = getCookieVal(cookie, "vqq_refresh_token") || getCookieVal(cookie, "v_t_refresh_token");
+    $.log(`[检测] 版本=${SCRIPT_VERSION}  vuid=${vuid || "空"}  vusession=${vusession ? "有" : "无"}  refresh_token=${vurefresh ? "有" : "无"}`);
+    if (!vurefresh) throw new Error(`[${SCRIPT_VERSION}] cookie 缺 refresh_token,重抓`);
 
-    const rf = await req("POST", REFRESH_URL, cookie, JSON.stringify({ type: "qq", si: { q36: "", h38: h38 || "" } }));
-    debug(rf && rf.data, "NewRefresh");
-    const rdata = rf && rf.data;
-    if (!rdata || rdata.errcode !== 0 || !rdata.vusession) {
+    const body = JSON.stringify({ vuid: Number(vuid) || vuid, vusession: vusession, vurefresh: vurefresh });
+    const rf = await req("POST", REFRESH_URL, cookie, body);
+    debug(rf, "Account/Refresh");
+    const rdata = (rf && (rf.data || rf)) || {};
+    const newVusession = rdata.vusession;
+    if (!newVusession) {
         throw new Error(
-            `[${SCRIPT_VERSION}] 刷新 vusession 失败: ${rf ? JSON.stringify(rf).slice(0, 150) : "无响应"}\n👉 重新登录 v.qq.com 抓取 Cookie`
+            `[${SCRIPT_VERSION}] 刷新 vusession 失败: ${rf ? JSON.stringify(rf).slice(0, 180) : "无响应"}\n👉 重进腾讯视频小程序/网页抓 Cookie`
         );
     }
-    // 用新 vusession 更新 cookie;并合并响应 Set-Cookie(refresh_token 等若滚动)
-    cookie = setCookieVal(cookie, "vqq_vusession", rdata.vusession);
-    cookie = setCookieVal(cookie, "v_vusession", rdata.vusession);
+    // 用新 vusession + 新 refresh_token(若返回)更新 cookie;合并 Set-Cookie
+    cookie = setCookieVal(cookie, "vqq_vusession", newVusession);
+    cookie = setCookieVal(cookie, "v_vusession", newVusession);
+    const newRefresh = rdata.vurefresh || rdata.refresh_token;
+    if (newRefresh) {
+        cookie = setCookieVal(cookie, "vqq_refresh_token", newRefresh);
+        cookie = setCookieVal(cookie, "v_t_refresh_token", newRefresh);
+    }
     cookie = mergeSetCookie(cookie, rf.headers);
     $.setdata(cookie, CK);
-    $.log(`[刷新] 新 vusession 末8=${rdata.vusession.slice(-8)}`);
+    $.log(`[刷新] 新 vusession 末8=${newVusession.slice(-8)}  refresh_token 滚动=${newRefresh ? "是" : "否"}`);
 
     // 2) CheckIn 签到
     const res = await req("GET", CHECKIN_URL, cookie, null);
