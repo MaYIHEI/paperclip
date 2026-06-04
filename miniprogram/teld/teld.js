@@ -1,10 +1,8 @@
 /**
- * 特来电 · 每日签到(「签到365天领手机」活动,H5 在小程序内)
+ * 特来电 · 每日签到(小程序「签到365天领手机」H5 打卡)
  *
- * 单脚本: 有 $request 时抓 Cookie(进签到页触发 sgi.teld.cc 接口,抓 telda/teldb 等),
- *   无 $request 时 cron:先用 teldb 刷新 telda(telda 仅 20 分钟),再打卡。
- *   签名 WVER = RSA-1024 PKCS#1v15(WTS) 十六进制(BigInt);刷新用 AES-CBC(纯 JS,自带);
- *   Sign/t 为旧版遗留、当前官方 H5 已不发,服务端不校验,故省略。
+ * 抓取方式: 打开「特来电」小程序 → 进「签到365天」页,触发 sgi.teld.cc 接口,自动抓 telda/teldb。
+ * 单脚本:$request 存在时抓 Cookie,不存在时 cron 自动打卡(签名/续期细节见 README)。
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
