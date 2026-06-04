@@ -13,7 +13,7 @@
 
 const $ = new Env("腾讯视频");
 
-const SCRIPT_VERSION = "2026-06-05.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-05.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK = "tenvideo_cookie"; // 完整 cookie(含 vqq_refresh_token 等),刷新后滚动更新
@@ -32,15 +32,20 @@ $.messages = [];
 function captureAuth() {
     try {
         if ($request.method === "OPTIONS") return;
-        const headers = lowerKeys($request.headers);
-        const cookie = normalizeCookie(headers["cookie"]);
-        $.log(`[capture] 触发 cookie长度=${cookie.length} refresh_token=${/vqq_refresh_token=/.test(cookie) ? "有" : "无"}`);
-        if (!/vqq_refresh_token=/.test(cookie)) {
-            $.log("[capture] 没有 vqq_refresh_token,跳过(确认已登录 v.qq.com)");
+        const cookie = normalizeCookie(lowerKeys($request.headers)["cookie"]);
+        const hasRT = /vqq_refresh_token=/.test(cookie);
+        $.log(`[capture] 触发 ${($request.url || "").split("?")[0]} cookie长度=${cookie.length} refresh_token=${hasRT ? "有" : "无"}`);
+        if (hasRT) {
+            $.setdata(cookie, CK);
+            $.msg($.name, "✅ 腾讯视频 Cookie 获取成功", "可关掉网页,cron 自动签到");
             return;
         }
-        $.setdata(cookie, CK);
-        $.msg($.name, "✅ 腾讯视频 Cookie 获取成功", "可关掉网页,cron 自动签到");
+        // 仅看 Warning 日志也能确认"到底触发没":触发但没 refresh_token 时节流通知一次
+        const now = Date.now();
+        if (now - +($.getdata("tenvideo_cap_ts") || 0) > 8000) {
+            $.setdata(String(now), "tenvideo_cap_ts");
+            $.msg($.name, "⏳ 抓到请求但没 refresh_token", "确认已登录 + 用桌面版网站,换会员页刷新再试");
+        }
     } catch (e) {
         $.log(`[ERROR] 抓取异常: ${e}`);
     }
