@@ -222,7 +222,7 @@ $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 - **日期**只用 `@Updated`(`YYYY-MM-DD`);署名:原作者带 `@` 前缀,MaYIHEI 用 `<尖括号>`,`@Modifier` 仅改造他人脚本时加
 - **`SCRIPT_VERSION`**:主脚本必带 + 首行 `$.log` 打印;cookie 副脚本不带(版本归主脚本)
 - **4 段平台配置注释保留在头部**,与 README 的四平台逐字一致(精简 = 把实现细节移 README,不删配置)
-- **入口判断**统一 `if (typeof $request !== "undefined")`(双引号、`!==`)
+- **入口判断**统一 `if (typeof $request !== "undefined")`(双引号、`!==`);**若是 http-response 抓取**(读 `$response.body`,如 `wedome` / `casetify`)则判 `$response`,不要改成 `$request`
 
 ---
 
