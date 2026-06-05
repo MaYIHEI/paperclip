@@ -1,7 +1,8 @@
 /**
  * 名创优品 · 微信小程序「名创优品」每日签到 mini 币
  *
- * 用法:打开微信小程序「名创优品」→ 进入会员页(自动登录刷 token)
+ * 抓取:打开「名创优品」小程序 → 进会员页(自动登录刷 token),抓 token
+ * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

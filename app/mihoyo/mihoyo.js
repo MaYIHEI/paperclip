@@ -1,7 +1,8 @@
 /**
  * 米游社 · 米游社签到原神/星穹铁道/绝区零/崩坏3
  *
- * 用法:打开「米游社」APP → 进入「米游社首页」+「任意游戏每日签到页」(分别抓 stoken + web cookie)
+ * 抓取:打开「米游社」APP → 首页 + 任意游戏签到页,分别抓 stoken / web cookie
+ * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

@@ -1,7 +1,8 @@
 /**
  * 笔笔省 · 微信支付「笔笔省」小程序  天天领券页面每日免费券自动领取
  *
- * 用法:微信打开「微信支付笔笔省」小程序 → 进入「我的-提现笔笔省-天天领」页面,自动触发抓取
+ * 抓取:打开「微信支付笔笔省」小程序 → 进「天天领」页,自动抓 session-token
+ * 签到:cron 定时自动领券
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

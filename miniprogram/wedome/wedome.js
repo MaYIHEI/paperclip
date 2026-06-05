@@ -1,7 +1,8 @@
 /**
  * 味多美 · 每日签到(每日签到领积分,每日 +2 分)
  *
- * 用法:打开「味多美」小程序 → 进入「签到」页(自动触发 get),即抓到 token;之后 cron 自动签到。无需手动点签到。
+ * 抓取:打开「味多美」小程序 → 进「签到」页(自动触发 get),抓 buyer-token
+ * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

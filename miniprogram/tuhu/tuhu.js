@@ -1,7 +1,8 @@
 /**
  * 途虎养车 · 微信小程序「途虎养车」每日签到自动获取积分(每日 +5 积分,可抵现)
  *
- * 用法:打开微信小程序「途虎养车」→ 进入「我的」或「积分中心」页面 → 触发 `GetMemberSignInInfoAsync` 或 `GetRightsList` 接口
+ * 抓取:打开「途虎养车」小程序 → 进「我的」/「积分中心」,触发接口自动抓 token
+ * 签到:cron 定时自动签到
  *
  * @Author: @FoKit
  * @Modifier: @Sliverkiss(修复 blackBox 参数)

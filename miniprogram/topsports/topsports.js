@@ -1,7 +1,8 @@
 /**
  * 滔搏运动 · 每日签到(每日中心签到领积分)
  *
- * 用法:打开「滔搏运动」小程序 → 进入「每日中心」页,即抓到 Cookie;之后 cron 自动签到。
+ * 抓取:打开「滔搏运动」小程序 → 进「每日中心」页,自动抓 Cookie
+ * 签到:cron 定时自动签到(Authorization 开 app 即轮换 · 📦已归档,见 README)
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

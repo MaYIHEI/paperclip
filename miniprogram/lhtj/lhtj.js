@@ -1,7 +1,8 @@
 /**
  * 龙湖天街 · 微信小程序「龙湖天街」每日签到「日日签 日日赚」,签到得成长值 + 珑珠
  *
- * 用法:打开微信小程序「龙湖天街」→ 底部「会员」→「日日签 日日赚」→ 点击签到按钮一次
+ * 抓取:打开「龙湖天街」小程序 →「会员」→「日日签」点签到一次,抓鉴权 headers
+ * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

@@ -2,7 +2,8 @@
  * CASETiFY · 每日签到(每日签到送 C 币)
  *
  * ⚠️ 不维护 / 仅存档:token TTL 约 10h、续期依赖小程序内 wx.login(),cron 无法无人值守,仅「打开过小程序的当天」能签。
- * 用法:打开「CASETiFY」小程序 →「我的」/「积分商城」页,即抓 token;之后 cron 在 10h 窗口内尝试签到。
+ * 抓取:打开「CASETiFY」小程序 →「我的」/「积分商城」页,自动抓 token
+ * 签到:cron 在 10h 窗口内尝试(token 死后必失败 · ⚠️不维护,见 README)
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

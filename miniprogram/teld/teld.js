@@ -1,8 +1,8 @@
 /**
  * 特来电 · 每日签到(小程序「签到365天领手机」H5 打卡)
  *
- * 抓取方式: 打开「特来电」小程序 → 进「签到365天」页,触发 sgi.teld.cc 接口,自动抓 telda/teldb。
- * 单脚本:$request 存在时抓 Cookie,不存在时 cron 自动打卡(签名/续期细节见 README)。
+ * 抓取:打开「特来电」小程序 →「签到365天」页,触发接口自动抓 telda/teldb
+ * 签到:cron 定时自动打卡(续期/签名细节见 README)
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

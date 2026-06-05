@@ -1,7 +1,8 @@
 /**
  * 一点万象 · 华润万象生活「一点万象」APP 每日签到,覆盖万象汇/万象城/万象天地等华润商场
  *
- * 用法:打开「一点万象」APP → 任意页面停留 1 秒(自动触发 getPersonalData 接口)
+ * 抓取:打开「一点万象」APP → 任意页停留 1 秒(自动触发 getPersonalData),抓 cookie
+ * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

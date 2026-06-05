@@ -1,7 +1,8 @@
 /**
  * 小米商城 · 米金签到(每日 +5 米金,连签 2/7/14 天阶段红包)
  *
- * 用法:打开小米商城 APP → 首页「米金商城」→ 进入活动页点一次签到,即抓 Cookie;之后 cron 自动签到。
+ * 抓取:打开小米商城 APP → 首页「米金商城」→ 进活动页点签到,抓 Cookie
+ * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

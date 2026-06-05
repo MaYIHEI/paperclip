@@ -1,7 +1,8 @@
 /**
  * 龙德广场 · 每日签到(每日签到送积分)
  *
- * 用法:打开「龙德广场」小程序 → 进入「我的」→「签到」页,即抓到 token(JWT 到 2099,一次永久有效);之后 cron 自动签到。
+ * 抓取:打开「龙德广场」小程序 → 进「我的」→「签到」页,自动抓 token(JWT 到 2099)
+ * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

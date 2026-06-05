@@ -1,7 +1,8 @@
 /**
  * 海底捞 · 微信小程序「海底捞」每日签到,签到获得菜品碎片🧩
  *
- * 用法:打开微信小程序「海底捞」→ 进入「我的」→ 任意签到入口,触发签到接口
+ * 抓取:打开「海底捞」小程序 → 进「我的」签到入口,触发接口自动抓 token
+ * 签到:cron 定时自动签到
  *
  * @Author: @Sliverkiss
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>

@@ -1,7 +1,8 @@
 /**
  * 微博超话 · 微博 APP「超话」每日签到所有关注超话
  *
- * 用法:打开「微博」APP → 进入超话首页 → 任意一个超话点签到一次
+ * 抓取:打开微博 APP → 超话首页 + 任意超话点签到,分别抓列表/签到 cookie
+ * 签到:cron 定时自动签到
  *
  * @Author: @Evilbutcher (https://github.com/evilbutcher) / @toulanboy (https://github.com/toulanboy/scripts)
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>

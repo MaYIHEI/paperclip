@@ -1,7 +1,8 @@
 /**
  * 松山棉店 · 每日签到(每日签到领积分)
  *
- * 用法:打开「松山棉店」小程序 → 进入「签到」页(自动触发 signMainInfo),即抓到凭据;之后 cron 自动签到。无需手动点签到。
+ * 抓取:打开「松山棉店」小程序 → 进「签到」页(自动触发 signMainInfo),抓凭据
+ * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

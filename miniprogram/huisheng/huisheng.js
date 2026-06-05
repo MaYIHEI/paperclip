@@ -1,7 +1,8 @@
 /**
  * 惠省红包墙 · 微信小程序「惠省」红包墙活动全部 7 个 tab 可领券自动领取
  *
- * 用法:微信打开「惠省」小程序,首页停留 3 秒(自动触发 listActivityCoupon)
+ * 抓取:打开「惠省」小程序,首页停留 3 秒(自动触发 listActivityCoupon),抓 headers
+ * 签到:cron 定时自动领券
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

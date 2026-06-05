@@ -1,7 +1,8 @@
 /**
  * 小米有品 · 小米有品 APP「每日签到」红包活动，每日签到随机领取现金红包
  *
- * 用法:打开小米有品 APP → **「我的」→「红包」**（即每日签到红包活动页），停留 1 秒
+ * 抓取:打开小米有品 APP →「我的」→「红包」页,停留 1 秒抓 Cookie
+ * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
