@@ -21,6 +21,8 @@
 
 > 也可直接在 BoxJS 手填 `wedome_openid`(你的公众号 openid),跳过抓取。
 
+> **清除 Cookie**:切账号或 openid 失效时,BoxJS 把「清除 Cookie」开关设为开启 → 手动跑一次签到脚本(或等下次 cron),即清空 `wedome_openid` 并自动复位开关,之后重进小程序「我的」页重新抓取。
+
 ## Loon
 
 ```ini

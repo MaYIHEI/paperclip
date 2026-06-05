@@ -439,6 +439,7 @@
       "name": "味多美",
       "keys": [
         "wedome_openid",
+        "wedome_clear",
         "wedome_debug"
       ],
       "settings": [
@@ -449,6 +450,13 @@
           "type": "text",
           "placeholder": "进小程序自动抓,或手填",
           "desc": "味多美公众号 openid(永久固定);留空则靠抓取自动写入"
+        },
+        {
+          "id": "wedome_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后,运行一次签到脚本会清空已抓的 openid,完成后自动复位为关闭;之后重进小程序「我的」页重新抓取"
         },
         {
           "id": "wedome_debug",

@@ -52,10 +52,11 @@
 
 const $ = new Env("味多美");
 
-const SCRIPT_VERSION = "2026-06-05.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-05.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_OPENID = "wedome_openid"; // 公众号 openid(永久固定),抓取写入,也可 BoxJS 手填
+const CK_CLEAR = "wedome_clear"; // BoxJS「清除 Cookie」开关,开启后跑一次清空 openid 并自动复位
 
 const BASE = "https://scrm-b.zjian.net";
 const BRAND_ID = "2039";
@@ -93,6 +94,19 @@ function captureOpenid() {
     } catch (e) {
         $.log(`[ERROR] openid 抓取异常: ${e}`);
     }
+}
+
+// ============ 清除 openid(BoxJS 开关,跑一次后自动复位)============
+
+// 切账号 / openid 失效时用:BoxJS 把「清除 Cookie」设为开启 → 手动跑一次签到脚本(或等 cron)
+// 即清空 openid 并把开关复位,之后重进小程序「我的」页重新抓即可
+function maybeClear() {
+    if (($.getdata(CK_CLEAR) || "false") !== "true") return false;
+    $.setdata("", CK_OPENID); // 清空 openid
+    $.setdata("false", CK_CLEAR); // 复位开关,避免下次又清
+    $.log("[clear] 已清空 openid 并复位开关");
+    $.msg($.name, "🗑 已清除 openid", "重进味多美小程序「我的」页重新抓取");
+    return true;
 }
 
 // ============ 签到(openid 换 token → 取活动 → 签到)============
@@ -201,6 +215,7 @@ if (typeof $response !== "undefined") {
     $.done();
 } else {
     (async () => {
+        if (maybeClear()) return; // 清除模式:清完即止,不签到
         await checkin();
     })()
         .catch((e) => {
