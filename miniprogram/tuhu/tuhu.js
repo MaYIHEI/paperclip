@@ -7,6 +7,7 @@
  * @Modifier: @Sliverkiss(修复 blackBox 参数)
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>(适配新接口)
  * @Channel: Telegram 频道 https://t.me/mayihei
+ * @Updated: 2026-05-08
  *
  * ===== Loon =====
  * [MITM]

@@ -3,10 +3,9 @@
  *
  * 用法:打开微信小程序「泡泡玛特会员俱乐部」→ 进入「我的」页面或任意会员相关页面,触发接口
  *
- * @Author: Sliverkiss
- * @Modifier: MaYIHEI (https://github.com/MaYIHEI/paperclip)
+ * @Author: @Sliverkiss
+ * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Date: 2024.06.08
  * @Updated: 2026-05-11
  *
  * ===== Loon =====
