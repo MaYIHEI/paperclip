@@ -1,7 +1,8 @@
 /**
  * 微博超话 · 微博 APP「超话」每日签到所有关注超话
  *
- * 抓取:打开微博 APP → 超话首页 + 任意超话点签到,分别抓列表/签到 cookie
+ * 抓取①:打开微博 APP → 我的 → 超话社区 → 我的 → 关注,抓关注列表请求(container_timeline_topicsub)
+ * 抓取②:在超话页手动签到一次,抓签到请求(page/button · X-Validator 与路径绑定,必须分开抓)
  * 签到:cron 定时自动签到
  *
  * @Author: @Evilbutcher (https://github.com/evilbutcher) / @toulanboy (https://github.com/toulanboy/scripts)

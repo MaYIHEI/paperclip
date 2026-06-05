@@ -1,7 +1,8 @@
 /**
  * 米游社 · 米游社签到原神/星穹铁道/绝区零/崩坏3
  *
- * 抓取:打开「米游社」APP → 首页 + 任意游戏签到页,分别抓 stoken / web cookie
+ * 抓取①:打开「米游社」APP → 进「我的」页,抓游戏角色列表(http-response,绕 stoken DS 校验)
+ * 抓取②:进任意游戏签到页手动签一次,抓 cookie_token_v2 + web headers(给 luna sign 用)
  * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
