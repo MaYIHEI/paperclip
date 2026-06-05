@@ -183,6 +183,49 @@ script-providers:
 
 ---
 
+## 🧩 脚本头部规范
+
+`.js` 脚本头部统一格式,新脚本直接套骨架改占位符(以最新的 `teld` / `tenvideo` 为准)。
+
+### 主脚本头部
+
+```js
+/**
+ * <显示名> · <一句话功能,送什么>
+ *
+ * 抓取:<打开哪个 APP/小程序 → 进哪页 → 触发什么 → 抓什么凭据>
+ * 签到:cron <做什么>(<可选提示;细节见 README>)
+ *
+ * @Author: <自研写 MaYIHEI <url>;改造他人脚本写原作者,带 @>
+ * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>   // 仅改造他人脚本时加,自研删掉
+ * @Channel: Telegram 频道 https://t.me/mayihei
+ * @Updated: YYYY-MM-DD
+ *
+ * ===== Loon =====
+ * ...(4 段平台配置,与本脚本 README 的四平台逐字一致)
+ * ===== Surge =====   ===== Quantumult X =====   ===== Stash =====
+ */
+
+const $ = new Env("<显示名>");
+
+const SCRIPT_VERSION = "YYYY-MM-DD.r1"; // 改一次 +1,确认拉到最新版
+$.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
+```
+
+### cookie 副脚本头部
+
+与主脚本差异:标题固定 `<显示名> · Cookie 抓取`、**无 `SCRIPT_VERSION`**、**只有抓取行(无签到行)**。
+
+### 规则要点
+
+- **描述区两行对仗**:`抓取:` + `签到:`(全角冒号)。**需要抓多个 Cookie**(去两个页分别抓)时写 `抓取①:` / `抓取②:` 分步,**主脚本和 cookie 脚本都要写清每步**(见 `mihoyo` / `weibotalk`)
+- **日期**只用 `@Updated`(`YYYY-MM-DD`);署名:原作者带 `@` 前缀,MaYIHEI 用 `<尖括号>`,`@Modifier` 仅改造他人脚本时加
+- **`SCRIPT_VERSION`**:主脚本必带 + 首行 `$.log` 打印;cookie 副脚本不带(版本归主脚本)
+- **4 段平台配置注释保留在头部**,与 README 的四平台逐字一致(精简 = 把实现细节移 README,不删配置)
+- **入口判断**统一 `if (typeof $request !== "undefined")`(双引号、`!==`)
+
+---
+
 ## 🏷️ 状态徽章约定
 
 清单表格里"状态"列建议使用以下徽章:
