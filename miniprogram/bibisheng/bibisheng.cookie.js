@@ -1,7 +1,7 @@
 /**
- * 微信支付笔笔省 - Cookie 抓取
+ * 笔笔省 · Cookie 抓取
  *
- * 进小程序"我的-提现笔笔省-天天领"页面,会自动触发本脚本抓取 session-token
+ * 抓取:打开「微信支付笔笔省」小程序 → 进「天天领」页,自动抓 session-token
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

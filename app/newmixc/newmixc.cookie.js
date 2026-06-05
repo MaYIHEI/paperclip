@@ -1,13 +1,7 @@
 /**
- * 一点万象 Cookie 获取脚本
+ * 一点万象 · Cookie 抓取
  *
- * 一点万象(华润万象生活旗下万象汇/万象城商场 APP)签到。
- *
- * 抓取方式: 打开一点万象 APP,任意页面停留 1 秒
- *   → 触发 /mixc/api/v4/member/getPersonalData
- *   → 自动抓 token + mallNo + imei + deviceParams + appVersion + osVersion
- *
- * 抓完关闭本脚本即可。
+ * 抓取:打开「一点万象」APP → 任意页停留 1 秒(触发 getPersonalData),抓 token + 设备参数
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

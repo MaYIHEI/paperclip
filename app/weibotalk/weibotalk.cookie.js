@@ -1,13 +1,8 @@
 /**
- * 微博超话 Cookie 获取脚本(双抓取版)
+ * 微博超话 · Cookie 抓取
  *
- * 需要触发两次抓取:
- *   1. 进微博 APP → 我的 → 超话社区 → 我的 → 关注
- *      → 抓取 /2/statuses/container_timeline_topicsub (关注列表请求)
- *   2. 在超话页面手动签到一次
- *      → 抓取 /2/page/button?...active_checkin... (签到请求)
- *
- * 抓取完成后请关闭本脚本,避免后续被反复覆盖。
+ * 抓取①:打开微博 APP → 我的 → 超话社区 → 我的 → 关注,抓关注列表请求(container_timeline_topicsub)
+ * 抓取②:在超话页手动签到一次,抓签到请求(page/button · X-Validator 与路径绑定,必须分开抓)
  *
  * @Author: @Evilbutcher / @toulanboy
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>

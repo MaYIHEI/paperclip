@@ -1,11 +1,7 @@
 /**
- * 惠省红包墙 Cookie 抓取脚本
+ * 惠省红包墙 · Cookie 抓取
  *
- * 抓 listActivityCoupon 请求的 headers + body,存入持久化,供主脚本复用。
- * grantActivityCoupon 复用同一套 headers(经 cleanHeaders 处理 + mtgsig.a2 刷时间戳)。
- *
- * 触发方式:
- *   打开微信"惠省"小程序,首页停留 3 秒(自动调用 listActivityCoupon)即可。
+ * 抓取:打开「惠省」小程序,首页停留 3 秒(自动触发 listActivityCoupon),抓 headers + body
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

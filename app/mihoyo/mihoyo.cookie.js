@@ -1,15 +1,8 @@
 /**
- * 米游社多游戏签到 Cookie 获取脚本
+ * 米游社 · Cookie 抓取
  *
- * 需要触发两次抓取:
- *   1. 打开米游社 APP,进入"我的"页面
- *      → 抓 api-takumi.miyoushe.com/binding/api/getUserGameRolesByStoken (http-response)
- *      → 从响应体直接抠出游戏角色列表本地存(绕过 stoken 接口的 DS 时效校验)
- *   2. 进任意游戏签到页面手动签到一次(原神/星穹铁道/绝区零任意一个都行)
- *      → 抓 api-takumi.mihoyo.com/event/luna/{biz}/info
- *      → 取 cookie_token_v2 + 完整 web headers(给 luna sign 用)
- *
- * 抓完两次后请关闭本脚本。
+ * 抓取①:打开「米游社」APP → 进「我的」页,抓游戏角色列表(http-response,绕 stoken DS 校验)
+ * 抓取②:进任意游戏签到页手动签一次,抓 cookie_token_v2 + web headers(给 luna sign 用)
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

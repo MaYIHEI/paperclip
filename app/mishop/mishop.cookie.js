@@ -1,11 +1,7 @@
 /**
- * 小米商城 Cookie 抓取脚本
+ * 小米商城 · Cookie 抓取
  *
- * 抓取方式: 打开小米商城 APP → 首页 → "米金商城" → 点签到按钮
- *   → 触发 /mtop/mf/act/infinite/do 或 done
- *   → 自动抓 cookie + userId + 其他必要 headers
- *
- * 抓完关闭本脚本即可。
+ * 抓取:打开小米商城 APP → 首页「米金商城」→ 点签到,触发 do/done 抓 cookie + userId + headers
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
