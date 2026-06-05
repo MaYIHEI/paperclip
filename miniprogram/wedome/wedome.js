@@ -1,7 +1,7 @@
 /**
  * 味多美 · 每日签到(每日签到领积分,每日 +2 分)
  *
- * 抓取:打开「味多美」小程序 → 进「签到」页(登录触发 minaLogin),自动抓公众号 openid
+ * 抓取:打开「味多美」小程序 → 进「我的/签到」页(member/find 或 minaLogin),自动抓公众号 openid(无需删小程序重登)
  * 签到:cron 用 openid 换 token(loginByOpenid)→ 取 activityId → 签到(openid 永久固定,免续期)
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
@@ -12,21 +12,21 @@
  * [MITM]
  * hostname = scrm-b.zjian.net
  * [Script]
- * http-response ^https:\/\/scrm-b\.zjian\.net\/api\/member\/minaLogin tag=味多美 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png
+ * http-response ^https:\/\/scrm-b\.zjian\.net\/api\/member\/(minaLogin|find) tag=味多美 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png
  * cron "10 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js, tag=味多美签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png, enable=true
  *
  * ===== Surge =====
  * [MITM]
  * hostname = scrm-b.zjian.net
  * [Script]
- * 味多美 Cookie = type=http-response,pattern=^https:\/\/scrm-b\.zjian\.net\/api\/member\/minaLogin,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png
+ * 味多美 Cookie = type=http-response,pattern=^https:\/\/scrm-b\.zjian\.net\/api\/member\/(minaLogin|find),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png
  * 味多美签到 = type=cron,cronexp=10 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png
  *
  * ===== Quantumult X =====
  * [MITM]
  * hostname = scrm-b.zjian.net
  * [rewrite_local]
- * ^https:\/\/scrm-b\.zjian\.net\/api\/member\/minaLogin url script-response-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js
+ * ^https:\/\/scrm-b\.zjian\.net\/api\/member\/(minaLogin|find) url script-response-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js
  * [task_local]
  * 10 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js, tag=味多美签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png, enabled=true
  *
@@ -40,7 +40,7 @@
  *   mitm:
  *     - "scrm-b.zjian.net"
  *   script:
- *     - match: ^https:\/\/scrm-b\.zjian\.net\/api\/member\/minaLogin
+ *     - match: ^https:\/\/scrm-b\.zjian\.net\/api\/member\/(minaLogin|find)
  *       name: 味多美 Cookie
  *       type: response
  *       require-body: true
@@ -52,7 +52,7 @@
 
 const $ = new Env("味多美");
 
-const SCRIPT_VERSION = "2026-06-05.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-05.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_OPENID = "wedome_openid"; // 公众号 openid(永久固定),抓取写入,也可 BoxJS 手填
@@ -68,7 +68,8 @@ $.messages = [];
 
 // ============ openid 抓取(http-response minaLogin)============
 
-// minaLogin 登录响应里 data.member.openid 就是「公众号 openid」(loginByOpenid 用它,不是小程序 openid)
+// minaLogin / member/find 响应里 data.member.openid 就是「公众号 openid」(loginByOpenid 用它,不是小程序 openid)
+// 两接口结构一致;member/find 在「我的/会员」页正常浏览即触发,不必删小程序重登
 function captureOpenid() {
     try {
         const raw = typeof $response !== "undefined" && $response.body ? $response.body : "";
@@ -78,9 +79,9 @@ function captureOpenid() {
         }
         const j = JSON.parse(raw);
         const openid = j && j.data && j.data.member && j.data.member.openid;
-        $.log(`[capture] 触发 minaLogin  openid=${openid ? "有" : "无"}`);
+        $.log(`[capture] 命中登录/会员接口  openid=${openid ? "有" : "无"}`);
         if (!openid) {
-            $.log("[capture] 响应里没 member.openid,可能不是 minaLogin 接口");
+            $.log("[capture] 响应里没 member.openid,换「我的」页或重进小程序再试");
             return;
         }
         if (openid === $.getdata(CK_OPENID)) {
