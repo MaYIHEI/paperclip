@@ -60,7 +60,7 @@ const BASE    = 'https://m.xiaomiyoupin.com';
 const ACT_ID  = '686b76a6ac546f0001b930c5';
 
 // ─── 入口 ────────────────────────────────────────────────────────────────────
-if (typeof $request !== 'undefined') {
+if (typeof $request !== "undefined") {
     getCookie();
     $.done();
 } else {

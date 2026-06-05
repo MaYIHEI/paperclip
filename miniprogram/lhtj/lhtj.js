@@ -60,7 +60,7 @@ const SIGN_URL = 'https://gw2c-hw-open.longfor.com/lmarketing-task-api-mvc-prod/
 // ────────────────────────────────────────────────────────────────────
 // 重写脚本分支:抓 headers
 // ────────────────────────────────────────────────────────────────────
-if (typeof $request !== 'undefined' && $request.url && $request.url.includes('/signature/clock')) {
+if (typeof $request !== "undefined" && $request.url && $request.url.includes('/signature/clock')) {
   getCookie();
 } else {
   // ──────────────────────────────────────────────────────────────────

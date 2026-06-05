@@ -225,7 +225,7 @@ async function getIntegral() {
 }
 
 // 脚本执行入口
-if (typeof $request !== `undefined`) {
+if (typeof $request !== "undefined") {
     GetCookie();
     $.done();
 } else {

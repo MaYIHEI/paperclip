@@ -269,7 +269,7 @@ async function loadCryptoJS() {
 
 !(async () => {
     try {
-        if (typeof $request != "undefined") {
+        if (typeof $request !== "undefined") {
             await getCookie();
         } else {
             $.CryptoJS = await loadCryptoJS();

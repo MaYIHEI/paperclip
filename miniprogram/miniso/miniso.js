@@ -470,7 +470,7 @@ async function sendMsg(subtitle, body) {
     }
 }
 
-if (typeof $request !== 'undefined') {
+if (typeof $request !== "undefined") {
     getCookie();
     $.done();
 } else {
