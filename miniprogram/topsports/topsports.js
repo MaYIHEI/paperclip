@@ -1,32 +1,35 @@
 /**
  * 滔搏运动 · 每日签到(每日中心签到领积分)
  *
- * 抓取:打开「滔搏运动」小程序 → 进「每日中心」页,自动抓 Cookie
- * 签到:cron 定时自动签到(Authorization 开 app 即轮换 · 📦已归档,见 README)
+ * 抓取:首次进「每日中心」页完整抓 Cookie;此后开小程序任意页即自动刷新 Authorization
+ * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-02
+ * @Updated: 2026-06-06
  *
  * ===== Loon =====
  * [MITM]
- * hostname = m.topsports.com.cn
+ * hostname = m.topsports.com.cn, wxmall.topsports.com.cn
  * [Script]
  * http-request ^https:\/\/m\.topsports\.com\.cn\/h5\/act\/signIn\/actInfo tag=滔搏 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png
+ * http-request ^https:\/\/wxmall\.topsports\.com\.cn\/shopMember\/ tag=滔搏 Auth, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, requires-body=false
  * cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, tag=滔搏签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png, enable=true
  *
  * ===== Surge =====
  * [MITM]
- * hostname = m.topsports.com.cn
+ * hostname = m.topsports.com.cn, wxmall.topsports.com.cn
  * [Script]
  * 滔搏 Cookie = type=http-request,pattern=^https:\/\/m\.topsports\.com\.cn\/h5\/act\/signIn\/actInfo,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png
+ * 滔搏 Auth = type=http-request,pattern=^https:\/\/wxmall\.topsports\.com\.cn\/shopMember\/,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js
  * 滔搏签到 = type=cron,cronexp=15 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png
  *
  * ===== Quantumult X =====
  * [MITM]
- * hostname = m.topsports.com.cn
+ * hostname = m.topsports.com.cn, wxmall.topsports.com.cn
  * [rewrite_local]
  * ^https:\/\/m\.topsports\.com\.cn\/h5\/act\/signIn\/actInfo url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js
+ * ^https:\/\/wxmall\.topsports\.com\.cn\/shopMember\/ url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js
  * [task_local]
  * 15 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, tag=滔搏签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png, enabled=true
  *
@@ -39,9 +42,14 @@
  * http:
  *   mitm:
  *     - "m.topsports.com.cn"
+ *     - "wxmall.topsports.com.cn"
  *   script:
  *     - match: ^https:\/\/m\.topsports\.com\.cn\/h5\/act\/signIn\/actInfo
  *       name: 滔搏 Cookie
+ *       type: request
+ *       require-body: false
+ *     - match: ^https:\/\/wxmall\.topsports\.com\.cn\/shopMember\/
+ *       name: 滔搏 Auth
  *       type: request
  *       require-body: false
  * script-providers:
@@ -52,7 +60,7 @@
 
 const $ = new Env("滔搏");
 
-const SCRIPT_VERSION = "2026-06-02.6"; // 改一次 +1,跑日志可见,确认是否拉到最新版
+const SCRIPT_VERSION = "2026-06-06.1"; // 改一次 +1,跑日志可见,确认是否拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_COOKIE = "topsports_cookie"; // 完整 Cookie(含 Authorization=UUID, memberId)
@@ -69,6 +77,15 @@ const UA =
 
 function getCookie() {
     try {
+        const url = $request.url || "";
+
+        // 原生小程序(wxmall.topsports.com.cn):开 app 即触发,静默刷新 Authorization
+        if (/wxmall\.topsports\.com\.cn/.test(url)) {
+            updateAuth();
+            return;
+        }
+
+        // H5 WebView(m.topsports.com.cn/h5/act/signIn/actInfo):首次完整抓取
         const headers = lowerKeys($request.headers);
         // HTTP/2 下滔搏用多个独立 cookie: 头,Loon 合并时会残留 "cookie:" 脏前缀,
         // 不清理的话回放只能解出最前面的 Authorization,doSign 缺 appletsSource/memberId 会 50010(踩坑 #29)
@@ -89,6 +106,30 @@ function getCookie() {
         $.msg($.name, "🎉 Cookie 已抓取", "可关闭抓包,主脚本自动签到");
     } catch (e) {
         $.log(`[ERROR] cookie 抓取异常: ${e}`);
+    }
+}
+
+// 原生小程序每次开 app 都带最新 Bearer token,比对存储后静默覆盖
+// 登录前的请求仍用旧 token(与存储相同 → 跳过);登录后首个请求换新 token → 自动更新
+function updateAuth() {
+    try {
+        const bearer = ((lowerKeys($request.headers)["authorization"]) || "")
+            .replace(/^Bearer\s+/i, "").trim();
+        if (!bearer) return;
+
+        const stored = $.getdata(CK_COOKIE);
+        if (!stored) return; // 尚未做过初始 H5 抓取
+
+        const cur = (/Authorization=([^;]+)/i.exec(stored) || [])[1] || "";
+        if (cur === bearer) return; // 未变化
+
+        const updated = cur
+            ? stored.replace(/Authorization=[^;]+/i, `Authorization=${bearer}`)
+            : `${stored}; Authorization=${bearer}`;
+        $.setdata(updated, CK_COOKIE);
+        $.log(`[INFO] Authorization 已自动刷新 (…${bearer.slice(-6)})`);
+    } catch (e) {
+        $.log(`[ERROR] updateAuth: ${e}`);
     }
 }
 
