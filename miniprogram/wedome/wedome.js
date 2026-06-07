@@ -52,12 +52,13 @@
 
 const $ = new Env("味多美");
 
-const SCRIPT_VERSION = "2026-06-07.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_OPENID = "wedome_openid";      // 公众号 openid(永久固定)
 const CK_NAME = "wedome_membername";    // 会员昵称,signIn body 必填
 const CK_CLEAR = "wedome_clear";        // BoxJS「清除 Cookie」开关
+const CK_ACTID = "wedome_activityid";   // 上次成功签到时的 activityId(用于监测接口是否变动)
 
 const BASE = "https://scrm-b.zjian.net";
 const BRAND_ID = "2039";
@@ -139,7 +140,9 @@ async function checkin() {
     if (!activityId) {
         throw new Error(`[${SCRIPT_VERSION}] 取 activityId 失败: ${$.toStr(act).slice(0, 160)}`);
     }
-    $.log(`[活动] activityId=${activityId}`);
+    const lastActId = $.getdata(CK_ACTID) || "";
+    const actChanged = lastActId && lastActId !== activityId;
+    $.log(`[活动] activityId=${activityId}${actChanged ? "  ⚠️ 已变更(上次=" + lastActId + ")" : lastActId ? "  (与上次相同)" : "  (首次记录)"}`);
 
     // 3a) 查询今日是否已签(signInLog = 查询接口,有 createTime = 已签)
     const check = await api("POST", `/api/marketing/pointSignInActivitySet/signInLog?activityId=${activityId}&memberId=${memberId}`, token);
@@ -148,6 +151,7 @@ async function checkin() {
 
     if (check && check.data && check.data.createTime) {
         const signedToday = check.data.createTime.slice(0, 10) === today();
+        $.setdata(activityId, CK_ACTID);
         $.messages.push(signedToday ? `✨ 今日已签到,第 ${check.data.index || "?"} 天` : "✨ 今日已签到");
         return;
     }
@@ -167,7 +171,9 @@ async function checkin() {
 
     const tag = `[${SCRIPT_VERSION}]`;
     if (sign && sign.result === 0) {
-        $.messages.push(`✅ 签到成功 (+2 积分)`);
+        $.setdata(activityId, CK_ACTID); // 记录本次 activityId,供下次对比
+        const changedNote = actChanged ? " ⚠️ activityId 已变更" : "";
+        $.messages.push(`✅ 签到成功 (+2 积分)${changedNote}`);
     } else if (sign && /已签|already|repeat|重复/i.test($.toStr(sign))) {
         $.messages.push("✨ 今日已签到");
     } else {
