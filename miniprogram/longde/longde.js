@@ -52,7 +52,7 @@
 
 const $ = new Env("龙德广场");
 
-const SCRIPT_VERSION = "2026-05-24.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const CK_NAME = "longde_token";
 $.token = ($.isNode() ? process.env.LONGDE_TOKEN : $.getdata(CK_NAME)) || "";
@@ -368,6 +368,12 @@ if (typeof $request !== "undefined") {
     $.done();
 } else {
     (async () => {
+        if (JSON.parse($.getdata("longde_clear") || "false")) {
+            $.setdata("", CK_NAME);
+            $.setdata("false", "longde_clear");
+            $.messages.push("✅ Cookie 已清除，请重新抓取");
+            return;
+        }
         if (!$.token) {
             throw new Error("未配置 token,请先进小程序'签到'页抓取");
         }

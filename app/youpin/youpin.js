@@ -52,7 +52,7 @@
 
 const $ = new Env("小米有品");
 
-const SCRIPT_VERSION = "2026-05-27.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY  = 'youpin_data';
@@ -66,6 +66,12 @@ if (typeof $request !== "undefined") {
     $.done();
 } else {
     (async () => {
+        if (JSON.parse($.getdata("youpin_clear") || "false")) {
+            $.setdata("", CK_KEY);
+            $.setdata("false", "youpin_clear");
+            $.msg($.name, "", "✅ Cookie 已清除，请重新抓取");
+            return $.done();
+        }
         try {
             await main();
         } catch (e) {

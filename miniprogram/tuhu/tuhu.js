@@ -54,7 +54,7 @@
 
 const $ = new Env('途虎养车');
 
-const SCRIPT_VERSION = "2026-05-08.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 $.is_debug = ($.isNode() ? process.env['IS_DEDUG'] : $.getdata('is_debug')) || 'false';  // 调试模式
 $.token = ($.isNode() ? process.env['TUHU_TOKEN'] : $.getdata('tuhu_token')) || '';  // Token
@@ -231,6 +231,12 @@ if (typeof $request !== "undefined") {
     $.done();
 } else {
     !(async () => {
+        if (JSON.parse($.getdata('tuhu_clear') || 'false')) {
+            ['tuhu_token', 'tuhu_blackbox'].forEach(k => $.setdata('', k));
+            $.setdata('false', 'tuhu_clear');
+            $.messages.push('✅ Cookie 已清除，请重新抓取');
+            return;
+        }
         await main();  // 主函数
     })()
         .catch((e) => $.messages.push(e.message || e) && $.logErr(e))

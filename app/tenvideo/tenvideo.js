@@ -12,7 +12,7 @@
 
 const $ = new Env("腾讯视频");
 
-const SCRIPT_VERSION = "2026-06-05.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK = "tenvideo_cookie"; // 完整 cookie(含 vqq_refresh_token 等),刷新后滚动更新
@@ -199,6 +199,12 @@ if (typeof $request !== "undefined") {
     $.done();
 } else {
     (async () => {
+        if (JSON.parse($.getdata("tenvideo_clear") || "false")) {
+            $.setdata("", CK);
+            $.setdata("false", "tenvideo_clear");
+            $.messages.push("✅ Cookie 已清除，请重新抓取");
+            return;
+        }
         await checkin();
     })()
         .catch((e) => {

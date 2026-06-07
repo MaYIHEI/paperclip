@@ -48,7 +48,7 @@
 
 const $ = new Env('小米商城');
 
-const SCRIPT_VERSION = "2026-05-27.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'mishop_data';
@@ -59,6 +59,12 @@ const ACT_ID    = '6706c0695404a23dfb5b2cab';
 const TASK_ID   = '6706c0695243011f230d465d';
 const TASK_TYPE = 110;
 
+if (JSON.parse($.getdata("mishop_clear") || "false")) {
+    $.setdata("", CK_KEY);
+    $.setdata("false", "mishop_clear");
+    $.msg($.name, "", "✅ Cookie 已清除，请重新抓取");
+    $.done();
+} else {
 (async () => {
     const raw = $.getdata(CK_KEY);
     if (!raw) {
@@ -155,7 +161,7 @@ const TASK_TYPE = 110;
 
     $.done();
 })();
-
+}
 
 // 发 POST 请求, body 是 JSON 数组(小米商城 mtop 接口惯例: [{}, {payload}])
 function post(path, ck, bodyArr) {

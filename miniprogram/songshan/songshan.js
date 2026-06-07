@@ -52,7 +52,7 @@
 
 const $ = new Env("松山棉店");
 
-const SCRIPT_VERSION = "2026-06-04.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_HEADERS = "songshan_headers"; // 签到请求头(JSON)
@@ -195,6 +195,12 @@ if (typeof $request !== "undefined") {
     $.done();
 } else {
     (async () => {
+        if (JSON.parse($.getdata("songshan_clear") || "false")) {
+            [CK_HEADERS, CK_BODY].forEach(k => $.setdata("", k));
+            $.setdata("false", "songshan_clear");
+            $.messages.push("✅ Cookie 已清除，请重新抓取");
+            return;
+        }
         const rawHeaders = $.isNode() ? process.env.SONGSHAN_HEADERS : $.getdata(CK_HEADERS);
         $.body = $.isNode() ? process.env.SONGSHAN_BODY : $.getdata(CK_BODY);
         if (!rawHeaders || !$.body) {

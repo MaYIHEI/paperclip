@@ -11,7 +11,7 @@
 
 const $ = new Env("特来电");
 
-const SCRIPT_VERSION = "2026-06-04.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_AUTH = "teld_auth"; // telda/teldb/ip/userId 等,抓取写入、刷新后自动滚动更新
@@ -514,6 +514,12 @@ if (typeof $request !== "undefined") {
     $.done();
 } else {
     (async () => {
+        if (JSON.parse($.getdata("teld_clear") || "false")) {
+            $.setdata("", CK_AUTH);
+            $.setdata("false", "teld_clear");
+            $.messages.push("✅ Cookie 已清除，请重新抓取");
+            return;
+        }
         await checkin();
     })()
         .catch((e) => {

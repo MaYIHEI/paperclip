@@ -52,7 +52,7 @@
 
 const $ = new Env('名创优品');
 
-const SCRIPT_VERSION = "2026-05-24.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_NAME = 'miniso_data';
@@ -476,6 +476,13 @@ if (typeof $request !== "undefined") {
     $.done();
 } else {
     !(async () => {
+        if (JSON.parse($.getdata("miniso_clear") || "false")) {
+            $.setdata("", CK_NAME);
+            $.setdata("false", "miniso_clear");
+            $.msg($.name, "", "✅ Cookie 已清除，请重新抓取");
+            $.done();
+            return;
+        }
         await main();
     })()
         .catch(e => { $.messages.push(`❌ ${e.message || e}`); $.log(e); })

@@ -52,7 +52,7 @@
 
 const $ = new Env('龙湖天街');
 
-const SCRIPT_VERSION = "2026-05-24.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const CK_KEY = 'lhtj_headers';
 const ACTIVITY_NO = '11111111111686241863606037740000';
@@ -68,6 +68,12 @@ if (typeof $request !== "undefined" && $request.url && $request.url.includes('/s
   // Cron 分支:执行签到
   // ──────────────────────────────────────────────────────────────────
   (async () => {
+    if (JSON.parse($.getdata("lhtj_clear") || "false")) {
+      $.setdata("", CK_KEY);
+      $.setdata("false", "lhtj_clear");
+      $.msg($.name, "", "✅ Cookie 已清除，请重新抓取");
+      return $.done();
+    }
     const raw = $.getdata(CK_KEY);
     if (!raw) {
       $.msg($.name, '', '❌ 未抓取到 token,请按 README 重写规则抓取');

@@ -59,12 +59,12 @@
 
 const $ = new Env("驴充充");
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_AUTH = "lvcchong_mp_auth"; // JSON: userToken/refreshToken/userId/captureTime(捕获时间戳)
 
-$.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("lvcchong_debug")) || "false";
+$.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("lvcchong_mp_debug")) || "false";
 $.messages = [];
 
 const HOST = "https://appapi.lvcchong.com";
@@ -295,6 +295,12 @@ if (typeof $response !== "undefined") {
     $.done();
 } else {
     (async () => {
+        if (JSON.parse($.getdata("lvcchong_mp_clear") || "false")) {
+            $.setdata("", CK_AUTH);
+            $.setdata("false", "lvcchong_mp_clear");
+            $.messages.push("✅ Cookie 已清除，请重新抓取");
+            return;
+        }
         await checkin();
     })()
         .catch((e) => { $.messages.push(e.message || String(e)); $.logErr(e); })

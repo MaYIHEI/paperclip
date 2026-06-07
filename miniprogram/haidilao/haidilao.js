@@ -52,7 +52,7 @@
  */
 const $ = new Env("海底捞");
 
-const SCRIPT_VERSION = "2026-05-24.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const ckName = "hdl_data";
 const Notify = 1;
@@ -231,6 +231,12 @@ function ObjectKeys2LowerCase(obj) {
 !(async () => {
     if (typeof $request !== "undefined") {
         await getCookie();
+        return;
+    }
+    if (JSON.parse($.getdata("hdl_clear") || "false")) {
+        $.setdata("", ckName);
+        $.setdata("false", "hdl_clear");
+        $.notifyMsg.push("✅ Cookie 已清除，请重新抓取");
         return;
     }
     if (!(await checkEnv())) { throw new Error(`❌未检测到ck，请添加环境变量`); }

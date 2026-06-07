@@ -52,7 +52,7 @@
  */
 const $ = new Env("泡泡玛特");
 
-const SCRIPT_VERSION = "2026-05-11.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const ckName = "ppmt_data";
 const userCookie = $.toObj($.isNode() ? process.env[ckName] : $.getdata(ckName)) || [];
@@ -273,6 +273,12 @@ async function loadCryptoJS() {
         if (typeof $request !== "undefined") {
             await getCookie();
         } else {
+            if (JSON.parse($.getdata("ppmt_clear") || "false")) {
+                $.setdata("", ckName);
+                $.setdata("false", "ppmt_clear");
+                $.msg($.name, "", "✅ Cookie 已清除，请重新抓取");
+                return;
+            }
             $.CryptoJS = await loadCryptoJS();
             await checkEnv();
             await main();
