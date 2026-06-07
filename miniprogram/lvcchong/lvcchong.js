@@ -59,7 +59,7 @@
 
 const $ = new Env("驴充充");
 
-const SCRIPT_VERSION = "2026-06-07.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_AUTH = "lvcchong_mp_auth"; // JSON: userToken/refreshToken/userId/captureTime(捕获时间戳)
@@ -256,10 +256,14 @@ function tokenAgeMin(token) {
             if (i < 0) continue;
             buf = (buf << 6) | i;
             bits += 6;
-            if (bits >= 8) { bits -= 8; out += String.fromCharCode((buf >> bits) & 0xff); }
+            if (bits >= 8) {
+                bits -= 8;
+                out += String.fromCharCode((buf >> bits) & 0xff);
+                buf &= (1 << bits) - 1; // 清掉已输出的高位,防止 buf 溢出
+            }
         }
         const p = JSON.parse(out);
-        if (p && p.iat) return Math.round(Date.now() / 1000 - p.iat);
+        if (p && p.iat) return Math.round((Date.now() / 1000 - p.iat) / 60);
     } catch {}
     return null;
 }
