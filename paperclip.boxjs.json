@@ -11,9 +11,17 @@
       "name": "泡泡玛特",
       "keys": [
         "ppmt_data",
+        "ppmt_clear",
         "is_debug"
       ],
       "settings": [
+        {
+          "id": "ppmt_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        },
         {
           "id": "is_debug",
           "name": "调试模式",
@@ -40,9 +48,18 @@
       "name": "途虎养车",
       "keys": [
         "tuhu_token",
-        "tuhu_blackbox"
+        "tuhu_blackbox",
+        "tuhu_clear"
       ],
-      "settings": [],
+      "settings": [
+        {
+          "id": "tuhu_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        }
+      ],
       "author": "@FoKit, blackBox @Sliverkiss, 适配 @MaYIHEI",
       "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/tuhu",
       "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/tuhu/tuhu.js",
@@ -54,7 +71,7 @@
 
     {
       "id": "paperclip.bibisheng",
-      "name": "微信支付笔笔省",
+      "name": "微信支付笔笔省 (已归档)",
       "keys": [
         "bbs_session_token",
         "bbs_appid",
@@ -86,10 +103,19 @@
       "name": "海底捞",
       "keys": [
         "hdl_data",
+        "hdl_clear",
         "bark_key",
         "is_debug"
       ],
-      "settings": [],
+      "settings": [
+        {
+          "id": "hdl_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        }
+      ],
       "author": "@Sliverkiss, 修复 @MaYIHEI",
       "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/haidilao",
       "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/haidilao/haidilao.js",
@@ -112,10 +138,10 @@
       "settings": [
         {
           "id": "huisheng_delete_cookie",
-          "name": "清空 Cookie",
+          "name": "清除 Cookie",
           "val": false,
           "type": "boolean",
-          "desc": "设为开启后,运行一次会清空所有已抓的 cookie,完成后会自动复位为关闭"
+          "desc": "设为开启后，运行一次会清空所有已抓的 Cookie，完成后会自动复位为关闭"
         },
         {
           "id": "huisheng_request_time",
@@ -161,9 +187,17 @@
       "name": "名创优品",
       "keys": [
         "miniso_data",
+        "miniso_clear",
         "mc_debug"
       ],
       "settings": [
+        {
+          "id": "miniso_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        },
         {
           "id": "mc_debug",
           "name": "调试模式",
@@ -189,9 +223,18 @@
       "id": "paperclip.longde",
       "name": "龙德广场",
       "keys": [
-        "longde_token"
+        "longde_token",
+        "longde_clear"
       ],
-      "settings": [],
+      "settings": [
+        {
+          "id": "longde_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        }
+      ],
       "author": "@MaYIHEI",
       "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/longde",
       "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/longde/longde.js",
@@ -217,10 +260,10 @@
       "settings": [
         {
           "id": "wb_delete_cookie",
-          "name": "清空 Cookie",
+          "name": "清除 Cookie",
           "val": false,
           "type": "boolean",
-          "desc": "设为开启后,运行一次会清空所有已抓的 cookie,完成后会自动复位为关闭"
+          "desc": "设为开启后，运行一次会清空所有已抓的 Cookie，完成后会自动复位为关闭"
         },
         {
           "id": "wb_msg_max_num",
@@ -274,10 +317,10 @@
       "settings": [
         {
           "id": "mhy_delete_cookie",
-          "name": "清空 Cookie",
+          "name": "清除 Cookie",
           "val": false,
           "type": "boolean",
-          "desc": "设为开启后,运行一次会清空所有已抓的 cookie,完成后会自动复位为关闭"
+          "desc": "设为开启后，运行一次会清空所有已抓的 Cookie，完成后会自动复位为关闭"
         },
         {
           "id": "mhy_games",
@@ -320,9 +363,17 @@
       "name": "腾讯视频",
       "keys": [
         "tenvideo_cookie",
+        "tenvideo_clear",
         "tenvideo_debug"
       ],
       "settings": [
+        {
+          "id": "tenvideo_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        },
         {
           "id": "tenvideo_debug",
           "name": "调试模式",
@@ -348,9 +399,18 @@
       "id": "paperclip.newmixc",
       "name": "一点万象",
       "keys": [
-        "newmixc_data"
+        "newmixc_data",
+        "newmixc_clear"
       ],
-      "settings": [],
+      "settings": [
+        {
+          "id": "newmixc_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        }
+      ],
       "author": "@MaYIHEI",
       "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/newmixc",
       "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/newmixc/newmixc.js",
@@ -374,9 +434,18 @@
       "id": "paperclip.lhtj",
       "name": "龙湖天街",
       "keys": [
-        "lhtj_headers"
+        "lhtj_headers",
+        "lhtj_clear"
       ],
-      "settings": [],
+      "settings": [
+        {
+          "id": "lhtj_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        }
+      ],
       "author": "@MaYIHEI",
       "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/lhtj",
       "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/lhtj/lhtj.js",
@@ -385,10 +454,10 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/lhtj.png"
       ]
     },
-    
+
     {
       "id": "paperclip.casetify",
-      "name": "CASETiFY",
+      "name": "CASETiFY (已归档)",
       "keys": [
         "casetify_token",
         "casetify_hqtoken",
@@ -410,9 +479,17 @@
       "keys": [
         "songshan_headers",
         "songshan_body",
+        "songshan_clear",
         "songshan_debug"
       ],
       "settings": [
+        {
+          "id": "songshan_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        },
         {
           "id": "songshan_debug",
           "name": "调试模式",
@@ -448,15 +525,15 @@
           "name": "公众号 openid",
           "val": "",
           "type": "text",
-          "placeholder": "进小程序自动抓,或手填",
-          "desc": "味多美公众号 openid(永久固定);留空则靠抓取自动写入"
+          "placeholder": "进小程序自动抓，或手填",
+          "desc": "味多美公众号 openid(永久固定)；留空则靠抓取自动写入"
         },
         {
           "id": "wedome_clear",
           "name": "清除 Cookie",
           "val": false,
           "type": "boolean",
-          "desc": "设为开启后,运行一次签到脚本会清空已抓的 openid,完成后自动复位为关闭;之后重进小程序「我的」页重新抓取"
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 openid，完成后自动复位为关闭；之后重进小程序「我的」页重新抓取"
         },
         {
           "id": "wedome_debug",
@@ -481,24 +558,12 @@
 
     {
       "id": "paperclip.topsports",
-      "name": "滔搏",
+      "name": "滔搏 (已归档)",
       "keys": [
         "topsports_cookie",
         "topsports_debug"
       ],
-      "settings": [
-        {
-          "id": "topsports_debug",
-          "name": "调试模式",
-          "val": "false",
-          "type": "selects",
-          "items": [
-            { "key": "false", "label": "关闭" },
-            { "key": "true",  "label": "开启" }
-          ],
-          "desc": "开启后打印签到请求体和响应"
-        }
-      ],
+      "settings": [],
       "author": "@MaYIHEI",
       "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/topsports",
       "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/topsports/topsports.js",
@@ -512,9 +577,18 @@
       "id": "paperclip.mishop",
       "name": "小米商城",
       "keys": [
-        "mishop_data"
+        "mishop_data",
+        "mishop_clear"
       ],
-      "settings": [],
+      "settings": [
+        {
+          "id": "mishop_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        }
+      ],
       "author": "@MaYIHEI",
       "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/mishop",
       "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/mishop/mishop.js",
@@ -538,9 +612,18 @@
       "id": "paperclip.youpin",
       "name": "小米有品",
       "keys": [
-        "youpin_data"
+        "youpin_data",
+        "youpin_clear"
       ],
-      "settings": [],
+      "settings": [
+        {
+          "id": "youpin_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        }
+      ],
       "author": "@MaYIHEI",
       "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/youpin",
       "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/youpin/youpin.js",
@@ -555,9 +638,17 @@
       "name": "特来电",
       "keys": [
         "teld_auth",
+        "teld_clear",
         "teld_debug"
       ],
       "settings": [
+        {
+          "id": "teld_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        },
         {
           "id": "teld_debug",
           "name": "调试模式",
@@ -583,13 +674,20 @@
       "id": "paperclip.lvcchong",
       "name": "驴充充",
       "keys": [
-        "lvcchong_auth",
-        "lvcchong_debug",
-        "lvcchong_notify_ts"
+        "lvcchong_mp_auth",
+        "lvcchong_mp_clear",
+        "lvcchong_mp_debug"
       ],
       "settings": [
         {
-          "id": "lvcchong_debug",
+          "id": "lvcchong_mp_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重进小程序重新抓取"
+        },
+        {
+          "id": "lvcchong_mp_debug",
           "name": "调试模式",
           "val": "false",
           "type": "selects",
@@ -597,9 +695,26 @@
             { "key": "false", "label": "关闭" },
             { "key": "true",  "label": "开启" }
           ],
-          "desc": "开启后打印详细日志(脚本已归档)"
+          "desc": "开启后打印详细日志"
         }
       ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/lvcchong",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/lvcchong/lvcchong.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/lvcchong.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/lvcchong.png"
+      ]
+    },
+
+    {
+      "id": "paperclip.lvcchong_app",
+      "name": "驴充充 App (已归档)",
+      "keys": [
+        "lvcchong_auth",
+        "lvcchong_notify_ts"
+      ],
+      "settings": [],
       "author": "@MaYIHEI",
       "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/lvcchong",
       "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/lvcchong/lvcchong.js",
