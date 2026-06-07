@@ -20,7 +20,7 @@
 | [`casetify/`](./casetify/) | CASETiFY - 每日签到 | 📦 已归档 |
 | [`songshan/`](./songshan/) | 松山棉店 - 每日签到(微盟 SaaS) | ✅ 维护中 |
 | [`wedome/`](./wedome/) | 味多美 - 每日签到(卓健/大咖 SaaS) | 🧪 待验证 |
-| [`topsports/`](./topsports/) | 滔搏运动 - 每日签到 | 📦 已归档 |
+| [`topsports/`](./topsports/) | 滔搏运动 - 每日签到 | 🧪 待验证 |
 | [`teld/`](./teld/) | 特来电 - 每日打卡(签到365天领手机) | 🧪 待验证 |
 
 

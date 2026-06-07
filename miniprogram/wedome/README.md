@@ -4,7 +4,7 @@
 
 # 味多美
 
-> 🧪 **待验证** · **2026-06-05 从归档复活** —— 解包发现 `loginByOpenid` 旁路,用「公众号 openid 换 token」绕开 `wx.login()`,openid 永久固定、免续期。端到端实测签到成功,长期稳定性观察中。
+> 🧪 **待验证** · **2026-06-05 从归档复活** —— 解包发现 `loginByOpenid` 旁路,用「公众号 openid 换 token」绕开 `wx.login()`,openid 永久固定、免续期。2026-06-07 适配签到接口拆分(新增 `signIn` 接口 + `memberName`)。长期稳定性观察中。
 
 味多美微信小程序每日签到送积分(每日 +2 分)。底层卓健科技(zjian.net)+ 大咖(bigaka)会员 SaaS,`brandId=2039`(味多美北京)。
 
@@ -88,7 +88,8 @@ script-providers:
 
 - **复活核心:`loginByOpenid` 旁路** — 原 `buyer-token` 续期绑死 `wx.login()`(归档主因)。解包发现登录测试页有 `GET /api/member/h5/loginByOpenid?openid=<公众号openid>&brandId=2039`,**用公众号 openid 直接换 token,完全不碰 wx.login**,生产环境放行、无额外鉴权,openid 永久固定 → 一次抓取长期有效(和龙德广场「一次抓取永久有效」同级)
 - **抓的是「公众号 openid」** — `http-response` 挂 `minaLogin`(全新登录触发)或 `member/find`(「我的/会员」页正常浏览即触发,**已登录态也发,免删小程序重登**),两接口响应结构一致,均取 `data.member.openid`(公众号 openid)。**注意不是小程序 openid**(`miniWeixinInfo.openid` / `memberWeixinApps[].openid`),小程序 openid 调 loginByOpenid 会返回 `410 根据openid获取unionid失败`
-- **签到链(全动态,无写死易变值)** — `loginByOpenid` 换 token + memberId → POST `pointSignInActivitySet/get` 取当前 `activityId` → POST `signInLog?activityId&memberId` 签到(`signInLog` 即执行签到,幂等,已签返回当天已有记录)
+- **签到链(全动态,无写死易变值)** — `loginByOpenid` 换 token + memberId → POST `pointSignInActivitySet/get` 取当前 `activityId` → POST `signInLog?activityId&memberId` **查询**今日是否已签(有 `createTime` = 已签,跳过) → POST `pointSignInActivitySet/signIn` JSON body `{activityId,memberId,memberName,index:1}` **执行签到**
+- **memberName** — 从 `member/find` 响应的 `data.member.name` 抓取并存入 BoxJS `wedome_membername`，签到 body 必填；进一次小程序「我的」页即可同步
 - **鉴权头** — `buyer-token`(loginByOpenid 换来的)+ `brandId: 2039`,无 body 签名
 - **同套 SaaS 通用** — 卓健/大咖服务大量品牌小程序,改 `brandId` + `openid` 即可适配其他商家
 
@@ -100,6 +101,8 @@ script-providers:
 | 2026-06-01 | 📦 归档:`buyer-token` 续期需小程序登录(`401 用户未登录`),脚本无解 |
 | 2026-06-05 | 🧪 **复活**:解包发现 `loginByOpenid` 旁路(公众号 openid 换 token,免 wx.login),改抓公众号 openid + cron 自动换 token,端到端实测签到成功 |
 | 2026-06-05 | 抓取规则放宽到 `member/find`(「我的/会员」页正常浏览触发),免删小程序重登;原仅 `minaLogin` 须全新登录才命中 |
+| 2026-06-07 | 适配签到接口拆分:`signInLog` 由执行变为查询,实际签到改为新接口 `signIn`,body 增加 `memberName`；新增 `tentacle-content` 系列必填 header；捕获规则同步存储 `member.name` |
+| 2026-06-07 | 新增 `activityId` 变动检测:每次签到后存储 activityId,下次对比,变了通知用户 |
 
 ## 已知限制
 
