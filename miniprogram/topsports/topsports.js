@@ -2,7 +2,8 @@
  * 滔搏运动 · 每日签到(每日中心签到领积分)
  *
  * 抓取:首次进「每日中心」页完整抓 Cookie;此后开小程序任意页即自动刷新 Authorization
- * 签到:cron 定时自动签到
+ *       微信内打开任意滔搏 H5 链接 → 自动捕获 QZ_SID(H5 会话,有效期远长于 1 小时)
+ * 签到:cron 定时自动签到;Authorization 失效时自动降级到 H5 会话(QZ_SID)
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
@@ -14,6 +15,7 @@
  * [Script]
  * http-request ^https:\/\/m\.topsports\.com\.cn\/h5\/act\/signIn\/actInfo tag=滔搏 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png
  * http-request ^https:\/\/wxmall\.topsports\.com\.cn\/shopMember\/ tag=滔搏 Auth, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, requires-body=false
+ * http-response ^https:\/\/m\.topsports\.com\.cn\/ tag=滔搏 H5, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, requires-body=false
  * cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, tag=滔搏签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png, enable=true
  *
  * ===== Surge =====
@@ -22,6 +24,7 @@
  * [Script]
  * 滔搏 Cookie = type=http-request,pattern=^https:\/\/m\.topsports\.com\.cn\/h5\/act\/signIn\/actInfo,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png
  * 滔搏 Auth = type=http-request,pattern=^https:\/\/wxmall\.topsports\.com\.cn\/shopMember\/,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js
+ * 滔搏 H5 = type=http-response,pattern=^https:\/\/m\.topsports\.com\.cn\/,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js
  * 滔搏签到 = type=cron,cronexp=15 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png
  *
  * ===== Quantumult X =====
@@ -30,6 +33,7 @@
  * [rewrite_local]
  * ^https:\/\/m\.topsports\.com\.cn\/h5\/act\/signIn\/actInfo url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js
  * ^https:\/\/wxmall\.topsports\.com\.cn\/shopMember\/ url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js
+ * ^https:\/\/m\.topsports\.com\.cn\/ url script-response-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js
  * [task_local]
  * 15 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, tag=滔搏签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png, enabled=true
  *
@@ -52,6 +56,10 @@
  *       name: 滔搏 Auth
  *       type: request
  *       require-body: false
+ *     - match: ^https:\/\/m\.topsports\.com\.cn\/
+ *       name: 滔搏 H5
+ *       type: response
+ *       require-body: false
  * script-providers:
  *   滔搏签到:
  *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js
@@ -60,18 +68,21 @@
 
 const $ = new Env("滔搏");
 
-const SCRIPT_VERSION = "2026-06-06.1"; // 改一次 +1,跑日志可见,确认是否拉到最新版
+const SCRIPT_VERSION = "2026-06-06.2"; // 改一次 +1,跑日志可见,确认是否拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_COOKIE = "topsports_cookie"; // 完整 Cookie(含 Authorization=UUID, memberId)
+const CK_QZSID = "topsports_qzsid";  // H5 WeChat 公众号会话,有效期通常远超 1 小时
 
 $.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("topsports_debug")) || "false";
 $.messages = [];
 
 const HOST = "https://m.topsports.com.cn";
 const BRAND = "TS";
-const UA =
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.74(0x18004a24) NetType/WIFI Language/zh_CN miniProgram/wx71a6af1f91734f18";
+// 小程序 WebView UA(含 miniProgram 标识)
+const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.74(0x18004a24) NetType/WIFI Language/zh_CN miniProgram/wx71a6af1f91734f18";
+// 微信浏览器 UA(不含 miniProgram,用于 H5 会话请求)
+const UA_H5 = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.74(0x18004a24) NetType/WIFI Language/zh_CN";
 
 // ============ Cookie 抓取 ============
 
@@ -133,6 +144,24 @@ function updateAuth() {
     }
 }
 
+// 微信 H5 OAuth 回调会在响应头带 Set-Cookie: QZ_SID(服务端会话,有效期通常远超 1 小时)
+// http-response 规则触发,仅检查响应头,无需响应体
+function captureQzSid() {
+    try {
+        const sc = $response.headers && ($response.headers["Set-Cookie"] || $response.headers["set-cookie"]);
+        if (!sc) return;
+        const m = /QZ_SID=([^;,\s]+)/i.exec(String(sc));
+        if (!m) return;
+        const val = m[1];
+        if (val === $.getdata(CK_QZSID)) return; // 未变化,静默退出
+        $.setdata(val, CK_QZSID);
+        $.msg($.name, "🔐 H5 会话已更新", `QZ_SID 已捕获,签到将自动使用(…${val.slice(-6)})`);
+        $.log(`[INFO] QZ_SID 已捕获 (…${val.slice(-6)})`);
+    } catch (e) {
+        $.log(`[ERROR] captureQzSid: ${e}`);
+    }
+}
+
 // ============ 业务 ============
 
 function commonHeaders() {
@@ -154,6 +183,24 @@ function commonHeaders() {
         priority: "u=3, i",
         "User-Agent": UA,
         Cookie: $.cookie,
+    };
+}
+
+function h5Headers(cookie) {
+    // H5 微信浏览器请求头:无 minienv,无小程序标识,加 originH5Flag
+    return {
+        accept: "application/json, text/plain, */*",
+        "content-type": "application/json",
+        brandcode: BRAND,
+        originH5Flag: "true",
+        origin: HOST,
+        Referer: `${HOST}/m/dailycenter?brandCode=${BRAND}`,
+        "accept-language": "zh-CN,zh-Hans;q=0.9",
+        "sec-fetch-site": "same-origin",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-dest": "empty",
+        "User-Agent": UA_H5,
+        Cookie: cookie,
     };
 }
 
@@ -183,11 +230,52 @@ async function checkin() {
     } else if (res && (res.bizCode === 20001 || /已签|重复/.test(res.bizMsg || ""))) {
         $.messages.push("✨ 今日已签到");
     } else if (res && res.errorCode === 50010) {
-        // 50010「小程序权限不足」= Authorization 已轮换/失效。每次打开小程序都会换新 auth 让旧的作废,
-        // actInfo 宽松仍能过、doSign 严格即报此码。脚本无法做微信登录,只能重抓。
-        $.messages.push("❌ 签到失败: Authorization 已失效(重开过小程序会轮换)\n👉 重进滔搏「每日中心」页重抓 cookie 即可");
+        // 50010 = Authorization 已失效(1 小时服务端 TTL)。尝试 H5 会话降级。
+        const qzSid = $.getdata(CK_QZSID);
+        if (qzSid) {
+            $.log("[INFO] Authorization 失效,降级到 H5 会话(QZ_SID)…");
+            await checkinH5(activityId, qzSid);
+        } else {
+            $.messages.push(
+                "❌ Authorization 已失效,且无 H5 会话\n" +
+                "👉 在微信中打开以下链接触发自动捕获:\n" +
+                "https://m.topsports.com.cn/h5/act/signIn/index"
+            );
+        }
     } else {
         $.messages.push(`❌ 签到失败: ${res ? res.message || res.bizMsg || $.toStr(res) : "无响应"}`);
+    }
+}
+
+// Authorization 失效后降级:用 H5 会话(QZ_SID)重试 doSign
+async function checkinH5(activityId, qzSid) {
+    const cookie = `QZ_SID=${qzSid}`;
+    const res = await requestH5("POST", "/h5/act/signIn/doSign", { activityId, brandCode: BRAND }, cookie);
+    debug(res, "doSign(H5)");
+
+    if (!res) {
+        $.log(`[DEBUG] H5 doSign 无响应,QZ_SID=…${qzSid.slice(-6)}`);
+        $.messages.push("❌ H5 签到无响应 (详情见日志)");
+        return;
+    }
+    if (res.data && res.data.signInSuccess === true) {
+        const prize = (res.data.signInPrizeSendResultDTOList || [])
+            .map((p) => `${p.prizeName || ""}+${p.prizeValue || ""}`)
+            .join(", ");
+        $.messages.push(`✅ 签到成功(H5)${prize ? ": " + prize : ""}`);
+    } else if (res.bizCode === 20001 || /已签|重复/.test(res.bizMsg || "")) {
+        $.messages.push("✨ 今日已签到(H5)");
+    } else if (res.errorCode === 50010) {
+        // H5 会话也失效了,清空等待重捕
+        $.setdata("", CK_QZSID);
+        $.messages.push(
+            "❌ H5 会话也已失效\n" +
+            "👉 在微信中打开以下链接触发重新捕获:\n" +
+            "https://m.topsports.com.cn/h5/act/signIn/index"
+        );
+    } else {
+        $.log(`[DEBUG] H5 doSign 前200: ${$.toStr(res).substring(0, 200)}`);
+        $.messages.push(`❌ H5 签到失败: ${res.message || res.bizMsg || $.toStr(res).substring(0, 100)}`);
     }
 }
 
@@ -217,6 +305,30 @@ function request(method, path, body) {
     });
 }
 
+function requestH5(method, path, body, cookie) {
+    return new Promise((resolve) => {
+        const opts = { url: `${HOST}${path}`, headers: h5Headers(cookie) };
+        if (method === "POST" && body) opts.body = JSON.stringify(body);
+
+        debug({ method, url: opts.url, cookie }, `${method} H5 request`);
+
+        const fn = method === "POST" ? $.post : $.get;
+        fn.call($, opts, (err, resp, data) => {
+            if (err) {
+                $.log(`[ERROR] H5 ${method} ${path}: ${$.toStr(err)}`);
+                resolve(null);
+                return;
+            }
+            try {
+                resolve(typeof data === "string" ? JSON.parse(data) : data);
+            } catch (e) {
+                $.log(`[ERROR] H5 响应解析失败: ${(data || "").substring(0, 300)}`);
+                resolve(null);
+            }
+        });
+    });
+}
+
 // ============ acw_tc 刷新 ============
 
 // doSign 受阿里云 WAF 保护,必须带有效 acw_tc(Set-Cookie 下发,Max-Age=1800/30 分钟、HttpOnly)。
@@ -224,6 +336,7 @@ function request(method, path, body) {
 // 所以小程序每次进「每日中心」页都先请求这个入口拿新 acw_tc;而 cron 用的是抓包时存下的旧 acw_tc,
 // 过 30 分钟即失效 → doSign 被 WAF 拦 50010「权限不足」(actInfo 校验宽松仍能过,所以只挂 doSign)。
 // 这里在签到前重放该入口请求,拿新 acw_tc 回写进 $.cookie。
+// 同时探测 Set-Cookie 是否也带 QZ_SID(如果有则同步更新 H5 会话)。
 function refreshAcwTc() {
     return new Promise((resolve) => {
         const auth = getCookieVal("Authorization");
@@ -252,15 +365,30 @@ function refreshAcwTc() {
                 return resolve(false);
             }
             const sc = resp.headers && (resp.headers["Set-Cookie"] || resp.headers["set-cookie"]);
-            const m = sc && /acw_tc=([^;,\s]+)/i.exec(String(sc));
-            if (m) {
-                setCookieVal("acw_tc", m[1]);
-                $.log(`[INFO] acw_tc 已刷新 (…${m[1].slice(-6)})`);
+            const scStr = String(sc || "");
+            $.log(`[DEBUG] setCookieApplets Set-Cookie 前100: ${scStr.substring(0, 100)}`);
+
+            const acwM = /acw_tc=([^;,\s]+)/i.exec(scStr);
+            if (acwM) {
+                setCookieVal("acw_tc", acwM[1]);
+                $.log(`[INFO] acw_tc 已刷新 (…${acwM[1].slice(-6)})`);
                 resolve(true);
             } else {
                 // 代理内核可能未把 HttpOnly 的 Set-Cookie 暴露给脚本,此时无解,需重抓 cookie
                 $.log("[WARN] 响应未拿到 acw_tc(内核可能屏蔽 Set-Cookie),doSign 可能仍 50010");
                 resolve(false);
+            }
+
+            // 顺便检查是否下发了 QZ_SID(明确 setCookieApplets 是否创建 H5 会话)
+            const sidM = /QZ_SID=([^;,\s]+)/i.exec(scStr);
+            if (sidM) {
+                const val = sidM[1];
+                if (val !== $.getdata(CK_QZSID)) {
+                    $.setdata(val, CK_QZSID);
+                    $.log(`[INFO] QZ_SID 同步更新 (…${val.slice(-6)})`);
+                }
+            } else {
+                $.log("[INFO] setCookieApplets 未下发 QZ_SID");
             }
         });
     });
@@ -323,7 +451,13 @@ async function sendMsg(message) {
 // ============ 入口 ============
 
 if (typeof $request !== "undefined") {
-    getCookie();
+    if (typeof $response !== "undefined") {
+        // http-response:捕获 H5 OAuth 回调下发的 QZ_SID
+        captureQzSid();
+    } else {
+        // http-request:抓取完整 Cookie 或静默刷新 Authorization
+        getCookie();
+    }
     $.done();
 } else {
     (async () => {
