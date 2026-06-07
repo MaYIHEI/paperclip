@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-05
+ * @Updated: 2026-06-07
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("味多美");
 
-const SCRIPT_VERSION = "2026-06-05.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_OPENID = "wedome_openid"; // 公众号 openid(永久固定),抓取写入,也可 BoxJS 手填
@@ -135,16 +135,22 @@ async function checkin() {
     if (!activityId) {
         throw new Error(`[${SCRIPT_VERSION}] 取 activityId 失败: ${$.toStr(act).slice(0, 160)}`);
     }
+    $.log(`[签到] activityId=${activityId}`);
 
     // 3) 签到:POST signInLog 即执行签到(幂等,已签返回当天已有记录)
-    const sign = await api("POST", `/api/marketing/pointSignInActivitySet/signInLog?activityId=${activityId}&memberId=${memberId}`, token);
+    // 兼容两种传参格式:query string(原) + JSON body(新),服务端接受其中一种即可
+    const sign = await api("POST", `/api/marketing/pointSignInActivitySet/signInLog?activityId=${activityId}&memberId=${memberId}`, token, { activityId, memberId });
     debug(sign, "signInLog");
     $.log(`[响应] ${$.toStr(sign).slice(0, 200)}`);
 
     const tag = `[${SCRIPT_VERSION}]`;
-    if (sign && sign.result === 0 && sign.data && sign.data.createTime) {
-        const signedToday = sign.data.createTime.slice(0, 10) === today();
-        $.messages.push(signedToday ? `✅ 签到成功 (+2 积分),第 ${sign.data.index || "?"} 天` : "✨ 今日已签到");
+    if (sign && (sign.ok === true || (sign.result === 0 && sign.data && sign.data.createTime))) {
+        // 新格式 ok:true,或旧格式带 createTime
+        const idx = (sign.data && sign.data.index) || "?";
+        $.messages.push(`✅ 签到成功 (+2 积分),第 ${idx} 天`);
+    } else if (sign && sign.result === 0 && sign.ok === false) {
+        // 服务端返回 ok:false — 通常表示今日已签到(幂等);若 App 内未见记录说明接口格式又变了需重抓
+        $.messages.push("✨ 今日已签到");
     } else if (sign && /已签|already|repeat|重复/i.test($.toStr(sign))) {
         $.messages.push("✨ 今日已签到");
     } else {
