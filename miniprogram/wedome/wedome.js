@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-07
+ * @Updated: 2026-06-07 r3
  *
  * ===== Loon =====
  * [MITM]
@@ -52,11 +52,12 @@
 
 const $ = new Env("味多美");
 
-const SCRIPT_VERSION = "2026-06-07.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-07.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
-const CK_OPENID = "wedome_openid"; // 公众号 openid(永久固定),抓取写入,也可 BoxJS 手填
-const CK_CLEAR = "wedome_clear"; // BoxJS「清除 Cookie」开关,开启后跑一次清空 openid 并自动复位
+const CK_OPENID = "wedome_openid";      // 公众号 openid(永久固定)
+const CK_NAME = "wedome_membername";    // 会员昵称,signIn body 必填
+const CK_CLEAR = "wedome_clear";        // BoxJS「清除 Cookie」开关
 
 const BASE = "https://scrm-b.zjian.net";
 const BRAND_ID = "2039";
@@ -90,6 +91,9 @@ function captureOpenid() {
             return;
         }
         $.setdata(openid, CK_OPENID);
+        // member/find 响应同时带 name,signIn body 需要
+        const mname = j.data.member.name || "";
+        if (mname) $.setdata(mname, CK_NAME);
         $.msg($.name, "✅ 味多美 openid 已获取", "可关掉小程序,cron 自动签到(openid 永久有效,无需再抓)");
     } catch (e) {
         $.log(`[ERROR] openid 抓取异常: ${e}`);
@@ -135,19 +139,35 @@ async function checkin() {
     if (!activityId) {
         throw new Error(`[${SCRIPT_VERSION}] 取 activityId 失败: ${$.toStr(act).slice(0, 160)}`);
     }
-    $.log(`[签到] activityId=${activityId}`);
+    $.log(`[活动] activityId=${activityId}`);
 
-    // 3) 签到:POST signInLog 即执行签到(幂等,已签返回当天已有记录)
-    // 兼容两种传参格式:query string(原) + JSON body(新),服务端接受其中一种即可
-    const sign = await api("POST", `/api/marketing/pointSignInActivitySet/signInLog?activityId=${activityId}&memberId=${memberId}`, token, { activityId, memberId });
-    debug(sign, "signInLog");
-    $.log(`[响应] ${$.toStr(sign).slice(0, 200)}`);
+    // 3a) 查询今日是否已签(signInLog = 查询接口,有 createTime = 已签)
+    const check = await api("POST", `/api/marketing/pointSignInActivitySet/signInLog?activityId=${activityId}&memberId=${memberId}`, token);
+    debug(check, "signInLog(check)");
+    $.log(`[查询] ${$.toStr(check).slice(0, 200)}`);
+
+    if (check && check.data && check.data.createTime) {
+        const signedToday = check.data.createTime.slice(0, 10) === today();
+        $.messages.push(signedToday ? `✨ 今日已签到,第 ${check.data.index || "?"} 天` : "✨ 今日已签到");
+        return;
+    }
+
+    // 3b) 实际签到:POST signIn,body 必须含 memberName
+    const memberName = $.isNode()
+        ? (process.env.WEDOME_MEMBERNAME || "")
+        : ($.getdata(CK_NAME) || "");
+    if (!memberName) {
+        $.log("[WARN] 未存储 memberName,重进味多美小程序「我的」页触发 member/find 重抓即可");
+    }
+    const sign = await api("POST", "/api/marketing/pointSignInActivitySet/signIn", token, {
+        activityId, memberId, memberName, index: 1,
+    });
+    debug(sign, "signIn");
+    $.log(`[签到] ${$.toStr(sign).slice(0, 200)}`);
 
     const tag = `[${SCRIPT_VERSION}]`;
-    if (sign && (sign.ok === true || (sign.result === 0 && sign.data && sign.data.createTime))) {
-        // 新格式 ok:true,或旧格式带 createTime
-        const idx = (sign.data && sign.data.index) || "?";
-        $.messages.push(`✅ 签到成功 (+2 积分),第 ${idx} 天`);
+    if (sign && sign.result === 0) {
+        $.messages.push(`✅ 签到成功 (+2 积分)`);
     } else if (sign && /已签|already|repeat|重复/i.test($.toStr(sign))) {
         $.messages.push("✨ 今日已签到");
     } else {
@@ -168,6 +188,8 @@ function api(method, path, token, body) {
     return new Promise((resolve) => {
         const headers = {
             brandId: BRAND_ID,
+            "tentacle-content": "",
+            "tentacle-content-m-info": "",
             "content-type": "application/json",
             "User-Agent": UA,
             Referer: REFERER,
