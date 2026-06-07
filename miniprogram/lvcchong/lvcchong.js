@@ -1,8 +1,10 @@
 /**
- * 驴充充 · 每日签到(积分中心签到领积分)
+ * [📦 已归档] 驴充充 · 每日签到(积分中心签到领积分)
+ *
+ * 归档原因:wx.login() token 实测 < 38min 失效,小程序版与 app 版同量级,daily cron 无解
  *
  * 抓取:打开「驴充充」微信小程序 → 任意页面触发 /getUnionInfo(wx.login() 换 token)
- * 签到:cron 直接用 userToken 签到(小程序无需 H5 accessEntrance 中转)
+ * 签到:cron 📦已归档,见归档原因
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

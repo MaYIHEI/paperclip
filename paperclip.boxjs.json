@@ -5,7 +5,6 @@
   "icon": "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/paperclip.png",
   "repo": "https://github.com/MaYIHEI/paperclip",
   "apps": [
-
     {
       "id": "paperclip.ppmt",
       "name": "泡泡玛特",
@@ -28,8 +27,14 @@
           "val": "false",
           "type": "selects",
           "items": [
-            { "key": "false", "label": "关闭" },
-            { "key": "true",  "label": "开启" }
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
           ],
           "desc": "开启后会打印详细请求/响应日志"
         }
@@ -42,7 +47,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/popmart.png"
       ]
     },
-
     {
       "id": "paperclip.tuhu",
       "name": "途虎养车",
@@ -68,7 +72,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tuhu.png"
       ]
     },
-
     {
       "id": "paperclip.bibisheng",
       "name": "微信支付笔笔省 (已归档)",
@@ -97,7 +100,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/bibisheng.png"
       ]
     },
-
     {
       "id": "paperclip.haidilao",
       "name": "海底捞",
@@ -124,7 +126,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/haidilao.png"
       ]
     },
-
     {
       "id": "paperclip.huisheng",
       "name": "惠省红包墙",
@@ -157,8 +158,14 @@
           "val": "false",
           "type": "selects",
           "items": [
-            { "key": "false", "label": "关闭" },
-            { "key": "true",  "label": "开启" }
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
           ],
           "desc": "开启后打印 list/grant 请求体和响应"
         }
@@ -181,7 +188,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/huisheng.png"
       ]
     },
-
     {
       "id": "paperclip.miniso",
       "name": "名创优品",
@@ -204,8 +210,14 @@
           "val": "false",
           "type": "selects",
           "items": [
-            { "key": "false", "label": "关闭" },
-            { "key": "true",  "label": "开启" }
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
           ],
           "desc": "开启后打印详细请求/响应日志"
         }
@@ -218,7 +230,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/miniso.png"
       ]
     },
-
     {
       "id": "paperclip.longde",
       "name": "龙德广场",
@@ -243,7 +254,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/longde.png"
       ]
     },
-
     {
       "id": "paperclip.weibotalk",
       "name": "微博超话",
@@ -300,7 +310,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/weibo.png"
       ]
     },
-
     {
       "id": "paperclip.mihoyo",
       "name": "米游社",
@@ -357,7 +366,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/mihoyo.png"
       ]
     },
-
     {
       "id": "paperclip.tenvideo",
       "name": "腾讯视频",
@@ -380,8 +388,14 @@
           "val": "false",
           "type": "selects",
           "items": [
-            { "key": "false", "label": "关闭" },
-            { "key": "true",  "label": "开启" }
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
           ],
           "desc": "开启后打印 Account/Refresh 与签到响应"
         }
@@ -394,7 +408,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tenvideo.png"
       ]
     },
-
     {
       "id": "paperclip.newmixc",
       "name": "一点万象",
@@ -429,7 +442,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/newmixc.png"
       ]
     },
-
     {
       "id": "paperclip.lhtj",
       "name": "龙湖天街",
@@ -454,7 +466,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/lhtj.png"
       ]
     },
-
     {
       "id": "paperclip.casetify",
       "name": "CASETiFY (已归档)",
@@ -472,7 +483,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/casetify.png"
       ]
     },
-
     {
       "id": "paperclip.songshan",
       "name": "松山棉店",
@@ -496,8 +506,14 @@
           "val": "false",
           "type": "selects",
           "items": [
-            { "key": "false", "label": "关闭" },
-            { "key": "true",  "label": "开启" }
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
           ],
           "desc": "开启后打印签到请求体和响应"
         }
@@ -510,7 +526,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/songshan.png"
       ]
     },
-
     {
       "id": "paperclip.wedome",
       "name": "味多美",
@@ -541,8 +556,14 @@
           "val": "false",
           "type": "selects",
           "items": [
-            { "key": "false", "label": "关闭" },
-            { "key": "true",  "label": "开启" }
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
           ],
           "desc": "开启后打印 loginByOpenid / 签到响应"
         }
@@ -555,7 +576,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/wedome.png"
       ]
     },
-
     {
       "id": "paperclip.topsports",
       "name": "滔搏 (已归档)",
@@ -572,7 +592,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/topsports.png"
       ]
     },
-
     {
       "id": "paperclip.mishop",
       "name": "小米商城",
@@ -607,7 +626,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/mishop.png"
       ]
     },
-
     {
       "id": "paperclip.youpin",
       "name": "小米有品",
@@ -632,7 +650,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/youpin.png"
       ]
     },
-
     {
       "id": "paperclip.teld",
       "name": "特来电",
@@ -655,8 +672,14 @@
           "val": "false",
           "type": "selects",
           "items": [
-            { "key": "false", "label": "关闭" },
-            { "key": "true",  "label": "开启" }
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
           ],
           "desc": "开启后打印抓取/续期/请求参数/响应日志"
         }
@@ -669,35 +692,13 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/teld.png"
       ]
     },
-
     {
       "id": "paperclip.lvcchong",
-      "name": "驴充充",
+      "name": "驴充充 (已归档)",
       "keys": [
-        "lvcchong_mp_auth",
-        "lvcchong_mp_clear",
-        "lvcchong_mp_debug"
+        "lvcchong_mp_auth"
       ],
-      "settings": [
-        {
-          "id": "lvcchong_mp_clear",
-          "name": "清除 Cookie",
-          "val": false,
-          "type": "boolean",
-          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重进小程序重新抓取"
-        },
-        {
-          "id": "lvcchong_mp_debug",
-          "name": "调试模式",
-          "val": "false",
-          "type": "selects",
-          "items": [
-            { "key": "false", "label": "关闭" },
-            { "key": "true",  "label": "开启" }
-          ],
-          "desc": "开启后打印详细日志"
-        }
-      ],
+      "settings": [],
       "author": "@MaYIHEI",
       "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/lvcchong",
       "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/lvcchong/lvcchong.js",
@@ -706,7 +707,6 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/lvcchong.png"
       ]
     },
-
     {
       "id": "paperclip.lvcchong_app",
       "name": "驴充充 App (已归档)",
@@ -723,6 +723,5 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/lvcchong.png"
       ]
     }
-
   ]
 }

@@ -4,7 +4,7 @@
 
 # 驴充充(小程序版)
 
-> 🧪 **待验证** · **2026-06-07 从 `app/lvcchong/` 切换小程序通道** —— 小程序走 `wx.login()` → `/getUnionInfo` 换 token,无需 SIM 一键登录;签到直接用 miniprogram userToken(无需 H5 accessEntrance 中转)。Token 寿命尚未实测,首要验证目标。
+> 📦 **已归档** · wx.login() 签发的 token(userToken + refreshToken)实测 < 38min 即失效;小程序版与 app 版同量级,每日 cron 无解。
 
 驴充充微信小程序「积分中心 → 签到」每日签到领积分。AppID `wx0132aa93a8b214ae`。
 
