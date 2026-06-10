@@ -548,9 +548,9 @@
         {
           "id": "wanda_signer_url",
           "name": "签名服务地址",
-          "val": "https://wanda-signer.misery-hollows0m.workers.dev",
+          "val": "https://wanda-sign.byteden.xyz",
           "type": "text",
-          "placeholder": "https://wanda-signer.xxx.workers.dev",
+          "placeholder": "https://wanda-sign.byteden.xyz",
           "desc": "自建签名 Worker 地址(见 signer/),万达签名 wasm 跑在这里。已填好默认值,换号/重部署时改这里"
         },
         {
