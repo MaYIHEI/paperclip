@@ -52,7 +52,7 @@
 
 const $ = new Env('龙湖天街 App');
 
-const SCRIPT_VERSION = "2026-06-10.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-10.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 // ── 持久化 key ──
@@ -252,8 +252,8 @@ function sign(auth) {
           $.msg($.name, '✅ 签到成功', desc);
           markDone();
         } else if (data.code === '8040012' || data.code === '8040013') {
-          // 顶象风控拦截:dxrisk-token 失效/被判风险,需交互式验证,脚本无法自动通过
-          $.msg($.name, '⚠️ 账号已被风控', `需打开龙湖天街 App 手动签到完成验证,再按 README 重抓 Cookie [${data.code}] ${truncate(body, 120)}`);
+          // 顶象风控拦截:账号已被标记,重抓也无效,只能停脚本手动养号
+          $.msg($.name, '⚠️ 账号已被风控', `重抓 Cookie 也无效,建议暂停脚本、改用 App 手动签到养号一段时间再恢复 [${data.code}] ${truncate(body, 120)}`);
         } else if (data.message && /已签|不能重复|今日已/.test(data.message)) {
           $.msg($.name, '✅ 今日已签', data.message);
           markDone();
@@ -367,7 +367,7 @@ async function lottery(auth) {
       const type = d.data.reward_type === 30 ? '珑珠' : '';
       prizes.push(num !== '' ? `${name} +${num}${type}` : name);
     } else if (d && (d.code === '8040012' || d.code === '8040013')) {
-      $.msg($.name, '⚠️ 账号已被风控', `抽奖触发风控,需打开龙湖天街 App 手动操作完成验证后重抓 Cookie [${d.code}]`);
+      $.msg($.name, '⚠️ 账号已被风控', `抽奖触发风控,重抓也无效,建议暂停脚本、改用 App 手动操作养号一段时间再恢复 [${d.code}]`);
       break;
     } else {
       $.log(`[抽奖] click 非预期: ${truncate(clickRes.raw, 200)}`);
