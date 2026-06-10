@@ -4,7 +4,7 @@
 
 # 特来电
 
-> 🧪 **待验证** · **全链路实测跑通**:间隔 40 分钟两次 cron,均成功 teldb 刷新 telda → 打卡(服务端 `12904 今日已打卡`)。剩待长期观察:① 明天未签时拿到 `✅ 签到成功`(目前只测到「已打卡」)② teldb 滚动跨多日续期稳定性
+> ✅ **维护中** · **全链路实测跑通**:间隔 40 分钟两次 cron,均成功 teldb 刷新 telda → 打卡(服务端 `12904 今日已打卡`)。剩待长期观察:① 明天未签时拿到 `✅ 签到成功`(目前只测到「已打卡」)② teldb 滚动跨多日续期稳定性
 
 特来电(充电桩)微信小程序「签到365天领手机」每日打卡。打卡接口 `ProSrv-CompleteCheckInTask` 跑在内嵌 H5(`c2.teld.cc` / `sgi.teld.cc`),鉴权用 Cookie 里的 `telda`(X-Token,仅 ~20 分钟,cron 时用 `teldb` 自动刷新),签名 `WVER` 本地用 BigInt 算,无任何外部依赖。
 
@@ -112,6 +112,7 @@ script-providers:
 | 2026-06-03 | 实测 telda 真 20 分钟即失效(`Token自身已过期`),确认必须做 teldb 刷新 |
 | 2026-06-04 | r1:逆向并实现 teldb 刷新 telda(cajess=AES-CBC,默认 key/iv 找到、cajess 内 `_a/_b` 为诱饵)。内置纯 JS AES,抓包数据逐字节验证通过。telda/teldb 滚动写回,可日常 cron |
 | 2026-06-04 | r2 修抓 Cookie(多行 cookie 头);r3 修 `BIZ-User-0143`(teldb cookie 为颠倒序,发请求前还原)。**全链路实测跑通**:间隔 40 分钟两次 cron 均刷新+打卡成功 |
+| 2026-06-10 | 多日 cron 稳定,🧪→✅ 维护中 |
 
 ## 已知限制
 

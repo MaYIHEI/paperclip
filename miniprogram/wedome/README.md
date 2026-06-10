@@ -4,7 +4,7 @@
 
 # 味多美
 
-> 🧪 **待验证** · **2026-06-05 从归档复活** —— 解包发现 `loginByOpenid` 旁路,用「公众号 openid 换 token」绕开 `wx.login()`,openid 永久固定、免续期。2026-06-07 适配签到接口拆分(新增 `signIn` 接口 + `memberName`)。长期稳定性观察中。
+> ✅ **维护中** · **2026-06-05 从归档复活** —— 解包发现 `loginByOpenid` 旁路,用「公众号 openid 换 token」绕开 `wx.login()`,openid 永久固定、免续期。2026-06-07 适配签到接口拆分(新增 `signIn` 接口 + `memberName`)。长期稳定性观察中。
 
 味多美微信小程序每日签到送积分(每日 +2 分)。底层卓健科技(zjian.net)+ 大咖(bigaka)会员 SaaS,`brandId=2039`(味多美北京)。
 
@@ -103,6 +103,7 @@ script-providers:
 | 2026-06-05 | 抓取规则放宽到 `member/find`(「我的/会员」页正常浏览触发),免删小程序重登;原仅 `minaLogin` 须全新登录才命中 |
 | 2026-06-07 | 适配签到接口拆分:`signInLog` 由执行变为查询,实际签到改为新接口 `signIn`,body 增加 `memberName`；新增 `tentacle-content` 系列必填 header；捕获规则同步存储 `member.name` |
 | 2026-06-07 | 新增 `activityId` 变动检测:每次签到后存储 activityId,下次对比,变了通知用户 |
+| 2026-06-10 | 长期稳定,🧪→✅ 维护中 |
 
 ## 已知限制
 

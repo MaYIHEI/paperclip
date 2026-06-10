@@ -4,7 +4,7 @@
 
 # 腾讯视频
 
-> 🧪 **待验证** · 从归档复活,**实测成功**(`✅ 签到成功,获得 10 V力值`):cron 先用 `refresh_token` 走 `Account/Refresh` 换新 vusession(免 qimei、免签名),再调 `CheckIn` 签到。**无人值守**
+> ✅ **维护中** · 从归档复活,**实测成功**(`✅ 签到成功,获得 10 V力值`):cron 先用 `refresh_token` 走 `Account/Refresh` 换新 vusession(免 qimei、免签名),再调 `CheckIn` 签到。**无人值守**
 
 腾讯视频 VIP 每日签到(V力值)。签到接口 `CheckIn` 无签名、纯靠有效 vusession;而 vusession 仅 2 小时,旧版靠用户手动开 app 续命。新版用 `refresh_token`(长期、cookie 里)走 `pbaccess.video.qq.com/.../Account/Refresh` 每次现刷 vusession,实现无人值守。
 
@@ -100,6 +100,7 @@ script-providers:
 | — | 初版(@WowYiJiu):抓 app `ReadTaskList` cookie 回放签到,vusession 2h 靠手动续 |
 | 2026-06-05 | 复活:用 refresh_token 刷 vusession 再签到,无人值守。状态 📦→🧪 |
 | 2026-06-05 | 刷新改用 `Account/Refresh`(免 qimei,网页/小程序 cookie 通用),修小程序 cookie `input invalid`。**实测成功:`✅ 获得 10 V力值`** |
+| 2026-06-10 | 多日实测稳定,🧪→✅ 维护中 |
 
 ## 已知限制
 
