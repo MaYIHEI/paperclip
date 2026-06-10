@@ -14,8 +14,8 @@
 
 - `wanda.cookie.js` — Cookie 抓取(从「我的」页请求头抠 `x-ry-token` / `x-ry-user` / `shumeiboxid`)
 - `wanda.js` — cron 签到,**已内嵌纯 JS 签名引擎**(约 68KB,前半段是 wasm2js 自动生成的引擎,勿手改)
-- `signer/` — 签名引擎的**来源与构建脚本**(可选)。也提供了 Worker / VPS 两种「远程签名」部署,
-  仅在你想把引擎放外部时用;正常用 `wanda.js` 自包含版即可,**不用碰这个目录**。
+
+就这两个脚本,无任何外部依赖。
 
 ## 使用步骤
 
@@ -93,7 +93,23 @@ script-providers:
   - `c = urlEncodeUnicode(JSON.stringify(body))`(百分号编码),但**实际发送的 body 是原始 JSON**;服务端按解析后的 body 重新规范化校验。
   - 签名 `uri = /sign_in/do_sign_in.api`(带前导斜杠)。
 - **跨渠道复用**:APP 端原生签名器无源码不可复现,但**用小程序渠道签名(`cCode=XIAOCHENGXUGP`, `appId=3`, `ver=6.5.3`)配 APP 抓到的 token,服务端照样认**(实测 `code:0`)。
-- **签名怎么在 Loon 里算**:Loon JSC 不支持 WebAssembly。把 `index_bg.wasm` 经 `wasm-opt -Oz` → `wasm2js` → `terser` 转成 ~57KB 纯 JS 引擎,内嵌进 `wanda.js` 顶部(`WANDA_ASM_FN`),配 wasm-bindgen glue(`createSigner`)本地调用。端到端实测:内嵌引擎算出的 check 与原始 wasm 逐字一致。重建方式见 [`signer/`](./signer/)。
+- **签名怎么在 Loon 里算**:Loon JSC 不支持 WebAssembly。把 `index_bg.wasm` 经 `wasm-opt -Oz` → `wasm2js` → `terser` 转成 ~57KB 纯 JS 引擎,内嵌进 `wanda.js` 顶部(`WANDA_ASM_FN`),配 wasm-bindgen glue(`createSigner`)本地调用。端到端实测:内嵌引擎算出的 check 与原始 wasm 逐字一致。
+
+### 万达若更新 wasm 换签名算法 —— 重建内嵌引擎
+
+`index_bg.wasm` 来自万达电影小程序公开包(`wx6718e4b1e9cce6b2`,`wasm/index_bg.wasm`)。换算法时重新解包拿到新 wasm,然后:
+
+```bash
+npm i binaryen terser
+node node_modules/binaryen/bin/wasm-opt index_bg.wasm -Oz --strip-debug --strip-producers -o opt.wasm
+node node_modules/binaryen/bin/wasm2js opt.wasm -Oz -o asm.js
+# 1) 删 asm.js 顶部的 `import * as wbg from 'wbg';`
+# 2) 把结尾 `var retasmFunc = asmFunc({...` 起替换成 `return asmFunc;`
+# 3) 整体包成 `var WANDA_ASM_FN=(function(){ ...上面内容... })();`
+# 4) terser 压一下,替换 wanda.js 顶部「签名引擎」段
+```
+
+glue(`createSigner` / `urlEncodeUnicode`)和签名入参(`signature(ts, uri, urlEncodeUnicode(body))`)就在 `wanda.js` 里,照着调即可。
 
 ## 维护记录
 
@@ -105,4 +121,4 @@ script-providers:
 
 - **token 时效未知**:`x-ry-token` 是会话票据,TTL 未实测。若像部分 APP 那样「开 APP 即轮换」,daily cron 会间歇失败 —— 届时按通知重抓即可。**这是本脚本标 🧪 待验证的主因**,需观察几天稳定性。
 - **签名校验失败(403)** = token 失效:脚本会提示「重开万达 APP 我的页重抓 Cookie」。
-- **万达若更新小程序 wasm**(换签名算法),内嵌引擎需按 [`signer/`](./signer/) 的构建步骤重新生成。目前 `ver=6.5.3` 引擎稳定。
+- **万达若更新小程序 wasm**(换签名算法),内嵌引擎需按上方「重建内嵌引擎」步骤重新生成。目前 `ver=6.5.3` 引擎稳定。

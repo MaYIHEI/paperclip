@@ -46,6 +46,10 @@ captures/
 config.local.*
 secrets/
 
+# Wrangler / Cloudflare 本地缓存(含账号 ID/邮箱,绝不提交)
+.wrangler/
+.cf-token
+
 # Claude Code / Codex 本地上下文(不应提交)
 .claude/
 CLAUDE.md
