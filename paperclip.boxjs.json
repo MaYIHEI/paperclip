@@ -536,6 +536,67 @@
       ]
     },
     {
+      "id": "paperclip.wanda",
+      "name": "万达电影",
+      "keys": [
+        "wanda_data",
+        "wanda_signer_url",
+        "wanda_clear",
+        "wanda_debug"
+      ],
+      "settings": [
+        {
+          "id": "wanda_signer_url",
+          "name": "签名服务地址",
+          "val": "https://wanda-signer.misery-hollows0m.workers.dev",
+          "type": "text",
+          "placeholder": "https://wanda-signer.xxx.workers.dev",
+          "desc": "自建签名 Worker 地址(见 signer/),万达签名 wasm 跑在这里。已填好默认值,换号/重部署时改这里"
+        },
+        {
+          "id": "wanda_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        },
+        {
+          "id": "wanda_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "开启后打印 ts/check 与签到响应"
+        }
+      ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/wanda",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/wanda/wanda.js",
+      "scripts": [
+        {
+          "name": "主签到",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/wanda/wanda.js"
+        },
+        {
+          "name": "抓 Cookie",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/wanda/wanda.cookie.js"
+        }
+      ],
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/wanda.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/wanda.png"
+      ]
+    },
+    {
       "id": "paperclip.casetify",
       "name": "CASETiFY (已归档)",
       "keys": [
