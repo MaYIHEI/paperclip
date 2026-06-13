@@ -52,7 +52,7 @@
 
 const $ = new Env("味多美");
 
-const SCRIPT_VERSION = "2026-06-07.r4"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-13.r5"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_OPENID = "wedome_openid";      // 公众号 openid(永久固定)
@@ -149,10 +149,11 @@ async function checkin() {
     debug(check, "signInLog(check)");
     $.log(`[查询] ${$.toStr(check).slice(0, 200)}`);
 
-    if (check && check.data && check.data.createTime) {
-        const signedToday = check.data.createTime.slice(0, 10) === today();
+    // 只有 createTime 是「今天」才算今日已签、跳过;否则那是历史签到记录,必须继续走真正的 signIn。
+    // (旧版 bug:不论 createTime 是哪天都 push「今日已签到」并 return,导致天天报已签实际从没签)
+    if (check && check.data && check.data.createTime && check.data.createTime.slice(0, 10) === today()) {
         $.setdata(activityId, CK_ACTID);
-        $.messages.push(signedToday ? `✨ 今日已签到,第 ${check.data.index || "?"} 天` : "✨ 今日已签到");
+        $.messages.push(`✨ 今日已签到,第 ${check.data.index || "?"} 天`);
         return;
     }
 
