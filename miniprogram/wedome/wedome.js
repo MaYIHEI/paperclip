@@ -52,7 +52,7 @@
 
 const $ = new Env("味多美");
 
-const SCRIPT_VERSION = "2026-06-13.r7"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-13.r8"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_OPENID = "wedome_openid";      // 公众号 openid(永久固定)
@@ -144,56 +144,63 @@ async function checkin() {
     const actChanged = lastActId && lastActId !== activityId;
     $.log(`[活动] activityId=${activityId}${actChanged ? "  ⚠️ 已变更(上次=" + lastActId + ")" : lastActId ? "  (与上次相同)" : "  (首次记录)"}`);
 
-    // 3a) 查询今日是否已签(signInLog = 查询接口,有 createTime = 已签)
-    const check = await api("POST", `/api/marketing/pointSignInActivitySet/signInLog?activityId=${activityId}&memberId=${memberId}`, token);
-    debug(check, "signInLog(check)");
-    $.log(`[查询] ${$.toStr(check).slice(0, 200)}`);
-
-    // 注意:实测 signInLog 的 createTime 返回的是「服务器当前时间」(cron 08:10 跑就回 08:10:00)、且 ok:false,
-    // 并不代表真签到过 —— 旧版据此判「今日已签到」直接 return,导致从来没真正签到。
-    // 因此不再用 signInLog 短路,始终走下面的 signIn,由 signIn 自己的返回判定成功 / 已签。
-
-    // 3b) 实际签到:POST signIn,body 必须含 memberName(空则服务端返回 ok:false 拒签)
+    // memberName(signIn body 需要):优先 BoxJS,兜底取 loginByOpenid 的 member.name
     let memberName = $.isNode()
         ? (process.env.WEDOME_MEMBERNAME || "")
         : ($.getdata(CK_NAME) || "");
-    // 兜底:从 loginByOpenid 返回里捞会员名(字段名未知,多试几个),避免必须手动进小程序抓取
-    if (!memberName && login && login.data) {
-        const d = login.data;
-        memberName = d.memberName || d.name || d.nickName || d.nickname || (d.member && d.member.name) || "";
-        if (memberName) {
-            $.setdata(memberName, CK_NAME);
-            $.log(`[兜底] 从 loginByOpenid 取到 memberName=${memberName}`);
-        }
+    if (!memberName && login.data && login.data.member && login.data.member.name) {
+        memberName = login.data.member.name;
+        $.setdata(memberName, CK_NAME);
+        $.log(`[兜底] 从 loginByOpenid 取到 memberName=${memberName}`);
     }
-    if (!memberName) {
-        $.log("[WARN] 仍无 memberName → signIn 大概率被拒;进一次味多美小程序「我的/会员」页触发 member/find 重抓");
-    }
-    const sign = await api("POST", "/api/marketing/pointSignInActivitySet/signIn", token, {
-        activityId, memberId, memberName, index: 1,
-    });
-    debug(sign, "signIn");
-    $.log(`[签到] ${$.toStr(sign).slice(0, 300)}`);
 
-    // 成功标志是 ok===true,不是 result===0(实测失败时 result 也是 0,只有 ok 区分成败)
+    // ⚠️ 成功判据:只认「积分有没有涨」。实测所有接口都回 result:0 / ok:false
+    //    (连 loginByOpenid、查积分这种明显成功的也是),ok/result 无法区分成败 —— 旧版误信 ok 导致天天误报。
+    //    唯一可靠信号 = 签到前后的积分差。
+    const p0 = await getPoint(token);
+
+    // 3) signInLog:本 SaaS 里它既返回签到状态、调用本身也会完成当日签到(实测 cron 调它的同刻积分 +2)
+    let check = await api("POST", `/api/marketing/pointSignInActivitySet/signInLog?activityId=${activityId}&memberId=${memberId}`, token);
+    debug(check, "signInLog");
+    $.log(`[查询] ${$.toStr(check).slice(0, 200)}`);
+    let signedToday = !!(check && check.data && check.data.createTime && check.data.createTime.slice(0, 10) === today());
+
+    // signInLog 没把今天签上,再显式调 signIn 兜底,然后复查记录
+    if (!signedToday) {
+        const sign = await api("POST", "/api/marketing/pointSignInActivitySet/signIn", token, {
+            activityId, memberId, memberName, index: 1,
+        });
+        debug(sign, "signIn");
+        $.log(`[签到] ${$.toStr(sign).slice(0, 300)}`);
+        check = await api("POST", `/api/marketing/pointSignInActivitySet/signInLog?activityId=${activityId}&memberId=${memberId}`, token);
+        debug(check, "signInLog(recheck)");
+        signedToday = !!(check && check.data && check.data.createTime && check.data.createTime.slice(0, 10) === today());
+    }
+
+    const p1 = await getPoint(token);
+    const delta = (p0 != null && p1 != null) ? p1 - p0 : null;
+    $.log(`[积分] 签到前=${p0} 签到后=${p1} 差值=${delta}`);
+
     const tag = `[${SCRIPT_VERSION}]`;
-    if (sign && sign.ok === true) {
-        $.setdata(activityId, CK_ACTID); // 记录本次 activityId,供下次对比
-        const changedNote = actChanged ? " ⚠️ activityId 已变更" : "";
-        $.messages.push(`✅ 签到成功 (+2 积分)${changedNote}`);
-    } else if (sign && /已签|already|repeat|重复/i.test($.toStr(sign))) {
-        $.messages.push("✨ 今日已签到");
+    const changedNote = actChanged ? " ⚠️ activityId 已变更" : "";
+    if (delta != null && delta > 0) {
+        $.setdata(activityId, CK_ACTID);
+        $.messages.push(`✅ 签到成功 (+${delta} 积分)${changedNote}`);
+    } else if (signedToday) {
+        // 积分没动但今天确有签到记录 → 多为当天 cron 已签过,正常
+        $.setdata(activityId, CK_ACTID);
+        $.messages.push(`✨ 今日已签到${check.data.index ? `,第 ${check.data.index} 天` : ""}`);
     } else {
-        const hint = memberName ? "" : "(memberName 为空,进味多美小程序「我的」页重抓)";
-        $.messages.push(`${tag} ❌ 签到失败${hint}: ${sign ? $.toStr(sign).slice(0, 200) : "无响应"}`);
+        $.messages.push(`${tag} ❌ 签到失败,积分未变${memberName ? "" : "(memberName 为空)"}`);
     }
+    if (p1 != null) $.messages.push(`💰 当前积分: ${p1}`);
+}
 
-    // 4) 积分余额(可选展示)
-    const point = await api("GET", "/api/member/memberPoint/getMyPointInfo", token);
-    debug(point, "getMyPointInfo");
-    if (point && point.data && typeof point.data.point === "number") {
-        $.messages.push(`💰 当前积分: ${point.data.point}`);
-    }
+// 读取当前积分;失败返回 null
+async function getPoint(token) {
+    const r = await api("GET", "/api/member/memberPoint/getMyPointInfo", token);
+    debug(r, "getMyPointInfo");
+    return r && r.data && typeof r.data.point === "number" ? r.data.point : null;
 }
 
 // ============ 请求 ============
