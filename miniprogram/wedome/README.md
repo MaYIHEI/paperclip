@@ -88,7 +88,8 @@ script-providers:
 
 - **复活核心:`loginByOpenid` 旁路** — 原 `buyer-token` 续期绑死 `wx.login()`(归档主因)。解包发现登录测试页有 `GET /api/member/h5/loginByOpenid?openid=<公众号openid>&brandId=2039`,**用公众号 openid 直接换 token,完全不碰 wx.login**,生产环境放行、无额外鉴权,openid 永久固定 → 一次抓取长期有效(和龙德广场「一次抓取永久有效」同级)
 - **抓的是「公众号 openid」** — `http-response` 挂 `minaLogin`(全新登录触发)或 `member/find`(「我的/会员」页正常浏览即触发,**已登录态也发,免删小程序重登**),两接口响应结构一致,均取 `data.member.openid`(公众号 openid)。**注意不是小程序 openid**(`miniWeixinInfo.openid` / `memberWeixinApps[].openid`),小程序 openid 调 loginByOpenid 会返回 `410 根据openid获取unionid失败`
-- **签到链(全动态,无写死易变值)** — `loginByOpenid` 换 token + memberId → POST `pointSignInActivitySet/get` 取当前 `activityId` → POST `signInLog?activityId&memberId` **查询**今日是否已签(有 `createTime` = 已签,跳过) → POST `pointSignInActivitySet/signIn` JSON body `{activityId,memberId,memberName,index:1}` **执行签到**
+- **签到链(全动态,无写死易变值)** — `loginByOpenid` 换 token + memberId → POST `pointSignInActivitySet/get` 取当前 `activityId` → POST `signInLog?activityId&memberId`(本 SaaS 里它既返回今日签到状态、调用本身也完成当日签到) → 必要时再 POST `pointSignInActivitySet/signIn` 兜底
+- **成败只看积分差,不看 `ok`/`result`** — 实测**所有**接口都返回 `result:0` / `ok:false`(连 `loginByOpenid`、查积分这种明显成功的也是),这两个字段无法区分成败。脚本改为签到前后各读一次 `getMyPointInfo.point`,**积分涨了才算签到成功**;积分没动但 `signInLog` 有今日 `createTime` → 当天已签(多为 cron 已跑过)
 - **memberName** — 从 `member/find` 响应的 `data.member.name` 抓取并存入 BoxJS `wedome_membername`，签到 body 必填；进一次小程序「我的」页即可同步
 - **鉴权头** — `buyer-token`(loginByOpenid 换来的)+ `brandId: 2039`,无 body 签名
 - **同套 SaaS 通用** — 卓健/大咖服务大量品牌小程序,改 `brandId` + `openid` 即可适配其他商家
@@ -104,6 +105,7 @@ script-providers:
 | 2026-06-07 | 适配签到接口拆分:`signInLog` 由执行变为查询,实际签到改为新接口 `signIn`,body 增加 `memberName`；新增 `tentacle-content` 系列必填 header；捕获规则同步存储 `member.name` |
 | 2026-06-07 | 新增 `activityId` 变动检测:每次签到后存储 activityId,下次对比,变了通知用户 |
 | 2026-06-10 | 长期稳定,🧪→✅ 维护中 |
+| 2026-06-13 | 🐞 修复天天误报签到成功:① 旧版 `signInLog` 短路逻辑不论日期都判「今日已签到」直接 return,从不真正签到;② 误把 `result===0`/`ok===true` 当成功标志,但实测**所有接口** `result` 恒 0、`ok` 恒 false。改为**签到前后积分差**判成败(涨了才算成功),`signIn` 仅作兜底 |
 
 ## 已知限制
 
