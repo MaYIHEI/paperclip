@@ -52,7 +52,7 @@
 
 const $ = new Env("味多美");
 
-const SCRIPT_VERSION = "2026-06-13.r5"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-13.r6"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_OPENID = "wedome_openid";      // 公众号 openid(永久固定)
@@ -149,13 +149,9 @@ async function checkin() {
     debug(check, "signInLog(check)");
     $.log(`[查询] ${$.toStr(check).slice(0, 200)}`);
 
-    // 只有 createTime 是「今天」才算今日已签、跳过;否则那是历史签到记录,必须继续走真正的 signIn。
-    // (旧版 bug:不论 createTime 是哪天都 push「今日已签到」并 return,导致天天报已签实际从没签)
-    if (check && check.data && check.data.createTime && check.data.createTime.slice(0, 10) === today()) {
-        $.setdata(activityId, CK_ACTID);
-        $.messages.push(`✨ 今日已签到,第 ${check.data.index || "?"} 天`);
-        return;
-    }
+    // 注意:实测 signInLog 的 createTime 返回的是「服务器当前时间」(cron 08:10 跑就回 08:10:00)、且 ok:false,
+    // 并不代表真签到过 —— 旧版据此判「今日已签到」直接 return,导致从来没真正签到。
+    // 因此不再用 signInLog 短路,始终走下面的 signIn,由 signIn 自己的返回判定成功 / 已签。
 
     // 3b) 实际签到:POST signIn,body 必须含 memberName
     const memberName = $.isNode()
@@ -168,7 +164,7 @@ async function checkin() {
         activityId, memberId, memberName, index: 1,
     });
     debug(sign, "signIn");
-    $.log(`[签到] ${$.toStr(sign).slice(0, 200)}`);
+    $.log(`[签到] ${$.toStr(sign).slice(0, 300)}`);
 
     const tag = `[${SCRIPT_VERSION}]`;
     if (sign && sign.result === 0) {
