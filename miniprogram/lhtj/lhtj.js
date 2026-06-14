@@ -125,7 +125,7 @@ function getCookie() {
     return $done({});
   }
   $.setdata(JSON.stringify(data), CK_KEY);
-  $.msg($.name, '', '🎉 抓取 token 成功,可关闭重写规则');
+  $.msg($.name, '✅ 龙湖天街 Cookie 获取成功', '可关闭重写规则');
   $done({});
 }
 
