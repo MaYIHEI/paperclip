@@ -109,7 +109,7 @@ function getCookie() {
 
     $.msg(
         $.name,
-        '✅ Cookie 已保存',
+        '✅ 小米有品 Cookie 获取成功',
         `serviceToken: ${maskToken(serviceToken)}\n` +
         `session: ${maskToken(youpinSession || '-')}`
     );
