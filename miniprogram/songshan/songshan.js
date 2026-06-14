@@ -86,7 +86,7 @@ function getCookie() {
         $.setdata(JSON.stringify(headers), CK_HEADERS);
         $.setdata(body, CK_BODY);
 
-        $.msg($.name, "🎉 签到凭据已抓取", "可关闭抓包,主脚本自动签到");
+        $.msg($.name, "✅ 松山棉店 Cookie 获取成功", "可关闭抓包,主脚本自动签到");
     } catch (e) {
         $.log(`[ERROR] cookie 抓取异常: ${e}`);
     }
