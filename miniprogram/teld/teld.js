@@ -7,6 +7,48 @@
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Updated: 2026-06-04
+ *
+ * ===== Loon =====
+ * [MITM]
+ * hostname = sgi.teld.cc, c2.teld.cc
+ * [Script]
+ * http-request ^https:\/\/sgi\.teld\.cc\/api\/invoke tag=特来电 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/teld/teld.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/teld.png
+ * cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/teld/teld.js, tag=特来电签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/teld.png, enable=true
+ *
+ * ===== Surge =====
+ * [MITM]
+ * hostname = sgi.teld.cc, c2.teld.cc
+ * [Script]
+ * 特来电 Cookie = type=http-request,pattern=^https:\/\/sgi\.teld\.cc\/api\/invoke,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/teld/teld.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/teld.png
+ * 特来电签到 = type=cron,cronexp=30 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/teld/teld.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/teld.png
+ *
+ * ===== Quantumult X =====
+ * [MITM]
+ * hostname = sgi.teld.cc, c2.teld.cc
+ * [rewrite_local]
+ * ^https:\/\/sgi\.teld\.cc\/api\/invoke url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/teld/teld.js
+ * [task_local]
+ * 30 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/teld/teld.js, tag=特来电签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/teld.png, enabled=true
+ *
+ * ===== Stash =====
+ * cron:
+ *   script:
+ *     - name: 特来电签到
+ *       cron: '30 8 * * *'
+ *       timeout: 60
+ * http:
+ *   mitm:
+ *     - "sgi.teld.cc"
+ *     - "c2.teld.cc"
+ *   script:
+ *     - match: ^https:\/\/sgi\.teld\.cc\/api\/invoke
+ *       name: 特来电 Cookie
+ *       type: request
+ *       require-body: false
+ * script-providers:
+ *   特来电签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/teld/teld.js
+ *     interval: 86400
  */
 
 const $ = new Env("特来电");
