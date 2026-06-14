@@ -208,7 +208,7 @@ async function getCookie() {
         index >= 0 ? userCookie[index] = newData : userCookie.push(newData);
 
         $.setjson(userCookie, ckName);
-        $.msg($.name, `🎉账号[${phone_num(newData.userName)}]更新token成功!`, ``);
+        $.msg($.name, `✅ 泡泡玛特 Cookie 获取成功`, `账号 ${phone_num(newData.userName)}`);
 
     } catch (e) {
         throw e;
