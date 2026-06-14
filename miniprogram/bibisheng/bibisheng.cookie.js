@@ -33,7 +33,7 @@ const KEY_PAGE = 'bbs_page';
         if (headers['x-page']) $.setdata(headers['x-page'], KEY_PAGE);
 
         $.log(`[INFO] session-token 已更新, 长度 ${token.length}`);
-        $.msg('笔笔省', '✅ Token 已更新', '可以关闭重写,等 cron 自动领券');
+        $.msg('笔笔省', '✅ 笔笔省 Cookie 获取成功', '可以关闭重写,等 cron 自动领券');
     } catch (e) {
         $.log('[ERROR] cookie 抓取失败: ' + e);
     }
