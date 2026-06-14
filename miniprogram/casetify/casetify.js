@@ -175,7 +175,7 @@ function getCookie() {
             const r = JSON.parse(($response && $response.body) || "{}");
             phone = r && r.data && r.data.phone || "";
         } catch (e) {}
-        $.msg($.name, "", `🎉 token 已更新${phone ? ` ${maskPhone(phone)}` : ""}`);
+        $.msg($.name, "✅ CASETiFY Cookie 获取成功", `${phone ? maskPhone(phone) : ""}`);
     } catch (e) {
         $.log(`[getCookie] ${e}`);
     }
