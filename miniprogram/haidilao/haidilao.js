@@ -213,7 +213,7 @@ async function getCookie() {
             existing.push(token);
             const newVal = existing.join('@');
             $.setdata(newVal, ckName);
-            $.msg($.name, '', `🎉 获取 Token 成功 (共${existing.length}个账号)`);
+            $.msg($.name, '✅ 海底捞 Cookie 获取成功', `共 ${existing.length} 个账号`);
             $.log(`[INFO] 新增 token: ${token}`);
         } else {
             $.log(`[INFO] token 已存在,无需更新`);
