@@ -69,7 +69,7 @@ const CK_KEY = 'mishop_data';
 
         if (verify > 0) {
             $.log(`[INFO] Cookie 已更新, userId=${userId}, cookie ${cookie.length}字符, 读回 ${verify}字符`);
-            $.msg('小米商城', '✅ Cookie 获取成功', `账号 ${userId} · 请关闭本脚本`);
+            $.msg('小米商城', '✅ 小米商城 Cookie 获取成功', `账号 ${userId} · 请关闭本脚本`);
         } else {
             $.log(`[ERROR] setdata 写入失败 (ok=${ok} verify=${verify})`);
             $.msg('小米商城', '⚠️ Cookie 写入失败', '存储读回为空,检查代理工具持久化权限');
