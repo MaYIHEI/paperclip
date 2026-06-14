@@ -39,7 +39,7 @@ const KEY_LIST_BODY = 'huisheng_list_body';
         $.log(`[OK] headers ${Object.keys(headers).length} 个,body ${body.length} 字符;写入返回 H=${okH} B=${okB};读回验证 H=${verifyH} B=${verifyB}`);
 
         if (verifyH > 0 && verifyB > 0) {
-            $.msg('惠省', '✅ 鉴权数据已落地', `headers ${verifyH} 字符 / body ${verifyB} 字符\n可关闭本脚本,主脚本可跑`);
+            $.msg('惠省', '✅ 惠省 Cookie 获取成功', `headers ${verifyH} 字符 / body ${verifyB} 字符\n可关闭本脚本,主脚本可跑`);
         } else {
             $.msg('惠省', '⚠️ 写入异常', `存储读回为空 (H=${verifyH} B=${verifyB})\n检查 Loon 持久化存储权限`);
         }
