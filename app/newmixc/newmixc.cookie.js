@@ -73,7 +73,7 @@ const CK_KEY = 'newmixc_data';
 
         $.setdata(JSON.stringify(data), CK_KEY);
         $.log(`[INFO] 已更新 token, phone=${maskPhone(phone)}, mallNo=${data.mallNo}`);
-        $.msg('一点万象', '✅ Token 获取成功', `账号 ${maskPhone(phone)} · 商场 ${data.mallNo}`);
+        $.msg('一点万象', '✅ 一点万象 Cookie 获取成功', `账号 ${maskPhone(phone)} · 商场 ${data.mallNo}`);
     } catch (e) {
         $.log('[ERROR] cookie 抓取失败: ' + e);
     }
