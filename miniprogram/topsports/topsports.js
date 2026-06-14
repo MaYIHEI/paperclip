@@ -117,7 +117,7 @@ function getCookie() {
             return;
         }
         $.setdata(cookie, CK_COOKIE);
-        $.msg($.name, "🎉 Cookie 已抓取", "可关闭抓包,主脚本自动签到");
+        $.msg($.name, "✅ 滔搏 Cookie 获取成功", "可关闭抓包,主脚本自动签到");
     } catch (e) {
         $.log(`[ERROR] cookie 抓取异常: ${e}`);
     }
