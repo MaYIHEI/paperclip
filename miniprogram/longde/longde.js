@@ -229,7 +229,7 @@ function getCookie() {
         }
         $.setdata(newToken, CK_NAME);
         const expDate = payload.exp ? new Date(payload.exp * 1000).toLocaleDateString() : "?";
-        $.msg($.name, "🎉 Token 获取成功", `mall_id: ${payload.mall_id}\n有效至: ${expDate}`);
+        $.msg($.name, "✅ 龙德广场 Cookie 获取成功", `mall_id: ${payload.mall_id}\n有效至: ${expDate}`);
     } catch (e) {
         $.log(`[ERROR] cookie 抓取异常: ${e}`);
     }
