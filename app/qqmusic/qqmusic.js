@@ -13,21 +13,21 @@
  * [MITM]
  * hostname = u6.y.qq.com
  * [Script]
- * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?_webcgikey=EveryDaySignLvzScore& tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  * cron "20 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
  *
  * ===== Surge =====
  * [MITM]
  * hostname = u6.y.qq.com
  * [Script]
- * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?_webcgikey=EveryDaySignLvzScore&,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  * QQ音乐签到 = type=cron,cronexp=20 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  *
  * ===== Quantumult X =====
  * [MITM]
  * hostname = u6.y.qq.com
  * [rewrite_local]
- * ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?_webcgikey=EveryDaySignLvzScore& url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js
+ * ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js
  * [task_local]
  * 20 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
  *
@@ -41,7 +41,7 @@
  *   mitm:
  *     - "u6.y.qq.com"
  *   script:
- *     - match: ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?_webcgikey=EveryDaySignLvzScore&
+ *     - match: ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore
  *       name: QQ音乐 Cookie
  *       type: request
  *       require-body: false
@@ -53,7 +53,7 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-06-15.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-15.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, ts }
@@ -69,8 +69,8 @@ $.messages = [];
 
 // ============ 抓取 ============
 
-// 进「每日签到」页时触发(musics.fcg?_webcgikey=EveryDaySignLvzScore&),
-// 只需从 Cookie 里取 uin + qm_keyst,不需要请求体。
+// 进会员中心/签到页时触发(musics.fcg 的 query 含 EveryDaySignLvzScore,含首页合并请求),
+// 只需从 Cookie 里取 uin + qm_keyst + refresh_key,不需要请求体。
 function getCookie() {
     try {
         const headers = lowerKeys($request.headers);

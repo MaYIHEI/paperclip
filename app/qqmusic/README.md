@@ -15,8 +15,8 @@ QQ 音乐 App「我的 / 会员 / 每日签到」绿钻成长值每日签到。*
 ## 使用步骤
 
 1. 按下方对应平台配置,开启重写脚本 + cron
-2. 打开 QQ 音乐 App →「我的 / 会员 / 每日签到」进签到页
-3. 收到 `✅ QQ 音乐 Cookie 获取成功` 通知即抓取成功
+2. 打开 QQ 音乐 App →「我的 → 会员中心」(进到会员中心首页即可,无需点签到)
+3. 收到 `✅ QQ 音乐 Cookie 获取成功` 通知即抓取成功(没弹就再进一次「每日签到」页)
 4. 之后挂着代理就行,cron 每天自动续期 + 签到,**无需再开 App**;只有手机关机 / 断代理超过 3 天才需重抓
 
 ## 工作原理
@@ -43,7 +43,7 @@ QQ 音乐 App「我的 / 会员 / 每日签到」绿钻成长值每日签到。*
 hostname = u6.y.qq.com
 
 [Script]
-http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?_webcgikey=EveryDaySignLvzScore& tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
 
 cron "20 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
 ```
@@ -55,7 +55,7 @@ cron "20 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/papercli
 hostname = u6.y.qq.com
 
 [Script]
-QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?_webcgikey=EveryDaySignLvzScore&,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
 
 QQ音乐签到 = type=cron,cronexp=20 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
 ```
@@ -67,7 +67,7 @@ QQ音乐签到 = type=cron,cronexp=20 9 * * *,timeout=60,script-path=https://raw
 hostname = u6.y.qq.com
 
 [rewrite_local]
-^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?_webcgikey=EveryDaySignLvzScore& url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js
+^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js
 
 [task_local]
 20 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
@@ -86,7 +86,7 @@ http:
   mitm:
     - "u6.y.qq.com"
   script:
-    - match: ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?_webcgikey=EveryDaySignLvzScore&
+    - match: ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore
       name: QQ音乐 Cookie
       type: request
       require-body: false
@@ -115,3 +115,4 @@ script-providers:
 | 日期 | 变更 |
 |---|---|
 | 2026-06-15 | 初版。三版迭代:① 整包抓取+原样回放 → ② 解包小程序发现 `musicu.fcg` 免签名通道(只存 uin+qm_keyst)→ ③ 发现 musickey 仅 3 天有效但 `refresh_key` 可续期,加 cron 自动续期。全链路真 token 实测通(续期换新 key 3 天有效 → 签到 `Ret:20019`) |
+| 2026-06-15 | 抓取规则放宽:`musics.fcg?...EveryDaySignLvzScore`(匹配 query 中任意位置),进会员中心首页的合并请求即可触发,无需点进签到页 |
