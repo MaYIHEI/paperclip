@@ -255,6 +255,31 @@
       ]
     },
     {
+      "id": "paperclip.bhg",
+      "name": "北京华联",
+      "keys": [
+        "bhg_token",
+        "bhg_mallid",
+        "bhg_clear"
+      ],
+      "settings": [
+        {
+          "id": "bhg_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        }
+      ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/bhg",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bhg/bhg.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/bhg.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/bhg.png"
+      ]
+    },
+    {
       "id": "paperclip.weibotalk",
       "name": "微博超话",
       "keys": [
