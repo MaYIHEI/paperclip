@@ -16,6 +16,7 @@
 | [`huisheng/`](./huisheng/) | 惠省 - 每日领券 | ✅ 维护中 |
 | [`miniso/`](./miniso/) | 名创优品 - mini 币 | ✅ 维护中 |
 | [`longde/`](./longde/) | 龙德广场 - 每日签到 | ✅ 维护中 |
+| [`bhg/`](./bhg/) | 北京华联(BHG Mall) - 每日签到 | 🧪 待验证 |
 | [`lhtj/`](./lhtj/) | 龙湖天街 - 每日签到(仅小程序通道) | ✅ 维护中 |
 | [`casetify/`](./casetify/) | CASETiFY - 每日签到 | 📦 已归档 |
 | [`songshan/`](./songshan/) | 松山棉店 - 每日签到(微盟 SaaS) | ✅ 维护中 |
