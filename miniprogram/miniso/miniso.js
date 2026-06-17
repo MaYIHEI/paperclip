@@ -1,32 +1,32 @@
 /**
  * 名创优品 · 微信小程序「名创优品」每日签到 mini 币
  *
- * 抓取:打开「名创优品」小程序 → 进会员页(自动登录刷 token),抓 token
+ * 抓取:打开「名创优品」小程序 → 进会员页(自动刷新会员信息),抓 token
  * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-24
+ * @Updated: 2026-06-17
  *
  * ===== Loon =====
  * [MITM]
- * hostname = mini-cn.miniso.com
+ * hostname = member-center.miniso.com
  * [Script]
- * http-response https:\/\/mini-cn\.miniso\.com\/api\/v3\/m-mini\/user\/login tag=名创优品 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png
+ * http-request ^https:\/\/member-center\.miniso\.com\/userinfo\/userinfo\/GetUserInfoV3 tag=名创优品 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png
  * cron "37 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js, tag=名创优品签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png, enable=true
  *
  * ===== Surge =====
  * [MITM]
- * hostname = mini-cn.miniso.com
+ * hostname = member-center.miniso.com
  * [Script]
- * 名创优品 Cookie = type=http-response,pattern=https:\/\/mini-cn\.miniso\.com\/api\/v3\/m-mini\/user\/login,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png
+ * 名创优品 Cookie = type=http-request,pattern=^https:\/\/member-center\.miniso\.com\/userinfo\/userinfo\/GetUserInfoV3,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png
  * 名创优品签到 = type=cron,cronexp=37 7 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png
  *
  * ===== Quantumult X =====
  * [MITM]
- * hostname = mini-cn.miniso.com
+ * hostname = member-center.miniso.com
  * [rewrite_local]
- * https:\/\/mini-cn\.miniso\.com\/api\/v3\/m-mini\/user\/login url script-response-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js
+ * ^https:\/\/member-center\.miniso\.com\/userinfo\/userinfo\/GetUserInfoV3 url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js
  * [task_local]
  * 37 7 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js, tag=名创优品签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png, enabled=true
  *
@@ -38,12 +38,12 @@
  *       timeout: 60
  * http:
  *   mitm:
- *     - "mini-cn.miniso.com"
+ *     - "member-center.miniso.com"
  *   script:
- *     - match: https:\/\/mini-cn\.miniso\.com\/api\/v3\/m-mini\/user\/login
+ *     - match: ^https:\/\/member-center\.miniso\.com\/userinfo\/userinfo\/GetUserInfoV3
  *       name: 名创优品 Cookie
- *       type: response
- *       require-body: true
+ *       type: request
+ *       require-body: false
  * script-providers:
  *   名创优品签到:
  *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js
@@ -52,7 +52,7 @@
 
 const $ = new Env('名创优品');
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-17.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_NAME = 'miniso_data';
