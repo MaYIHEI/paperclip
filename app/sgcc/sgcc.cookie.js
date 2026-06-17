@@ -29,17 +29,22 @@ try {
   const t = low['t'], uid = low['userid'];
   if (!t || !uid) { $done({}); }
   else {
+    // 去重:t 没变就静默更新,不再弹通知(member 接口每页几十条,避免刷屏)
+    let prevT = null;
+    try { prevT = JSON.parse(read(KEY) || '{}').t; } catch (e) {}
     const picked = {};
     for (const k of WANT) if (low[k] != null) picked[k] = low[k];
     picked._ts = Date.now();
     const ok = write(JSON.stringify(picked), KEY);
     const back = read(KEY); // 写后读回校验(踩坑 #24)
-    if (ok && back) {
-      notify('✅ 网上国网 Cookie 获取成功',
-        `userid: ${uid.slice(0,6)}…${uid.slice(-4)}`,
-        `t: ${t.slice(0,6)}…${t.slice(-4)}  共 ${Object.keys(picked).length-1} 个头`);
-    } else {
-      notify('⚠️ 网上国网 Cookie 写入失败', '请检查 Loon 脚本权限', '');
+    if (t !== prevT) {
+      if (ok && back) {
+        notify('✅ 网上国网 Cookie 获取成功',
+          `userid: ${uid.slice(0,6)}…${uid.slice(-4)}`,
+          `t: ${t.slice(0,6)}…${t.slice(-4)}  共 ${Object.keys(picked).length-1} 个头`);
+      } else {
+        notify('⚠️ 网上国网 Cookie 写入失败', '请检查 Loon 脚本权限', '');
+      }
     }
     $done({});
   }
