@@ -59,8 +59,8 @@ post("/api/oauth2/outer/c02/f02", gk.e, {}, function(err,data){
   var keyCode, sessPub;
   try{ var j=JSON.parse(data); var p=JSON.parse(sm4dec(j.encryptData, gk.T)); keyCode=p.data.keyCode; sessPub=p.data.publicKey; }
   catch(e){ notify("⚠️ SGCC 探针-getKeyCode失败", String(data).slice(0,120)); $done(); return; }
-  // 假账密登录
-  var loginBody = JSON.stringify({params:{uscInfo:{devciceIp:"",tenant:"state_grid",member:"0902",devciceId:""},quInfo:{optSys:"android",pushId:"000000",addressProvince:"110100",password:md5("Test123456"),addressRegion:"110101",account:"13812345678",addressCity:"330100"}}});
+  // 假账密登录。complexSliderRet:0 = 原作者用的"声明不滑、直接放行"字段;干净 IP 下服务器认,IP 被风控才 RK1003
+  var loginBody = JSON.stringify({params:{uscInfo:{devciceIp:"",tenant:"state_grid",member:"0902",devciceId:""},quInfo:{optSys:"android",pushId:"000000",addressProvince:"110100",password:md5("Test123456"),addressRegion:"110101",account:"13812345678",addressCity:"330100",complexSliderRet:0}}});
   var lg = envelope(loginBody, sessPub, false);
   post("/api/osg-web0004/open/c44/f06", lg.e, {keyCode:keyCode}, function(err2,data2){
     if(err2){ notify("⚠️ SGCC 探针-login网络错误", JSON.stringify(err2)); $done(); return; }
