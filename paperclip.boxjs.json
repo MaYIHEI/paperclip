@@ -849,6 +849,48 @@
       ]
     },
     {
+      "id": "paperclip.tingtingfm",
+      "name": "听听FM",
+      "keys": [
+        "tingtingfm_data",
+        "tingtingfm_clear",
+        "tingtingfm_debug"
+      ],
+      "settings": [
+        {
+          "id": "tingtingfm_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        },
+        {
+          "id": "tingtingfm_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "开启后打印换 token / 签到请求与响应"
+        }
+      ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/tingtingfm",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/tingtingfm/tingtingfm.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tingtingfm.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tingtingfm.png"
+      ]
+    },
+    {
       "id": "paperclip.teld",
       "name": "特来电",
       "keys": [
