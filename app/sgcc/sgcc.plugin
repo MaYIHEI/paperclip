@@ -1,11 +1,12 @@
-#!name=网上国网 Cookie(测试)
-#!desc=抓取网上国网 App 鉴权 token(t/userid/device_token),🧪 测试可行性用。打开后进 App「我的/积分」页触发,收到「✅ 网上国网 Cookie 获取成功」即成功(t 未变化时静默不重复弹)。
+#!name=网上国网签到(测试)
+#!desc=网上国网积分签到。① 开 App 进「我的/积分」页,自动抓 t 存 BoxJS(收到「✅ Cookie 获取成功」即可)② cron 每天 8:30 自动签到(复用信封免公钥);也可在脚本里手动跑。🧪 待验证(t 寿命 + 签到生效)。
 #!author=MaYIHEI
 #!homepage=https://github.com/MaYIHEI/paperclip
 #!icon=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
 
 [Script]
-http-request ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/ tag=网上国网 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/sgcc-wip/app/sgcc/sgcc.cookie.js, requires-body=false, timeout=10
+http-request ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/ tag=网上国网 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/sgcc-wip/app/sgcc/sgcc.cookie.js, requires-body=1, timeout=10
+cron "30 8 * * *" tag=网上国网签到, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/sgcc-wip/app/sgcc/sgcc.js, timeout=20
 
 [MITM]
 hostname = csc-service.sgcc.com.cn

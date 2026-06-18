@@ -1,16 +1,18 @@
 /*
- * 网上国网 Cookie 抓取(Loon http-request)
- * 抓 csc-service 业务请求头里的鉴权三件套 + 设备头,存 sgcc_data
+ * 网上国网 抓取(Loon http-request)—— 抓两样,全存本地 BoxJS,仓库不留个人数据
+ *   ① 鉴权头(t/userid/设备头)→ sgcc_data
+ *   ② "提交签到"信封(m1/0103514 的 data+skey)→ sgcc_signin(供 sgcc.js 复用)
+ * 开 App 进「我的/积分签到」页一次,两样自动抓全。
  *
- * [Script] 配置(Loon):
+ * [Script] 配置(Loon,需 requires-body 才能抓签到信封):
  * http-request ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/ \
- *   script-path=<raw url>/app/sgcc/sgcc.cookie.js, requires-body=0, timeout=10, tag=网上国网 Cookie
+ *   script-path=<raw>/app/sgcc/sgcc.cookie.js, requires-body=1, timeout=10, tag=网上国网 Cookie
  *
- * @Author MaYIHEI
- * @Updated 2026-06-17
- * 状态:🧪 待验证(token 寿命与签到链路真机未跑通)
+ * @Author MaYIHEI  @Updated 2026-06-17  状态:🧪 待验证
  */
 const KEY = 'sgcc_data';
+const KEY_ENV = 'sgcc_signin';
+const SIGNIN_PATH = '/osg-omgmt1042/member/m1/0103514'; // 真正"提交签到"端点(一天一次)
 const WANT = [
   'authorization', 't', 'userid', 'device_token',
   'appguid', 'appguidnew', 'devicetokentx', 'devicetokentxtime',
@@ -20,16 +22,30 @@ const WANT = [
 
 function read(k){ return typeof $persistentStore!=='undefined' ? $persistentStore.read(k) : null; }
 function write(v,k){ return typeof $persistentStore!=='undefined' ? $persistentStore.write(v,k) : false; }
-function notify(t,s,b){ if(typeof $notification!=='undefined') $notification.post(t,s,b); }
+function notify(t,s,b){ if(typeof $notification!=='undefined') $notification.post(t,s,b||''); }
 
 try {
+  const url = ($request && $request.url) || '';
   const h = ($request && $request.headers) || {};
   const low = {};
   for (const k in h) low[k.toLowerCase()] = h[k];
+
+  // ② 抓"提交签到"信封(只在 m1/0103514 这一条,带 body)
+  if (url.indexOf(SIGNIN_PATH) > -1) {
+    try {
+      const b = JSON.parse(($request && $request.body) || '{}');
+      if (b.data && b.skey) {
+        const prev = read(KEY_ENV);
+        write(JSON.stringify({ data: b.data, skey: b.skey, path: SIGNIN_PATH }), KEY_ENV);
+        if (!prev) notify('✅ 网上国网 签到信封已抓', '之后可自动签到', '');
+      }
+    } catch (e) {}
+  }
+
+  // ① 抓鉴权头
   const t = low['t'], uid = low['userid'];
   if (!t || !uid) { $done({}); }
   else {
-    // 去重:t 没变就静默更新,不再弹通知(member 接口每页几十条,避免刷屏)
     let prevT = null;
     try { prevT = JSON.parse(read(KEY) || '{}').t; } catch (e) {}
     const picked = {};
@@ -49,6 +65,6 @@ try {
     $done({});
   }
 } catch (e) {
-  notify('⚠️ 网上国网 Cookie 异常', e.message || String(e), '');
+  notify('⚠️ 网上国网 抓取异常', e.message || String(e), '');
   $done({});
 }
