@@ -134,8 +134,7 @@ async function main() {
     // 6) 限量爆款领取
     await taskComponent("限量爆款", COMPONENTS.hot, "privilege_grant.exec", {});
 
-    $.msg("WPS 任务汇总", "", $.results.join("\n"));
-    $.log(`[DONE]\n${$.results.join("\n")}`);
+    $.msg("WPS 任务汇总", "", $.results.join("\n")); // $.msg 已把汇总打到日志,不再重复 $.log
 }
 
 // ============ 任务:每日签到(请求体加密)============
