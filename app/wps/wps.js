@@ -2,7 +2,7 @@
  * WPS · 每日签到 + 福利中心(打卡/抽奖/会员试用申请/限量爆款领取),送积分与会员时长
  *
  * 抓取:打开「WPS」APP → 进任意活动页(任务中心/福利中心)→ 自动触发 page_info,抓 wps_sid
- * 签到:cron 每日签到 + 福利中心 4 项任务(细节见 README)
+ * 签到:cron 10 点触发,抢完限量爆款顺手做签到等其余任务,逐个串行、动作间随机间隔(细节见 README)
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
@@ -13,14 +13,14 @@
  * hostname = personal-act.wps.cn
  * [Script]
  * http-request ^https:\/\/personal-act\.wps\.cn\/activity-rubik\/activity\/page_info tag=WPS Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png
- * cron "20 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js, tag=WPS签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png, enable=true
+ * cron "0 10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js, tag=WPS签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png, enable=true
  *
  * ===== Surge =====
  * [MITM]
  * hostname = personal-act.wps.cn
  * [Script]
  * WPS Cookie = type=http-request,pattern=^https:\/\/personal-act\.wps\.cn\/activity-rubik\/activity\/page_info,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png
- * WPS签到 = type=cron,cronexp=20 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png
+ * WPS签到 = type=cron,cronexp=0 10 * * *,timeout=120,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png
  *
  * ===== Quantumult X =====
  * [MITM]
@@ -28,14 +28,14 @@
  * [rewrite_local]
  * ^https:\/\/personal-act\.wps\.cn\/activity-rubik\/activity\/page_info url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.cookie.js
  * [task_local]
- * 20 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js, tag=WPS签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png, enabled=true
+ * 0 10 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js, tag=WPS签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png, enabled=true
  *
  * ===== Stash =====
  * cron:
  *   script:
  *     - name: WPS签到
- *       cron: '20 8 * * *'
- *       timeout: 60
+ *       cron: '0 10 * * *'
+ *       timeout: 120
  * http:
  *   mitm:
  *     - "personal-act.wps.cn"
@@ -52,7 +52,7 @@
 
 const $ = new Env("WPS");
 
-const SCRIPT_VERSION = "2026-06-19.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-19.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -81,6 +81,9 @@ const COMPONENTS = {
 
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 WpsiOS/26.6.1";
 
+// 动作间隔(秒,[最小,最大] 每步独立取随机,各不相等):10 点抢完顺手把其余做了,模拟真人手动操作避风控
+const ACTION_GAP = [5, 10];
+
 $.results = []; // 各任务结果汇总,最后一条通知
 
 // 清除 cookie 开关(BoxJS 写 wps_clear=true)
@@ -103,7 +106,7 @@ async function main() {
         return;
     }
 
-    // 1) 动态取 user_id(签到加密需要;不写进脚本)
+    // 动态取 user_id(签到加密需要,不写进脚本)+ 顺带校验登录态
     let uid;
     try {
         const r = await httpReq("GET", ISLOGIN);
@@ -117,22 +120,22 @@ async function main() {
         return;
     }
 
-    // 2) 每日签到(加密)
-    await taskSignIn(uid);
-    // 3) 福利中心打卡免费领会员
-    await taskComponent("打卡领会员", COMPONENTS.fragment, "fragment_collect.sign_in", {
-        fragment_collect: { sign_date: beijingDate(), series_id: "", is_new_sign_series: true },
-    });
-    // 4) 天天抽奖
-    await taskComponent("天天抽奖", COMPONENTS.lottery, "lottery_v2.exec", {
-        lottery_v2: { session_id: COMPONENTS.lottery.session_id },
-    });
-    // 5) 会员免费试用申请
+    // 10 点 cron 触发:抢完限量爆款顺手把其余做了,逐个串行、动作间随机间隔(模拟真人,避风控)
+    await taskComponent("限量爆款", COMPONENTS.hot, "privilege_grant.exec", {}); // 库存少,放最前
+    await sleep(jitter(ACTION_GAP));
     await taskComponent("会员试用申请", COMPONENTS.trial, "privilege_select.exec", {
         privilege_select: { group_id: COMPONENTS.trial.group_id, privilege_id: COMPONENTS.trial.privilege_id },
     });
-    // 6) 限量爆款领取
-    await taskComponent("限量爆款", COMPONENTS.hot, "privilege_grant.exec", {});
+    await sleep(jitter(ACTION_GAP));
+    await taskSignIn(uid);
+    await sleep(jitter(ACTION_GAP));
+    await taskComponent("打卡领会员", COMPONENTS.fragment, "fragment_collect.sign_in", {
+        fragment_collect: { sign_date: beijingDate(), series_id: "", is_new_sign_series: true },
+    });
+    await sleep(jitter(ACTION_GAP));
+    await taskComponent("天天抽奖", COMPONENTS.lottery, "lottery_v2.exec", {
+        lottery_v2: { session_id: COMPONENTS.lottery.session_id },
+    });
 
     $.msg("WPS 任务汇总", "", $.results.join("\n")); // $.msg 已把汇总打到日志,不再重复 $.log
 }
@@ -277,6 +280,13 @@ function interpretFail(inner) {
 function beijingDate() {
     const d = new Date(Date.now() + 8 * 3600 * 1000);
     return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// 在 [min,max] 秒区间取随机毫秒
+function jitter([min, max]) {
+    return Math.floor((min + Math.random() * (max - min)) * 1000);
 }
 
 // aesKey: 22 位随机 base36 + 10 位 unix 秒(共 32 字符)

@@ -28,9 +28,15 @@ WPS Office 每日签到 + 福利中心多项任务,送 WPS 积分与超级会员
 1. 按下方对应平台配置,开启重写脚本 + cron
 2. 打开「WPS」APP → 进任意活动页(任务中心 / 福利中心「天天领福利」)停留 1 秒
 3. 收到 `✅ WPS Cookie 获取成功` 通知即抓取成功
-4. cron 会按计划自动跑全部任务
+4. cron 每天 **10:00** 触发(活动均 10 点开抢):先抢限量爆款,顺手把签到等其余任务做了
 
 > 青龙:在环境变量设 `wps_sid`(值为抓到的 wps_sid),直接拉 `wps.js` 跑。
+
+## 执行节奏 + 反风控
+
+- **10 点触发,一口气做完**:抢完限量爆款后顺手做签到/打卡/抽奖/试用,模拟真人操作,不空等。
+- 任务**逐个串行,动作之间随机间隔几秒、各不相等**,绝不并发,尽量避开风控。
+- `wps_clear` 写 `true` 可清除已存 Cookie(下次运行生效)。
 
 ## Loon
 
@@ -41,7 +47,7 @@ hostname = personal-act.wps.cn
 [Script]
 http-request ^https:\/\/personal-act\.wps\.cn\/activity-rubik\/activity\/page_info tag=WPS Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png
 
-cron "20 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js, tag=WPS签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png, enable=true
+cron "0-59/17 10-12 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js, tag=WPS签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png, enable=true
 ```
 
 ## Surge
@@ -53,7 +59,7 @@ hostname = personal-act.wps.cn
 [Script]
 WPS Cookie = type=http-request,pattern=^https:\/\/personal-act\.wps\.cn\/activity-rubik\/activity\/page_info,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png
 
-WPS签到 = type=cron,cronexp=20 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png
+WPS签到 = type=cron,cronexp=0-59/17 10-12 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png
 ```
 
 ## Quantumult X
@@ -66,7 +72,7 @@ hostname = personal-act.wps.cn
 ^https:\/\/personal-act\.wps\.cn\/activity-rubik\/activity\/page_info url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.cookie.js
 
 [task_local]
-20 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js, tag=WPS签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png, enabled=true
+0-59/17 10-12 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js, tag=WPS签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png, enabled=true
 ```
 
 ## Stash
@@ -75,7 +81,7 @@ hostname = personal-act.wps.cn
 cron:
   script:
     - name: WPS签到
-      cron: '20 8 * * *'
+      cron: '0-59/17 10-12 * * *'
       timeout: 60
 
 http:
@@ -104,6 +110,7 @@ script-providers:
 | 日期 | 变更 |
 |---|---|
 | 2026-06-19 | 初版:每日签到 + 福利中心打卡/抽奖/试用申请/限量爆款 |
+| 2026-06-19 | 改单条 10 点 cron,抢完爆款顺手做完其余,任务串行、动作间随机间隔避风控 |
 
 ## 已知限制
 
