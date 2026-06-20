@@ -52,7 +52,7 @@
 
 const $ = new Env("WPS");
 
-const SCRIPT_VERSION = "2026-06-20.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-20.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -329,11 +329,22 @@ async function taskClockIn() {
         const cf = await rawReq("GET", CLOCK_CONF, {});
         const ss = (((safeJson(cf.body) || {}).data || {}).value || {}).ss;
 
-        // 动态密钥 s_key(带 wps_sid)
-        const inf = await rawReq("GET", CLOCK_INFO, { sid });
-        const s_key = ((safeJson(inf.body) || {}).data || {}).s_key;
+        // 动态密钥 s_key(带 wps_sid);info 偶发服务端错(invalid connection 等)→ 重试一次
+        let s_key = "", infBody = "";
+        for (let i = 0; i < 2 && !s_key; i++) {
+            if (i > 0) await sleep(2000);
+            const inf = await rawReq("GET", CLOCK_INFO, { sid });
+            infBody = inf.body || "";
+            s_key = ((safeJson(infBody) || {}).data || {}).s_key;
+        }
 
-        if (!ss || !s_key) throw new Error(`缺密钥 ss=${!!ss} s_key=${!!s_key},响应: ${inf.body.slice(0, 160)}`);
+        if (!ss || !s_key) {
+            // 服务端偶发错,优雅降级为接口异常(不抛 ❌,写清原因)
+            const m = ((safeJson(infBody) || {}).msg) || infBody.slice(0, 60) || "缺 ss/s_key";
+            $.results.push(`⚠️ ${tag}:接口异常(${m})`);
+            debug(`${tag} info: ss=${!!ss} s_key=${!!s_key} ${infBody.slice(0, 160)}`);
+            return;
+        }
 
         // body 键名排序后做规范 JSON,与服务端校验口径一致
         const bodyStr = canonicalJSON({ client_type: 1 });
