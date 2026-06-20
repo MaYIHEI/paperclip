@@ -1100,44 +1100,104 @@
         {
           "id": "wps_task_hot",
           "name": "限量爆款",
-          "val": true,
-          "type": "boolean",
-          "desc": "福利中心限量爆款领取(每天 1 次，库存少放最前)"
+          "type": "selects",
+          "desc": "福利中心限量爆款领取(每天 1 次，库存少放最前)",
+          "val": "true",
+          "items": [
+            {
+              "key": "true",
+              "label": "开启"
+            },
+            {
+              "key": "false",
+              "label": "关闭"
+            }
+          ]
         },
         {
           "id": "wps_task_trial",
           "name": "会员试用",
-          "val": true,
-          "type": "boolean",
-          "desc": "会员免费试用瓜分，三档(7天/月卡/3个月卡)全部申领，次日开奖"
+          "type": "selects",
+          "desc": "会员免费试用瓜分，三档(7天/月卡/3个月卡)全部申领，次日开奖",
+          "val": "true",
+          "items": [
+            {
+              "key": "true",
+              "label": "开启"
+            },
+            {
+              "key": "false",
+              "label": "关闭"
+            }
+          ]
         },
         {
           "id": "wps_task_signin",
           "name": "每日签到",
-          "val": true,
-          "type": "boolean",
-          "desc": "任务中心每日签到，积分 +1"
+          "type": "selects",
+          "desc": "任务中心每日签到，积分 +1",
+          "val": "true",
+          "items": [
+            {
+              "key": "true",
+              "label": "开启"
+            },
+            {
+              "key": "false",
+              "label": "关闭"
+            }
+          ]
         },
         {
           "id": "wps_task_fragment",
           "name": "打卡领会员",
-          "val": true,
-          "type": "boolean",
-          "desc": "福利中心连续打卡领会员"
+          "type": "selects",
+          "desc": "福利中心连续打卡领会员",
+          "val": "true",
+          "items": [
+            {
+              "key": "true",
+              "label": "开启"
+            },
+            {
+              "key": "false",
+              "label": "关闭"
+            }
+          ]
         },
         {
           "id": "wps_task_lottery",
           "name": "天天抽奖",
-          "val": true,
-          "type": "boolean",
-          "desc": "福利中心每日 1 次抽奖"
+          "type": "selects",
+          "desc": "福利中心每日 1 次抽奖",
+          "val": "true",
+          "items": [
+            {
+              "key": "true",
+              "label": "开启"
+            },
+            {
+              "key": "false",
+              "label": "关闭"
+            }
+          ]
         },
         {
           "id": "wps_task_clockin",
           "name": "小程序打卡",
-          "val": true,
-          "type": "boolean",
-          "desc": "WPS 小程序每日打卡，抽 PDF/图片权益包等"
+          "type": "selects",
+          "desc": "WPS 小程序每日打卡，抽 PDF/图片权益包等",
+          "val": "true",
+          "items": [
+            {
+              "key": "true",
+              "label": "开启"
+            },
+            {
+              "key": "false",
+              "label": "关闭"
+            }
+          ]
         },
         {
           "id": "wps_debug",
