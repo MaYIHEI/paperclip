@@ -52,13 +52,16 @@
 
 const $ = new Env("WPS");
 
-const SCRIPT_VERSION = "2026-06-20.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-20.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
 
-// 任务开关:BoxJS 里把对应项设为关闭(存 "false")才跳过;未设置/其它值=默认开启
-const taskOff = (k) => $.getdata(k) === "false";
+// 任务开关:关闭才跳过(兼容字符串 "false"/"0" 与布尔 false,不同 BoxJS 存法都认);未设置=默认开启
+function taskOff(k) {
+    const v = $.getdata(k);
+    return v === false || v === 0 || v === "false" || v === "0";
+}
 
 // 调试日志:BoxJS 设 wps_debug=true 才打印接口原始响应(平时只看任务汇总)
 function debug(content) {
@@ -150,6 +153,9 @@ async function main() {
         }, "已完成")],
         ["wps_task_clockin", () => taskClockIn()],
     ];
+    // 打印每个开关实际读到的原始值(排查 BoxJS 是否生效:null=未设置默认开)
+    $.log(`[INFO] 任务开关 ${tasks.map(([k]) => `${k.slice(9)}=${JSON.stringify($.getdata(k))}`).join(" ")}`);
+
     let ran = 0;
     for (const [key, run] of tasks) {
         if (taskOff(key)) continue;                    // BoxJS 关闭该任务 → 跳过
