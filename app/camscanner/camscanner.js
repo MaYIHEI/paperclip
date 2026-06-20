@@ -6,11 +6,6 @@
  *
  * 奖品:50M/100M 云存储 · Pad 优惠券 · 打印机优惠券 · 7天/30天 VIP
  *
- * 逆向记录:IPA v7.17.5(cryptid=0 脱壳),lief+capstone 反汇编
- *   sign = md5( key1=urlencode(v1)&key2=urlencode(v2)&...&keyN=urlencode(vN) + appSecret )
- *   appSecret(生产) = intsig_v2_84ee85cdaaaf1867
- *   key 按 ASCII 升序;client_app 中 @ 编码为 %40 参与签名,URL 里用 %2540(双编码)
- *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Updated: 2026-06-20

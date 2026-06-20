@@ -79,21 +79,17 @@ script-providers:
     interval: 86400
 ```
 
-## 实现细节
+## 说明
 
-- **三段式流程**:`reward/big_lottery`(查 `day_count` 今日剩余次数,无需签名)→ `reward/task_handle?method=get_lottery_code`(原生接口,需签名,返回 `lottery_code`)→ `reward/lottery`(H5 接口,用 `lottery_code` 抽奖,返回中奖 `item`)。
-- **签名算法**(逆向自 IPA v7.17.5,`cryptid=0` 脱壳 + lief/capstone 反汇编):
-  - `sign = md5( key1=urlencode(v1)&key2=urlencode(v2)&…&keyN=urlencode(vN) + appSecret )`,key 按 ASCII 升序,拼接末尾**不带 `&`**。
-  - 生产 `appSecret = intsig_v2_84ee85cdaaaf1867`。
-- **`client_app` 双编码坑**:签名串里 `@` 编码为 `%40` 参与计算;实际 URL 里要写 `%2540`(双编码),服务端 URL-decode 一次得回 `%40`,才能与客户端 sign 串对上。
-- **接口返回 `ret` 类型不统一**:成功有时是数字 `0`(task_handle),有时是字符串 `"200"`(big_lottery / lottery),判错时统一转字符串比对。
-- **错误处理**:`ret 105/116` 或 `err` 含 token 判为 Cookie 失效,推送「请重新抓取」;`ret 109` 限频时等 5s 重试一次,避免静默丢失一次抽奖机会。
+- cron 自动把当天剩余抽奖次数(每日最多 3 次)用满,每次中奖结果汇总成一条通知推送。
+- Cookie 失效会推送「Token 已失效,请重新抓取」提示;遇服务端限频会自动等待重试,不会白白丢掉一次机会。
+- BoxJS 开关:`camscanner_clear=true` 清除已存 Cookie;`camscanner_debug=true` 打印接口原始响应便于排查。
 
 ## 维护记录
 
 | 日期 | 变更 |
 |---|---|
-| 2026-06-20 | 初版:逆向签名算法,实现三段式自动抽奖 |
+| 2026-06-20 | 初版:幸运大转盘每日自动抽奖 |
 | 2026-06-20 | 接入 BoxJS;补清除 Cookie + 调试模式开关 |
 
 ## 已知限制
