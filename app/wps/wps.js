@@ -60,6 +60,12 @@ const CK_KEY = "wps_sid";
 // 任务开关:BoxJS 里把对应项设为关闭(存 "false")才跳过;未设置/其它值=默认开启
 const taskOff = (k) => $.getdata(k) === "false";
 
+// 调试日志:BoxJS 设 wps_debug=true 才打印接口原始响应(平时只看任务汇总)
+function debug(content) {
+    if (($.getdata("wps_debug") || "false") !== "true") return;
+    $.log(`[DEBUG] ${typeof content === "string" ? content : JSON.stringify(content)}`);
+}
+
 // ===== 接口 =====
 const ISLOGIN = "https://account.wps.cn/api/v3/islogin";        // 动态取 user_id(脚本不硬编码任何账号信息)
 const ENC_KEY = "https://personal-bus.wps.cn/sign_in/v1/encrypt/key"; // 服务端全局公钥(所有用户共用,每次现拉)
@@ -188,7 +194,7 @@ async function taskSignIn(uid) {
         } else {
             const st = classify(j && (j.ext_msg || j.msg), "已签到");
             $.results.push(`${st.e} ${tag}:${st.t}`);
-            if (st.e !== "✅") $.log(`[WARN] ${tag} 响应: ${r.body.slice(0, 300)}`);
+            if (st.e !== "✅") debug(`${tag} 响应: ${r.body.slice(0, 300)}`);
         }
     } catch (e) {
         $.results.push(`❌ ${tag}:异常`);
@@ -215,14 +221,14 @@ async function taskComponent(tag, comp, action, payload, doneLabel) {
         const j = safeJson(r.body);
         if (!j) {
             $.results.push(`❌ ${tag}:无响应`);
-            $.log(`[WARN] ${tag} 响应: ${r.body.slice(0, 300)}`);
+            debug(`${tag} 响应: ${r.body.slice(0, 300)}`);
             return;
         }
         // 外层 result 只代表请求被受理(打卡已签时这里直接报 Duplicate 错);真正成败看内层 data.<action>.success
         if (j.result !== "ok") {
             const st = classify(j.msg || j.ext_msg, doneLabel);
             $.results.push(`${st.e} ${tag}:${st.t}`);
-            if (st.e !== "✅") $.log(`[WARN] ${tag} 响应: ${r.body.slice(0, 300)}`);
+            if (st.e !== "✅") debug(`${tag} 响应: ${r.body.slice(0, 300)}`);
             return;
         }
         const inner = (j.data || {})[action.split(".")[0]] || {};
@@ -235,7 +241,7 @@ async function taskComponent(tag, comp, action, payload, doneLabel) {
             if (!reason) reason = j.msg || (inner.error_code ? `code ${inner.error_code}` : "");
             const st = classify(reason, doneLabel);
             $.results.push(`${st.e} ${tag}:${st.t}`);
-            if (st.e !== "✅") $.log(`[WARN] ${tag} 响应: ${r.body.slice(0, 300)}`);
+            if (st.e !== "✅") debug(`${tag} 响应: ${r.body.slice(0, 300)}`);
         }
     } catch (e) {
         $.results.push(`❌ ${tag}:异常`);
@@ -293,7 +299,7 @@ async function taskTrial() {
             } else {
                 const st = classify(inner.reason || (su && su.msg), "已申领");
                 parts.push(`${name}${st.t}`);
-                if (st.e !== "✅") { allGood = false; $.log(`[WARN] ${tag} ${d.title}: ${JSON.stringify(su).slice(0, 200)}`); }
+                if (st.e !== "✅") { allGood = false; debug(`${tag} ${d.title}: ${JSON.stringify(su).slice(0, 200)}`); }
             }
         }
         $.results.push(`${allGood ? "✅" : "⚠️"} ${tag}:${parts.join(" ")}`);
@@ -337,7 +343,7 @@ async function taskClockIn() {
         } else {
             const st = classify(j && j.msg, "已打卡");
             $.results.push(`${st.e} ${tag}:${st.t}`);
-            if (st.e !== "✅") $.log(`[WARN] ${tag} 响应: ${r.body.slice(0, 300)}`);
+            if (st.e !== "✅") debug(`${tag} 响应: ${r.body.slice(0, 300)}`);
         }
     } catch (e) {
         $.results.push(`❌ ${tag}:异常`);

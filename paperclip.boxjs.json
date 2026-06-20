@@ -967,7 +967,9 @@
       "id": "paperclip.camscanner",
       "name": "扫描全能王",
       "keys": [
-        "camscanner_data"
+        "camscanner_data",
+        "camscanner_clear",
+        "camscanner_debug"
       ],
       "settings": [
         {
@@ -977,6 +979,30 @@
           "type": "text",
           "placeholder": "进 APP 自动抓，或手填",
           "desc": "扫描全能王登录 Token(抓 get_user_attribute 自动写入);清空此项即等于清除 Cookie"
+        },
+        {
+          "id": "camscanner_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "开启后运行一次会清空已抓 Token 并自动复位为关闭;之后重进 APP 重新抓取"
+        },
+        {
+          "id": "camscanner_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "开启后打印取码/抽奖接口原始响应"
         }
       ],
       "author": "@MaYIHEI",
@@ -998,7 +1024,8 @@
         "wps_task_signin",
         "wps_task_fragment",
         "wps_task_lottery",
-        "wps_task_clockin"
+        "wps_task_clockin",
+        "wps_debug"
       ],
       "settings": [
         {
@@ -1057,6 +1084,23 @@
           "val": true,
           "type": "boolean",
           "desc": "WPS 小程序每日打卡，抽 PDF/图片权益包等"
+        },
+        {
+          "id": "wps_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "开启后打印各任务接口原始响应(平时只看任务汇总)"
         }
       ],
       "author": "@MaYIHEI",

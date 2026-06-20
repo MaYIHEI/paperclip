@@ -59,7 +59,7 @@
 
 const $ = new Env("扫描全能王");
 
-const SCRIPT_VERSION = "2026-06-20.r1";
+const SCRIPT_VERSION = "2026-06-20.r2";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY     = 'camscanner_data';
@@ -80,7 +80,22 @@ const PRIZE_NAME = {
     vip_30day:                      '30天 VIP',
 };
 
+// 调试日志:BoxJS 设 camscanner_debug=true 才打印接口原始响应
+function debug(content, title = "debug") {
+    if (($.getdata("camscanner_debug") || "false") !== "true") return;
+    $.log(`\n----- ${title} -----\n${typeof content === "string" ? content : JSON.stringify(content)}\n----- end -----`);
+}
+
 (async () => {
+    // 清除 Cookie 开关(BoxJS 写 camscanner_clear=true);运行一次后自动复位
+    if (JSON.parse($.getdata("camscanner_clear") || "false")) {
+        $.setdata("", CK_KEY);
+        $.setdata("false", "camscanner_clear");
+        $.msg("扫描全能王", "", "✅ Cookie 已清除，请重新抓取");
+        $.done();
+        return;
+    }
+
     const ckRaw = $.getdata(CK_KEY);
     if (!ckRaw) {
         $.msg('扫描全能王', '🚫 缺少 Cookie',
@@ -142,7 +157,8 @@ const PRIZE_NAME = {
             }
             const codeData = codeRes && codeRes.data ? codeRes.data : null;
             if (!codeData || !codeData.lottery_code) {
-                $.log(`[WARN] 第 ${i + 1} 次获取 lottery_code 失败: ${JSON.stringify(codeRes).slice(0, 200)}`);
+                $.log(`[WARN] 第 ${i + 1} 次获取 lottery_code 失败`);
+                debug(JSON.stringify(codeRes), `第${i + 1}次取码响应`);
                 prizes.push('❓ 取码失败');
                 break;
             }
@@ -154,7 +170,8 @@ const PRIZE_NAME = {
                 prizes.push(PRIZE_NAME[item] || item);
                 $.log(`[INFO] 第 ${i + 1} 次中奖: ${PRIZE_NAME[item] || item}`);
             } else {
-                $.log(`[WARN] 第 ${i + 1} 次抽奖异常: ${JSON.stringify(drawRes).slice(0, 200)}`);
+                $.log(`[WARN] 第 ${i + 1} 次抽奖异常`);
+                debug(JSON.stringify(drawRes), `第${i + 1}次抽奖响应`);
                 prizes.push('❓ 异常');
             }
 
