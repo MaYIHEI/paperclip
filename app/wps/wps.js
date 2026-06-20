@@ -1,5 +1,5 @@
 /**
- * WPS · 每日签到 + 福利中心(打卡/抽奖/会员试用申请/限量爆款领取),送积分与会员时长
+ * WPS · 每日签到 + 福利中心(打卡/抽奖/会员试用申请/限量爆款领取)+ 小程序每日打卡,送积分与会员时长
  *
  * 抓取:打开「WPS」APP → 进任意活动页(任务中心/福利中心)→ 自动触发 page_info,抓 wps_sid
  * 签到:cron 10 点触发,抢完限量爆款顺手做签到等其余任务,逐个串行、动作间随机间隔(细节见 README)
@@ -52,7 +52,7 @@
 
 const $ = new Env("WPS");
 
-const SCRIPT_VERSION = "2026-06-19.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-20.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -64,6 +64,11 @@ const DAY_INFO = "https://personal-bus.wps.cn/sign_in/v1/day_info";
 const SIGN_IN = "https://personal-bus.wps.cn/sign_in/v1/sign_in";
 const COMPONENT = "https://personal-act.wps.cn/activity-rubik/activity/component_action";
 
+// 小程序每日打卡(独立活动,与上面福利中心 H5 不同):info 取动态密钥 s_key,CONF 取动态盐 ss,clock_in 执行
+const CLOCK_INFO = "https://personal-bus.wps.cn/activity/clock_in/v1/info";
+const CLOCK_IN = "https://personal-bus.wps.cn/activity/clock_in/v1/clock_in";
+const CLOCK_CONF = "https://personal-act.wpscdn.cn/srcapi/act/rubik-service/honeycomb-adapter/client/module-info?pid=113&mg_id=47736&id=48312";
+
 // ===== 福利中心活动「WPS618 天天领福利」的组件标识(活动换期需更新) =====
 const FLZX = { activity_number: "HD2025031721339450", page_number: "YM2025060910400185" };
 // 注:lottery/grant 的 filter_params(渠道追踪)不参与鉴权,故不带
@@ -73,13 +78,15 @@ const COMPONENTS = {
     fragment: { component_number: "ZJ2025061815352884", component_node_id: "FN1769668388sb3w", type: 42 },
     // 天天抽奖
     lottery: { component_number: "ZJ2025092916519174", component_node_id: "FN1779447163CApn", type: 45, session_id: 3002 },
-    // 会员免费试用申请(次日开奖,只申请)
-    trial: { component_number: "ZJ2025041115200788", component_node_id: "FN1744358694RbIn", type: 31, group_id: 2, privilege_id: 221 },
+    // 会员免费试用(瓜分奖品,次日开奖;每天可申领 2 次,先 preview 拿当天奖品再申领)
+    trial: { component_number: "ZJ2025041115207603", component_node_id: "FN1744359116PWbV", type: 32 },
     // 限量爆款领取(任选 1 个,服务端限每天 1 次;只领其中一项)
     hot: { component_number: "ZJ2024110514212950", component_node_id: "FN1779689314rHQZ", type: 16 },
 };
 
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 WpsiOS/26.6.1";
+// 小程序打卡走微信小程序 UA(打卡接口在 personal-bus 域,不带 APP 的 Origin/Referer)
+const MINI_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003123) NetType/WIFI Language/zh_CN miniProgram";
 
 // 动作间隔(秒,[最小,最大] 每步独立取随机,各不相等):10 点抢完顺手把其余做了,模拟真人手动操作避风控
 const ACTION_GAP = [5, 10];
@@ -121,21 +128,21 @@ async function main() {
     }
 
     // 10 点 cron 触发:抢完限量爆款顺手把其余做了,逐个串行、动作间随机间隔(模拟真人,避风控)
-    await taskComponent("限量爆款", COMPONENTS.hot, "privilege_grant.exec", {}); // 库存少,放最前
+    await taskComponent("限量爆款", COMPONENTS.hot, "privilege_grant.exec", {}, "已领取"); // 库存少,放最前
     await sleep(jitter(ACTION_GAP));
-    await taskComponent("会员试用申请", COMPONENTS.trial, "privilege_select.exec", {
-        privilege_select: { group_id: COMPONENTS.trial.group_id, privilege_id: COMPONENTS.trial.privilege_id },
-    });
+    await taskTrial();
     await sleep(jitter(ACTION_GAP));
     await taskSignIn(uid);
     await sleep(jitter(ACTION_GAP));
     await taskComponent("打卡领会员", COMPONENTS.fragment, "fragment_collect.sign_in", {
         fragment_collect: { sign_date: beijingDate(), series_id: "", is_new_sign_series: true },
-    });
+    }, "已打卡");
     await sleep(jitter(ACTION_GAP));
     await taskComponent("天天抽奖", COMPONENTS.lottery, "lottery_v2.exec", {
         lottery_v2: { session_id: COMPONENTS.lottery.session_id },
-    });
+    }, "已完成");
+    await sleep(jitter(ACTION_GAP));
+    await taskClockIn();
 
     $.msg("WPS 任务汇总", "", $.results.join("\n")); // $.msg 已把汇总打到日志,不再重复 $.log
 }
@@ -149,7 +156,7 @@ async function taskSignIn(uid) {
         const di = await httpReq("GET", DAY_INFO);
         const info = (JSON.parse(di.body).data || {}).info || {};
         if (info.has_sign) {
-            $.results.push(`✅ ${tag}:今日已签`);
+            $.results.push(`✅ ${tag}:已签到`);
             return;
         }
 
@@ -170,11 +177,10 @@ async function taskSignIn(uid) {
         if (j && j.result === "ok") {
             const names = ((j.data || {}).rewards || []).map((x) => x.reward_name).filter(Boolean);
             $.results.push(`✅ ${tag}:成功${names.length ? " " + names.join("/") : ""}`);
-        } else if (j && j.msg === "has sign") {
-            $.results.push(`✅ ${tag}:今日已签`);
         } else {
-            $.results.push(`⚠️ ${tag}:${(j && (j.ext_msg || j.msg)) || "失败"}`);
-            $.log(`[WARN] ${tag} 响应: ${r.body.slice(0, 300)}`);
+            const st = classify(j && (j.ext_msg || j.msg), "已签到");
+            $.results.push(`${st.e} ${tag}:${st.t}`);
+            if (st.e !== "✅") $.log(`[WARN] ${tag} 响应: ${r.body.slice(0, 300)}`);
         }
     } catch (e) {
         $.results.push(`❌ ${tag}:异常`);
@@ -184,7 +190,7 @@ async function taskSignIn(uid) {
 
 // ============ 任务:福利中心通用组件动作(明文 base64)============
 
-async function taskComponent(tag, comp, action, payload) {
+async function taskComponent(tag, comp, action, payload, doneLabel) {
     try {
         const uniq = {
             activity_number: FLZX.activity_number,
@@ -206,25 +212,147 @@ async function taskComponent(tag, comp, action, payload) {
         }
         // 外层 result 只代表请求被受理(打卡已签时这里直接报 Duplicate 错);真正成败看内层 data.<action>.success
         if (j.result !== "ok") {
-            if (isAlreadyDone(j.msg)) $.results.push(`✅ ${tag}:今日已完成`);
-            else {
-                $.results.push(`⚠️ ${tag}:${shortMsg(j.msg || j.ext_msg)}`);
-                $.log(`[WARN] ${tag} 响应: ${r.body.slice(0, 300)}`);
-            }
+            const st = classify(j.msg || j.ext_msg, doneLabel);
+            $.results.push(`${st.e} ${tag}:${st.t}`);
+            if (st.e !== "✅") $.log(`[WARN] ${tag} 响应: ${r.body.slice(0, 300)}`);
             return;
         }
         const inner = (j.data || {})[action.split(".")[0]] || {};
         if (inner.success === true) {
             $.results.push(`✅ ${tag}:成功${inner.reward_name ? " " + inner.reward_name : ""}`);
         } else {
-            const why = interpretFail(inner);
-            $.results.push(`${why.done ? "✅" : "⚠️"} ${tag}:${why.text}`);
-            if (!why.done) $.log(`[WARN] ${tag} 响应: ${r.body.slice(0, 300)}`);
+            // 内层失败:优先看 reason,抽奖次数用完(error_code 10005)归为已达上限
+            let reason = inner.reason || "";
+            if (!reason && inner.error_code === 10005) reason = "次数用完";
+            if (!reason) reason = j.msg || (inner.error_code ? `code ${inner.error_code}` : "");
+            const st = classify(reason, doneLabel);
+            $.results.push(`${st.e} ${tag}:${st.t}`);
+            if (st.e !== "✅") $.log(`[WARN] ${tag} 响应: ${r.body.slice(0, 300)}`);
         }
     } catch (e) {
         $.results.push(`❌ ${tag}:异常`);
         $.log(`[ERROR] ${tag}: ${e}`);
     }
+}
+
+// ============ 任务:会员免费试用(瓜分奖品,divide_prize)============
+// 先 preview 拿当天奖品(session_id/cycle_id 每期变,不硬编码),三个全部申领(均次日开奖)。
+// 逐个状态写清楚:✓=本次申领成功、已申领、已领完、没资格、已达上限等。
+
+async function taskTrial() {
+    const tag = "会员试用";
+    try {
+        const base = {
+            activity_number: FLZX.activity_number,
+            page_number: FLZX.page_number,
+            component_number: COMPONENTS.trial.component_number,
+            component_node_id: COMPONENTS.trial.component_node_id,
+        };
+        const callTrial = async (action, extra) => {
+            const reqObj = { component_uniq_number: base, component_type: COMPONENTS.trial.type, component_action: action };
+            for (const k in extra) reqObj[k] = extra[k];
+            const r = await httpReq("POST", COMPONENT, { body: JSON.stringify(reqObj) });
+            return safeJson(r.body);
+        };
+        const short = (t) => String(t || "奖品").replace(/超级会员/g, ""); // 7天卡 / 月卡 / 3个月卡
+
+        // preview 列出当天奖品
+        const pv = await callTrial("divide_prize.preview", {});
+        const details = (((pv || {}).data || {}).divide_prize || {}).divide_prize_details || [];
+        if (!details.length) {
+            $.results.push(`✅ ${tag}:今日已申领`);
+            return;
+        }
+
+        // 三个全领(均次日开奖),无优先;逐个申领,动作间隔避风控,每项状态单独写清
+        const parts = [];
+        let acted = 0;
+        for (const d of details) {
+            const name = short(d.title);
+            if (d.has_join) { parts.push(`${name}已申领`); continue; }
+            if (d.stock != null && d.stock <= 0) { parts.push(`${name}已领完`); continue; }
+            if (acted > 0) await sleep(jitter(ACTION_GAP));
+            acted++;
+            const su = await callTrial("divide_prize.sign_up", {
+                divide_prize: { cycle_id: d.cycle_id, session_id: `${d.session_id}_${beijingDate()}` },
+            });
+            const inner = ((su || {}).data || {}).divide_prize || {};
+            if (su && su.result === "ok" && inner.success === true) {
+                parts.push(`${name}✓`);
+            } else {
+                const st = classify(inner.reason || (su && su.msg), "已申领");
+                parts.push(`${name}${st.t}`);
+                if (st.e !== "✅") $.log(`[WARN] ${tag} ${d.title}: ${JSON.stringify(su).slice(0, 200)}`);
+            }
+        }
+        const anyOk = parts.some((p) => p.includes("✓"));
+        $.results.push(`${anyOk ? "✅" : "⚠️"} ${tag}:${parts.join(" ")}`);
+    } catch (e) {
+        $.results.push(`❌ ${tag}:异常`);
+        $.log(`[ERROR] ${tag}: ${e}`);
+    }
+}
+
+// ============ 任务:小程序每日打卡(请求头签名)============
+// 打卡接口在 personal-bus 域,鉴权 = wps_sid(Cookie)+ 固定 X-CSRFToken + Signature 头。
+// Signature = HMAC-SHA256( s_key + MD5(body) + Date , ss )(均现拉,无内嵌密钥):
+//   s_key 来自 clock_in/v1/info(每账号每日变);ss 来自 CONF 配置端点(活动级盐)。
+
+async function taskClockIn() {
+    const tag = "小程序打卡";
+    try {
+        const sid = $.getdata(CK_KEY);
+
+        // 动态盐 ss(配置端点在 CDN,不需登录)
+        const cf = await rawReq("GET", CLOCK_CONF, {});
+        const ss = (((safeJson(cf.body) || {}).data || {}).value || {}).ss;
+
+        // 动态密钥 s_key(带 wps_sid)
+        const inf = await rawReq("GET", CLOCK_INFO, { sid });
+        const s_key = ((safeJson(inf.body) || {}).data || {}).s_key;
+
+        if (!ss || !s_key) throw new Error(`缺密钥 ss=${!!ss} s_key=${!!s_key},响应: ${inf.body.slice(0, 160)}`);
+
+        // body 键名排序后做规范 JSON,与服务端校验口径一致
+        const bodyStr = canonicalJSON({ client_type: 1 });
+        const date = new Date().toUTCString();
+        const signature = hmacSha256Hex(s_key + md5Hex(bodyStr) + date, ss);
+
+        const r = await rawReq("POST", CLOCK_IN, { sid, body: bodyStr, date, signature });
+        const j = safeJson(r.body);
+        if (j && j.result === "ok") {
+            const d = j.data || {};
+            const rw = d.reward_name || (d.prize && d.prize.name) || (d.reward && d.reward.name) || "";
+            $.results.push(`✅ ${tag}:成功${rw ? " " + rw : ""}`);
+        } else {
+            const st = classify(j && j.msg, "已打卡");
+            $.results.push(`${st.e} ${tag}:${st.t}`);
+            if (st.e !== "✅") $.log(`[WARN] ${tag} 响应: ${r.body.slice(0, 300)}`);
+        }
+    } catch (e) {
+        $.results.push(`❌ ${tag}:异常`);
+        $.log(`[ERROR] ${tag}: ${e}`);
+    }
+}
+
+// 小程序打卡专用请求:personal-bus 域,X-CSRFToken + Signature 鉴权(与 personal-act 系列 header 不同,单独隔离)
+function rawReq(method, url, { sid, body, date, signature } = {}) {
+    const headers = { "User-Agent": MINI_UA, "Accept": "*/*", "X-CSRFToken": "1234567890" };
+    if (sid) headers["Cookie"] = `wps_sid=${sid};csrf=1234567890`;
+    if (body) headers["Content-Type"] = "application/json";
+    if (signature) headers["Signature"] = signature;
+    if (date) headers["Date"] = date;
+    return new Promise((resolve, reject) => {
+        const cb = (err, resp, data) =>
+            err ? reject(err) : resolve({ status: (resp && (resp.status || resp.statusCode)) || 0, body: data || "" });
+        method === "POST" ? $.post({ url, headers, body }, cb) : $.get({ url, headers, body }, cb);
+    });
+}
+
+// 键名排序后 JSON.stringify(与小程序源码 d(t) 的规范化口径一致)
+function canonicalJSON(obj) {
+    const sorted = Object.keys(obj).sort().reduce((a, k) => ((a[k] = obj[k]), a), {});
+    return JSON.stringify(sorted);
 }
 
 // ============ HTTP(携带 wps_sid;签到带 token 头)============
@@ -253,27 +381,19 @@ function safeJson(s) {
     try { return JSON.parse(s); } catch (e) { return null; }
 }
 
-// 服务端「今日已完成/已领取」类提示(去重唯一索引冲突、has sign 等),按成功对待
-function isAlreadyDone(msg) {
-    if (!msg) return false;
-    return /Duplicate entry|has sign|已签|已领|已参与|重复|already/i.test(msg);
-}
-
-// 长报错(如 SQL 错误)截短,通知里好看
-function shortMsg(msg) {
-    msg = String(msg || "失败");
-    if (/Duplicate entry/i.test(msg)) return "今日已完成";
-    return msg.length > 24 ? msg.slice(0, 24) + "…" : msg;
-}
-
-// 内层 success:false 时,把 reason/error_code 解读为「已完成(done=true)」或真失败
-function interpretFail(inner) {
-    const reason = String(inner.reason || "");
-    const code = inner.error_code;
-    if (code === 10005) return { done: true, text: "今日无抽奖次数" };
-    if (/reach limit|out of limit|out of stock/i.test(reason)) return { done: true, text: "已达上限/已领完" };
-    if (/limit|received|已/i.test(reason)) return { done: true, text: "今日已完成" };
-    return { done: false, text: reason || (code ? `code ${code}` : "未成功") };
+// 把服务端各种提示归类成清晰、正确的状态文案。
+// 返回 { e: 标记, t: 文案 };doneLabel = 本任务「已完成」的说法(已签到/已打卡/已申领/已领取/已完成)。
+// ✅ = 已做过 / 已达上限(都属正常完结);⚠️ = 没领到(已领完/没资格/其它异常,需留意)。
+function classify(msg, doneLabel) {
+    const m = String(msg || "");
+    if (!m) return { e: "⚠️", t: "未成功" };
+    if (/已签|has sign/i.test(m)) return { e: "✅", t: "已签到" };
+    if (/Duplicate entry|已领取|已申领|已参与|已参加|已报名|已完成|重复|repeat|already/i.test(m)) return { e: "✅", t: doneLabel || "已完成" };
+    if (/无.*次数|没有.*次数|次数.*(用完|不足|为0)|达到?.*上限|已达.*上限|超(出|过).*次数|reach limit|out of limit|上限/i.test(m)) return { e: "✅", t: "已达上限" };
+    if (/售罄|领完|抢完|发完|抢光|领光|out of stock|库存(不足)?|no stock|sold out|stock/i.test(m)) return { e: "⚠️", t: "已领完" };
+    if (/资格|不满足|未满足|不符合|无权限|没有权限|没有资格|not (match|qualified)|不在.*(范围|名单)|未达条件/i.test(m)) return { e: "⚠️", t: "没资格" };
+    // 其它服务端原文,原样写清楚(截短)
+    return { e: "⚠️", t: m.length > 30 ? m.slice(0, 30) + "…" : m };
 }
 
 // 北京时间 YYYY-MM-DD(青龙服务器可能是 UTC,固定 +8)
@@ -484,6 +604,101 @@ function aesEncrypt(plain, keyStr, ivStr) {
         out.push(...prev);
     }
     return b64enc(out);
+}
+
+// ============ 纯 JS 哈希(MD5 + SHA-256 + HMAC-SHA256,小程序打卡签名用;均与 node:crypto 对拍一致)============
+
+function md5Hex(str) {
+    const rol = (n, c) => (n << c) | (n >>> (32 - c));
+    const s = [7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+        5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
+        4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+        6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21];
+    const K = [];
+    for (let i = 0; i < 64; i++) K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) >>> 0;
+    let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+    const m = utf8Bytes(str);
+    const origLen = m.length;
+    m.push(0x80);
+    while (m.length % 64 !== 56) m.push(0);
+    const bitLen = origLen * 8;
+    for (let i = 0; i < 8; i++) m.push(Math.floor(bitLen / Math.pow(2, 8 * i)) & 0xff);
+    for (let off = 0; off < m.length; off += 64) {
+        const M = [];
+        for (let i = 0; i < 16; i++)
+            M[i] = (m[off + i * 4]) | (m[off + i * 4 + 1] << 8) | (m[off + i * 4 + 2] << 16) | (m[off + i * 4 + 3] << 24);
+        let A = a0, B = b0, C = c0, D = d0;
+        for (let i = 0; i < 64; i++) {
+            let F, g;
+            if (i < 16) { F = (B & C) | (~B & D); g = i; }
+            else if (i < 32) { F = (D & B) | (~D & C); g = (5 * i + 1) % 16; }
+            else if (i < 48) { F = B ^ C ^ D; g = (3 * i + 5) % 16; }
+            else { F = C ^ (B | ~D); g = (7 * i) % 16; }
+            F = (F + A + K[i] + M[g]) >>> 0;
+            A = D; D = C; C = B;
+            B = (B + rol(F, s[i])) >>> 0;
+        }
+        a0 = (a0 + A) >>> 0; b0 = (b0 + B) >>> 0; c0 = (c0 + C) >>> 0; d0 = (d0 + D) >>> 0;
+    }
+    const hexLE = (n) => { let h = ""; for (let i = 0; i < 4; i++) h += ((n >>> (i * 8)) & 0xff).toString(16).padStart(2, "0"); return h; };
+    return hexLE(a0) + hexLE(b0) + hexLE(c0) + hexLE(d0);
+}
+
+function sha256Bytes(bytes) {
+    const K = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+        0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+        0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+        0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+        0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+    let h = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+    const m = bytes.slice();
+    const origLen = m.length;
+    m.push(0x80);
+    while (m.length % 64 !== 56) m.push(0);
+    const bitLen = origLen * 8;
+    for (let i = 7; i >= 0; i--) m.push(Math.floor(bitLen / Math.pow(2, 8 * i)) & 0xff);
+    const rotr = (n, c) => (n >>> c) | (n << (32 - c));
+    for (let off = 0; off < m.length; off += 64) {
+        const w = [];
+        for (let i = 0; i < 16; i++)
+            w[i] = ((m[off + i * 4] << 24) | (m[off + i * 4 + 1] << 16) | (m[off + i * 4 + 2] << 8) | (m[off + i * 4 + 3])) >>> 0;
+        for (let i = 16; i < 64; i++) {
+            const s0 = (rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3)) >>> 0;
+            const s1 = (rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10)) >>> 0;
+            w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
+        }
+        let a = h[0], b = h[1], c = h[2], d = h[3], e = h[4], f = h[5], g = h[6], hh = h[7];
+        for (let i = 0; i < 64; i++) {
+            const S1 = (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) >>> 0;
+            const ch = ((e & f) ^ (~e & g)) >>> 0;
+            const t1 = (hh + S1 + ch + K[i] + w[i]) >>> 0;
+            const S0 = (rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) >>> 0;
+            const maj = ((a & b) ^ (a & c) ^ (b & c)) >>> 0;
+            const t2 = (S0 + maj) >>> 0;
+            hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+        }
+        h[0] = (h[0] + a) >>> 0; h[1] = (h[1] + b) >>> 0; h[2] = (h[2] + c) >>> 0; h[3] = (h[3] + d) >>> 0;
+        h[4] = (h[4] + e) >>> 0; h[5] = (h[5] + f) >>> 0; h[6] = (h[6] + g) >>> 0; h[7] = (h[7] + hh) >>> 0;
+    }
+    const out = [];
+    for (const x of h) out.push((x >>> 24) & 0xff, (x >>> 16) & 0xff, (x >>> 8) & 0xff, x & 0xff);
+    return out;
+}
+
+const bytesToHex = (b) => b.map((x) => x.toString(16).padStart(2, "0")).join("");
+
+// HMAC-SHA256:key/msg 为 UTF8 字符串,输出 hex(crypto-js HmacSHA256(msg,key).toString() 同口径)
+function hmacSha256Hex(msgStr, keyStr) {
+    let key = utf8Bytes(keyStr);
+    if (key.length > 64) key = sha256Bytes(key);
+    while (key.length < 64) key.push(0);
+    const o = [], i = [];
+    for (let j = 0; j < 64; j++) { o.push(key[j] ^ 0x5c); i.push(key[j] ^ 0x36); }
+    const inner = sha256Bytes(i.concat(utf8Bytes(msgStr)));
+    return bytesToHex(sha256Bytes(o.concat(inner)));
 }
 
 function Env(s) {
