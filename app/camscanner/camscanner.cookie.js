@@ -13,7 +13,7 @@ const $ = new Env("扫描全能王 [Cookie]");
 const CK_KEY = 'camscanner_data';
 
 (function main() {
-    if (!$request) {
+    if (typeof $request === "undefined") {
         $.log('[ERROR] 该脚本仅作为 http-request 重写脚本运行');
         $.done();
         return;

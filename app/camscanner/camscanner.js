@@ -59,6 +59,9 @@
 
 const $ = new Env("扫描全能王");
 
+const SCRIPT_VERSION = "2026-06-20.r1";
+$.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
+
 const CK_KEY     = 'camscanner_data';
 const APP_SECRET = 'intsig_v2_84ee85cdaaaf1867';
 const CLIENT     = 'iPhone-iPhone';
@@ -103,7 +106,20 @@ const PRIZE_NAME = {
 
     try {
         // 1. 查今日剩余次数
-        const info = await getLotteryInfo(token, cs_ept_d);
+        const infoRes = await getLotteryInfo(token, cs_ept_d);
+        if (isTokenError(infoRes)) {
+            $.msg('扫描全能王', '🚫 Token 已失效',
+                '请重新打开扫描全能王 APP 任意页面停留几秒,重新抓取 Cookie');
+            $.done();
+            return;
+        }
+        const info = infoRes && infoRes.data ? infoRes.data : null;
+        if (!info || info.day_count == null) {
+            $.msg('扫描全能王', '⚠️ 查询次数失败',
+                `服务端返回: ${JSON.stringify(infoRes).slice(0, 120)}`);
+            $.done();
+            return;
+        }
         $.log(`[INFO] 今日剩余: ${info.day_count} 次 / 本周累计: ${info.week_count} 次`);
 
         if (info.day_count <= 0) {
@@ -117,16 +133,24 @@ const PRIZE_NAME = {
         for (let i = 0; i < info.day_count; i++) {
             $.log(`[INFO] 第 ${i + 1} 次抽奖...`);
 
-            const codeRes = await getLotteryCode(token, client_id);
-            if (!codeRes.lottery_code) {
-                $.log(`[WARN] 第 ${i + 1} 次获取 lottery_code 失败: ${JSON.stringify(codeRes)}`);
+            // 2a. 拿 lottery_code(原生接口,需签名);遇限频(109)重试一次
+            const codeRes = await withRetry(() => getLotteryCode(token, client_id));
+            if (isTokenError(codeRes)) {
+                $.msg('扫描全能王', '🚫 Token 已失效', '请重新抓取 Cookie');
+                $.done();
+                return;
+            }
+            const codeData = codeRes && codeRes.data ? codeRes.data : null;
+            if (!codeData || !codeData.lottery_code) {
+                $.log(`[WARN] 第 ${i + 1} 次获取 lottery_code 失败: ${JSON.stringify(codeRes).slice(0, 200)}`);
+                prizes.push('❓ 取码失败');
                 break;
             }
 
-            const drawRes = await drawLottery(token, cs_ept_d, codeRes.lottery_code);
-            // get() 已把 data 层拆包,直接访问 item
-            if (drawRes && drawRes.item) {
-                const item = drawRes.item;
+            // 2b. 用 lottery_code 抽奖(H5 接口);同样对限频重试
+            const drawRes = await withRetry(() => drawLottery(token, cs_ept_d, codeData.lottery_code));
+            const item = drawRes && drawRes.data ? drawRes.data.item : undefined;
+            if (item) {
                 prizes.push(PRIZE_NAME[item] || item);
                 $.log(`[INFO] 第 ${i + 1} 次中奖: ${PRIZE_NAME[item] || item}`);
             } else {
@@ -147,6 +171,31 @@ const PRIZE_NAME = {
 
     $.done();
 })();
+
+// ── 错误判定 + 重试 ────────────────────────────────────────────────────────────
+
+// intsig 约定:成功 ret 为 0 或 "200"(类型不统一,统一转字符串比对)
+// ret 105/116 或 err 含 token = 凭据失效;ret 109 = 请求频繁(限频)
+function isTokenError(res) {
+    if (!res) return false;
+    const ret = String(res.ret);
+    return ret === '105' || ret === '116' || /token/i.test(res.err || '');
+}
+function isRateLimit(res) {
+    if (!res) return false;
+    return String(res.ret) === '109' || /frequent|频繁/i.test(res.err || '');
+}
+
+// 仅对限频(109)重试一次,等 5s——别让一次抽奖机会被静默吞掉
+async function withRetry(fn) {
+    let res = await fn();
+    if (isRateLimit(res)) {
+        $.log('[WARN] 触发限频(109),等待 5s 后重试一次');
+        await sleep(5000);
+        res = await fn();
+    }
+    return res;
+}
 
 // ── API ──────────────────────────────────────────────────────────────────────
 
@@ -251,8 +300,7 @@ function get(url, headers) {
             try {
                 const j = JSON.parse(body);
                 $.log(`[HTTP] ${url.split('?')[0].split('/').pop()} → ${body.slice(0, 200)}`);
-                // big_lottery 返回包装在 data 里
-                if (j.data !== undefined) return resolve(j.data !== null ? j.data : j);
+                // 返回完整对象({ret, err, data}),让调用方自行判错+拆包
                 return resolve(j);
             } catch (e) {
                 $.log(`[HTTP PARSE ERROR] ${body.slice(0, 300)}`);
