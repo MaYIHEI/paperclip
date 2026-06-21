@@ -52,7 +52,7 @@
 
 const $ = new Env("WPS");
 
-const SCRIPT_VERSION = "2026-06-20.r4"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-20.r5"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -125,17 +125,32 @@ async function main() {
         return;
     }
 
-    // 动态取 user_id(签到加密需要,不写进脚本)+ 顺带校验登录态
-    let uid;
-    try {
-        const r = await httpReq("GET", ISLOGIN);
-        const j = JSON.parse(r.body);
-        if (j.result !== "ok" || !j.userid) throw new Error(`islogin 异常: ${r.body.slice(0, 200)}`);
-        uid = j.userid;
-        $.log(`[INFO] user_id 已获取(${String(uid).slice(0, 3)}***)`);
-    } catch (e) {
-        $.msg("WPS", "🚫 登录态失效", "wps_sid 已过期,请重新抓取(打开 WPS 进活动页)");
-        $.log(`[ERROR] ${e}`);
+    // 动态取 user_id(签到加密需要,不写进脚本)+ 顺带校验登录态。
+    // 关键:区分「网络超时(reject)」与「服务端明确返回非 ok(真失效)」——
+    // 整点 cron 易撞网络抖动,网络错误重试一次自愈,绝不能误报成 cookie 失效让用户白重抓。
+    let uid, lastErr;
+    for (let attempt = 0; attempt < 2 && !uid; attempt++) {
+        if (attempt > 0) await sleep(3000);
+        try {
+            const r = await httpReq("GET", ISLOGIN);
+            const j = JSON.parse(r.body);
+            if (j.result !== "ok" || !j.userid) {
+                // 服务端明确判失效 = 真·登录态失效,不重试
+                $.msg("WPS", "🚫 登录态失效", "wps_sid 已过期,请重新抓取(打开 WPS 进活动页)");
+                $.log(`[ERROR] islogin 非 ok: ${r.body.slice(0, 200)}`);
+                return;
+            }
+            uid = j.userid;
+            $.log(`[INFO] user_id 已获取(${String(uid).slice(0, 3)}***)`);
+        } catch (e) {
+            lastErr = e; // 网络超时 / 连接失败 / 响应非 JSON → 值得重试
+            $.log(`[WARN] islogin 网络错误(${attempt + 1}/2): ${e}`);
+        }
+    }
+    if (!uid) {
+        // 重试后仍失败:是网络问题,不是 Cookie 失效——别误导用户去重抓
+        $.msg("WPS", "⚠️ 网络异常", "islogin 请求超时(非 Cookie 失效),稍后会自动重试或手动运行一次");
+        $.log(`[ERROR] islogin 重试后仍失败: ${lastErr}`);
         return;
     }
 
@@ -281,7 +296,7 @@ async function taskTrial() {
         const details = (((pv || {}).data || {}).divide_prize || {}).divide_prize_details || [];
         // 没明细 / 三档都已申领 → 直接收成一句(正常完成,不逐项罗列)
         if (!details.length || details.every((d) => d.has_join)) {
-            $.results.push(`✅ ${tag}:全部已申领`);
+            $.results.push(`✅ ${tag}:全部已申请`);
             return;
         }
 
@@ -292,7 +307,7 @@ async function taskTrial() {
         let acted = 0;
         for (const d of details) {
             const name = short(d.title);
-            if (d.has_join) { parts.push(`${name}已申领`); continue; }
+            if (d.has_join) { parts.push(`${name}已申请`); continue; }
             if (d.stock != null && d.stock <= 0) { parts.push(`${name}已领完`); allGood = false; continue; }
             if (acted > 0) await sleep(jitter(ACTION_GAP));
             acted++;
@@ -303,12 +318,13 @@ async function taskTrial() {
             if (su && su.result === "ok" && inner.success === true) {
                 parts.push(`${name}✓`);
             } else {
-                const st = classify(inner.reason || (su && su.msg), "已申领");
+                const st = classify(inner.reason || (su && su.msg), "已申请");
                 parts.push(`${name}${st.t}`);
                 if (st.e !== "✅") { allGood = false; debug(`${tag} ${d.title}: ${JSON.stringify(su).slice(0, 200)}`); }
             }
         }
-        $.results.push(`${allGood ? "✅" : "⚠️"} ${tag}:${parts.join(" ")}`);
+        // 三档全部到位(本次成功或之前已申请)→ 折叠成一句;有问题才逐项罗列
+        $.results.push(allGood ? `✅ ${tag}:全部已申请` : `⚠️ ${tag}:${parts.join(" ")}`);
     } catch (e) {
         $.results.push(`❌ ${tag}:异常`);
         $.log(`[ERROR] ${tag}: ${e}`);
