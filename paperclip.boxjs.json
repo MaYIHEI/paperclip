@@ -1224,6 +1224,49 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/wps.png",
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/wps.png"
       ]
+    },
+    {
+      "id": "paperclip.sgcc",
+      "name": "网上国网",
+      "keys": [
+        "sgcc_data",
+        "sgcc_signin",
+        "sgcc_clear",
+        "sgcc_debug"
+      ],
+      "settings": [
+        {
+          "id": "sgcc_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie 与签到请求，完成后自动复位为关闭；之后重新开 App 进积分签到页抓取"
+        },
+        {
+          "id": "sgcc_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "开启后打印每次签到的请求/响应日志"
+        }
+      ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/sgcc",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/sgcc/sgcc.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/sgcc.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/sgcc.png"
+      ]
     }
   ]
 }

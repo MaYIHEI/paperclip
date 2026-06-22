@@ -64,10 +64,16 @@ $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const KEY_HDR = "sgcc_data";    // Cookie:t + 设备头
 const KEY_ENV = "sgcc_signin";  // 签到请求体 {data,skey,path}
 const MAX_RETRY = 3;
+const DEBUG = JSON.parse($.getdata("sgcc_debug") || "false");
 
 const AUTH_KEYS = ["t","userid","device_token","devicetokentx","devicetokentxtime","appguid","appguidnew","wtoken","appcode","os","version","ip","province","language","wsgwtype","accessmethod","user-agent"];
 
 !(function main(){
+  // 清除 Cookie(BoxJS 开关):清空已抓 Cookie + 签到请求,开关自动复位
+  if (JSON.parse($.getdata("sgcc_clear") || "false")) {
+    $.setdata("", KEY_HDR); $.setdata("", KEY_ENV); $.setdata("false", "sgcc_clear");
+    $.msg("网上国网签到", "", "✅ Cookie 已清除,请重新开 App 进积分签到页抓取"); return $.done();
+  }
   const rawH = $.getdata(KEY_HDR), rawE = $.getdata(KEY_ENV);
   if (!rawH || !rawE) { $.msg("⚠️ 网上国网签到", "缺少 Cookie 或签到请求", "打开 App 进积分签到页抓取(收到两条通知即可)"); return $.done(); }
   let hdr, env0;
@@ -81,7 +87,9 @@ const AUTH_KEYS = ["t","userid","device_token","devicetokentx","devicetokentxtim
   const attempt = (n) => {
     const ts = "" + Date.now();
     const body = { data: env0.data, sign: sm3(env0.skey + env0.data + ts), skey: env0.skey, timestamp: ts };
+    if (DEBUG) $.log("[DEBUG] 第" + n + "次 POST " + path + " timestamp=" + ts);
     $.post({ url: "https://csc-service.sgcc.com.cn:28630" + path, headers, body: JSON.stringify(body) }, (err, resp, data) => {
+      if (DEBUG) $.log("[DEBUG] 响应(" + (resp && resp.status) + "): " + String(err || data).slice(0, 300));
       // 网络错误 → 重试
       if (err) {
         if (n < MAX_RETRY) { setTimeout(() => attempt(n + 1), 3000); return; }
