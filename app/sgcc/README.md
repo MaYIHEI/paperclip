@@ -1,45 +1,99 @@
-# 网上国网(SGCC / 95598)积分签到 🧪 待验证
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png" width="80" alt="网上国网" />
+</p>
 
-> ⚠️ **WIP,未长期实测**。`t` 寿命与签到生效待验证,不要当成品用。
+# 网上国网
 
-国家电网「网上国网」App(包名 `com.wsgw.zsdl95`)每日积分签到。网关 `csc-service.sgcc.com.cn:28630`,签到模块 `osg-omgmt1042`。
-
-## 方案:复用信封 + 本地抓 token
-
-App 业务请求是国密信封 `{data, sign, skey, timestamp}`(SM2+SM4+SM3)。app 的 SM2 公钥烧在 native 框架(`HTBaseFramework`,iprotect 白盒加固),**静态挖不出**。绕过办法:
-
-| 环节 | 做法 |
-|---|---|
-| **签到信封** | **复用**真实抓包的 `skey`+`data` —— 服务器用私钥解 `skey` 拿会话密钥 T、再解 `data`,**与会话无关 → 永久有效**;只需重算 `sign=SM3(skey+data+timestamp)`、刷新 `timestamp`。**不需要 app 公钥。** |
-| **鉴权** | 明文头 `t`/`userid`/`device_token`/`devicetokentx`/`appguid`… 由 cookie 钩子抓取 |
-| **签到端点** | `/osg-omgmt1042/member/m1/0103514`(真正"提交签到",抓包里一天只调一次;`signInConfig/f90` 仅状态轮询) |
-
-`skey`/`data`/`t` 全部由 cookie 钩子在**本地**抓、存 BoxJS,**仓库不含任何个人数据**。
+国家电网「网上国网」(95598)App 积分每日签到。
 
 ## 文件
 
-- `sgcc.cookie.js` — Loon http-request 钩子。进积分签到页时抓 `t` 等头(→`sgcc_data`)+ 签到信封 `skey`/`data`(→`sgcc_signin`)
-- `sgcc.js` — cron 签到。读 BoxJS 复用信封 + 重算 `sign` + 配当前 `t`,POST 签到端点
-- `sgcc.plugin` — 一键导入(cookie 抓取 http-request + 签到 cron)
-- `sgcc-crypto.js` / `sgcc-login-probe.js` — 研究产物(web 路线国密引擎 + 登录探针;web 端无签到入口,存档备查)
+- `sgcc.js` — cron 签到主脚本(复用抓到的签到请求,免账密/登录/验证码)
+- `sgcc.cookie.js` — Cookie + 签到请求抓取(http-request 重写)
 
-## 使用
+## 使用步骤
 
-1. Loon 导入 `sgcc.plugin`,开 **MITM**(hostname `csc-service.sgcc.com.cn`)+ 安装信任 CA 证书
-2. 开 App 进「我的 / 积分签到」页一次 → 收到两条通知:
-   - `✅ 网上国网 Cookie 获取成功`(t)
-   - `✅ 网上国网 签到信封已抓`(skey+data,存本地)
-3. cron 每天 8:30 自动签到;也可在 Loon 手动跑 `网上国网签到`
+1. 按下方对应平台配置,开启重写脚本 + cron(或直接导入 `sgcc.plugin` 一键配置);需先开启 MITM 并安装信任 CA 证书
+2. 打开「网上国网」App → 进入「我的 / 积分签到」页(进页面会自动签到,同时触发抓取)
+3. 收到两条通知 `✅ 网上国网 Cookie 获取成功` + `✅ 网上国网 签到请求已抓` 即抓取成功
+4. cron 会按计划自动签到:成功推 `✅`,Cookie 失效推 `⚠️`(再开 App 进签到页即自动重抓)
 
-## 已知限制 / 待验证
+## Loon
 
-1. **`t` 寿命** —— 抓一次能撑几天?太短则需常开 App 刷新(而开 App 进签到页本身已自动签到,意义打折)
-2. **签到生效** —— m1/0103514 复用是否真记一次签到(响应加密本地解不开,需开 App 查积分核对)
-3. **信封跨天复用** —— 若提交体明文内含时间戳/nonce,昨天的信封今天可能失效
-4. **共享性** —— 信封含本人身份(加密态),每人需各自抓;脚本通用、数据全在本地
+```ini
+[MITM]
+hostname = csc-service.sgcc.com.cn
 
-## 为什么不走别的路
+[Script]
+http-request ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/ tag=网上国网 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/sgcc-wip/app/sgcc/sgcc.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
 
-- **web 账密登录**可免滑块(关键字段 `complexSliderRet:0`,非 IP 问题),但 **web 端没有签到入口** → 拿到 web token 也没用
-- **app 账密登录** `{enc,key}` 是 Aegis/mPaaS native 加密(RSA 公钥 `pub.der` 找到但派生破不动)→ 暂不可复刻
-- 故采用「本地抓 token + 复用信封」,免公钥、免登录、免滑块
+cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/sgcc-wip/app/sgcc/sgcc.js, tag=网上国网签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
+```
+
+## Surge
+
+```ini
+[MITM]
+hostname = csc-service.sgcc.com.cn
+
+[Script]
+网上国网 Cookie = type=http-request,pattern=^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/sgcc-wip/app/sgcc/sgcc.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+
+网上国网签到 = type=cron,cronexp=30 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/sgcc-wip/app/sgcc/sgcc.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+```
+
+## Quantumult X
+
+```ini
+[MITM]
+hostname = csc-service.sgcc.com.cn
+
+[rewrite_local]
+^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/ url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/sgcc-wip/app/sgcc/sgcc.cookie.js
+
+[task_local]
+30 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/sgcc-wip/app/sgcc/sgcc.js, tag=网上国网签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enabled=true
+```
+
+## Stash
+
+```yaml
+cron:
+  script:
+    - name: 网上国网签到
+      cron: '30 8 * * *'
+      timeout: 60
+
+http:
+  mitm:
+    - "csc-service.sgcc.com.cn"
+  script:
+    - match: ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/
+      name: 网上国网 Cookie
+      type: request
+      require-body: true
+
+script-providers:
+  网上国网签到:
+    url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/sgcc-wip/app/sgcc/sgcc.js
+    interval: 86400
+```
+
+## 实现细节
+
+- **鉴权 = 抓取的 Cookie**(进 App 签到页时自动带的 t + 设备头),由 `sgcc.cookie.js` 抓取存本地
+- **签到 = 复用抓到的"提交签到"请求**:cron 取出请求体、重算时间戳后提交,**免账号密码、免登录、免图形验证码**
+- **数据全在本地**(BoxJS),仓库与脚本不含任何账号数据;脚本可共享,各人抓各自 Cookie
+- **响应加密**,脚本只判签到成功/失败,**读不到积分数字**(积分到 App 查看)
+
+## 维护记录
+
+| 日期 | 变更 |
+|---|---|
+| 2026-06-22 | 初版:复用签到请求 + 本地抓 Cookie,免账密/登录/验证码;实测连续多天可签,Cookie ≥4.5 天 |
+
+## 已知限制
+
+- **Cookie 会失效**:失效时签到脚本推 `⚠️` 提醒,开 App 进积分签到页即自动重抓(实测有效期 ≥4.5 天,无需频繁操作)
+- **读不到积分数字**:签到响应加密,脚本只判成功/失败,具体积分与连签天数请到 App 查看
+- **目前仅 Loon 实测**:其他平台配置已按规范提供,未逐一验证
