@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png" width="80" alt="网上国网" />
+  <img src="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png" width="80" alt="网上国网" />
 </p>
 
 # 网上国网
@@ -25,9 +25,9 @@
 hostname = csc-service.sgcc.com.cn
 
 [Script]
-http-request ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/ tag=网上国网 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+http-request ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/ tag=网上国网 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
 
-cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js, tag=网上国网签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
+cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js, tag=网上国网签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enable=true
 ```
 
 ## Surge
@@ -37,9 +37,9 @@ cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/papercli
 hostname = csc-service.sgcc.com.cn
 
 [Script]
-网上国网 Cookie = type=http-request,pattern=^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+网上国网 Cookie = type=http-request,pattern=^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
 
-网上国网签到 = type=cron,cronexp=30 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+网上国网签到 = type=cron,cronexp=30 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
 ```
 
 ## Quantumult X
@@ -52,7 +52,7 @@ hostname = csc-service.sgcc.com.cn
 ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/ url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.cookie.js
 
 [task_local]
-30 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js, tag=网上国网签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enabled=true
+30 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js, tag=网上国网签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enabled=true
 ```
 
 ## Stash
