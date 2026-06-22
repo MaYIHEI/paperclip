@@ -6,8 +6,9 @@
  * ★信封(skey/data)和 t 全部由 sgcc.cookie.js 在你本地抓、存 BoxJS;本脚本不含任何个人数据。
  *   开 App 进积分签到页一次,自动抓全(t 存 sgcc_data,签到信封存 sgcc_signin)。
  * 不需 app SM2 公钥(白盒挖不出)、不需登录(Aegis加密)、不需滑块。
- * 通知:每次推一条。✅ 签到完成 / ⚠️ t 失效(开 app 重抓)/ ⏳ 服务器忙(重试后仍忙)。
- *   响应加密、无会话密钥解不开,故读不到积分数字;成败靠返回码判定。服务器忙自动重试 3 次。
+ * 通知:每次推一条。✅ 签到完成(带本地连签天数)/ ⚠️ 签到失败(重试3次仍无 encryptData = 多半 t 失效,开 app 重抓)。
+ *   判定:有 encryptData = 成功;否则重试应对偶发"系统正忙",重试光仍失败即判失效。
+ *   响应加密、无会话密钥解不开,故读不到积分数字;连签数是脚本本地计数(只要不另外手动签即与服务器一致)。
  *
  * [Script] cron "30 8 * * *" script-path=<raw>/app/sgcc/sgcc.js, tag=网上国网签到
  * @Author MaYIHEI  @Updated 2026-06-22  状态:🧪 实测连续 2 天可签、t≥2天;通知已分类告警
@@ -19,10 +20,21 @@ var sm3=(typeof __SM3==='function')?__SM3:(__SM3.sm3||__SM3.default||__SM3);
 
 var KEY_HDR = "sgcc_data";      // t + 设备头
 var KEY_ENV = "sgcc_signin";    // 签到信封 {data,skey,path}
+var KEY_STREAK = "sgcc_streak"; // 本地连签计数 {date,days}
 
 var MAX_RETRY = 3;
 
 function read(k){ return typeof $persistentStore!=="undefined" ? $persistentStore.read(k) : null; }
+function write(v,k){ return typeof $persistentStore!=="undefined" ? $persistentStore.write(v,k) : false; }
+function ymd(d){ return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+// 本地连签:今天已记则不变,接上昨天则 +1,否则归 1(脚本自己数,只要不另外手动签即与服务器一致)
+function bumpStreak(){
+  var today=ymd(new Date()), yest=ymd(new Date(Date.now()-86400000)), p={};
+  try{ p=JSON.parse(read(KEY_STREAK)||"{}"); }catch(e){}
+  var days = p.date===today ? (p.days||1) : (p.date===yest ? (p.days||0)+1 : 1);
+  write(JSON.stringify({date:today,days:days}), KEY_STREAK);
+  return days;
+}
 function notify(t,s,b){ if(typeof $notification!=="undefined") $notification.post(t,s,b||""); console.log(t+" | "+s+" | "+(b||"")); }
 function done(){ if(typeof $done!=="undefined") $done({}); }
 
@@ -42,19 +54,19 @@ try {
         var ts = "" + Date.now();
         var body = { data: env0.data, sign: sm3(env0.skey + env0.data + ts), skey: env0.skey, timestamp: ts };
         $httpClient.post({ url:"https://csc-service.sgcc.com.cn:28630"+path, headers:baseHeaders, body:JSON.stringify(body) }, function(err,resp,data){
+          // 网络错误 → 重试
           if(err){
             if(n < MAX_RETRY){ setTimeout(function(){ attempt(n+1); }, 3000); return; }
-            notify("⏳ 网上国网签到","网络错误,已重试"+MAX_RETRY+"次", String(err).slice(0,80)); done(); return;
+            notify("⚠️ 网上国网签到","网络错误,重试"+MAX_RETRY+"次失败", String(err).slice(0,80)); done(); return;
           }
           var ok=false, msg=String(data||"").slice(0,140);
           try{ var j=JSON.parse(data); ok=!!j.encryptData; if(!ok) msg=(j.message||"")+" ["+(j.code||"")+"]"; }catch(e){}
-          if(ok){ var ageDay = hdr._ts ? ((Date.now()-hdr._ts)/86400000).toFixed(1)+" 天" : "未知"; notify("✅ 网上国网签到","今日签到完成 ✓","Cookie 已用 "+ageDay); done(); return; }
-          if(/系统正忙|S100[0-9]|S101[0-2]/.test(msg)){
-            if(n < MAX_RETRY){ setTimeout(function(){ attempt(n+1); }, 3000); return; }
-            notify("⏳ 网上国网签到","服务器忙,重试"+MAX_RETRY+"次仍未成功","可稍后手动重跑"); done(); return;
-          }
-          // 其余(多为 t 失效)
-          notify("⚠️ 网上国网签到","签到未成功,t 多半已失效","开 app 进积分签到页重新抓取 | "+msg); done();
+          // 成功:有 encryptData
+          if(ok){ var d=bumpStreak(); notify("✅ 网上国网签到","今日签到完成 ✓","已连签 "+d+" 天"); done(); return; }
+          // 非成功:重试应对偶发"系统正忙";服务器对所有失败都只回"系统正忙"无法靠码区分,
+          //   故持久失败(重试光仍无 encryptData)= 多半 t 已失效,直接提示重抓。
+          if(n < MAX_RETRY){ setTimeout(function(){ attempt(n+1); }, 3000); return; }
+          notify("⚠️ 网上国网签到","签到失败(重试"+MAX_RETRY+"次)· 多半 t 已失效","开 app 进积分签到页重抓;若 app 也异常则服务器问题 | "+msg); done();
         });
       };
       attempt(1);
