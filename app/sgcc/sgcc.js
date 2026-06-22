@@ -48,7 +48,7 @@ try {
           }
           var ok=false, msg=String(data||"").slice(0,140);
           try{ var j=JSON.parse(data); ok=!!j.encryptData; if(!ok) msg=(j.message||"")+" ["+(j.code||"")+"]"; }catch(e){}
-          if(ok){ notify("✅ 网上国网签到","今日签到完成 ✓","积分请到 app 查看"); done(); return; }
+          if(ok){ var ageDay = hdr._ts ? ((Date.now()-hdr._ts)/86400000).toFixed(1)+" 天" : "未知"; notify("✅ 网上国网签到","今日签到完成 ✓","Cookie 已用 "+ageDay); done(); return; }
           if(/系统正忙|S100[0-9]|S101[0-2]/.test(msg)){
             if(n < MAX_RETRY){ setTimeout(function(){ attempt(n+1); }, 3000); return; }
             notify("⏳ 网上国网签到","服务器忙,重试"+MAX_RETRY+"次仍未成功","可稍后手动重跑"); done(); return;
