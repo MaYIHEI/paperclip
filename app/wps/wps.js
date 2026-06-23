@@ -52,7 +52,7 @@
 
 const $ = new Env("WPS");
 
-const SCRIPT_VERSION = "2026-06-23.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-23.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -506,6 +506,9 @@ async function taskClockIn() {
     try {
         const sid = $.getdata(CK_KEY);
 
+        // 排在任务首位、整点 cron 会精确撞上 10:00:00 的后端尖峰 → 先错峰几秒再打首个请求
+        await sleep(jitter([3, 10]));
+
         // 动态盐 ss(配置端点在 CDN,不需登录);整点 cron 易撞网络抖动 → 与 s_key 一样重试
         let ss = "", cfBody = "";
         for (let i = 0; i < 2 && !ss; i++) {
@@ -515,13 +518,17 @@ async function taskClockIn() {
             ss = (((safeJson(cfBody) || {}).data || {}).value || {}).ss;
         }
 
-        // 动态密钥 s_key(带 wps_sid);info 偶发服务端错(invalid connection 等)→ 重试一次
+        // 动态密钥 s_key(带 wps_sid):info 接口在整点 10:00 后端负载尖峰时偶发应用层错
+        // (msg:"invalid connection",非 cookie 失效——手动错峰跑就正常)。重试 4 次 + 递增退避,
+        // 尽量盖过尖峰窗口;退避序列 0/3/6/9s,总耗时上限约 18s(clockin 排首位,不挤占后续任务)。
         let s_key = "", infBody = "";
-        for (let i = 0; i < 2 && !s_key; i++) {
-            if (i > 0) await sleep(2000);
+        const backoff = [0, 3000, 6000, 9000];
+        for (let i = 0; i < backoff.length && !s_key; i++) {
+            if (backoff[i]) await sleep(backoff[i]);
             const inf = await rawReq("GET", CLOCK_INFO, { sid });
             infBody = inf.body || "";
             s_key = ((safeJson(infBody) || {}).data || {}).s_key;
+            if (!s_key) debug(`${tag} info 重试 ${i + 1}/${backoff.length}: ${infBody.slice(0, 120)}`);
         }
 
         if (!ss || !s_key) {
