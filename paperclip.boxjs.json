@@ -260,7 +260,8 @@
       "keys": [
         "bhg_token",
         "bhg_mallid",
-        "bhg_clear"
+        "bhg_clear",
+        "bhg_debug"
       ],
       "settings": [
         {
@@ -269,6 +270,23 @@
           "val": false,
           "type": "boolean",
           "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        },
+        {
+          "id": "bhg_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "开启后打印签到 / 状态接口原始响应"
         }
       ],
       "author": "@MaYIHEI",

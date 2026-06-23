@@ -52,13 +52,13 @@
 
 const $ = new Env("北京华联");
 
-const SCRIPT_VERSION = "2026-06-16.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-23.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const CK_NAME = "bhg_token";
 const MALL_KEY = "bhg_mallid"; // 华联是连锁,mall_id 不在 JWT 里,从抓取 URL 提取后存这里
 $.token = ($.isNode() ? process.env.BHG_TOKEN : $.getdata(CK_NAME)) || "";
 $.mallId = ($.isNode() ? process.env.BHG_MALLID : $.getdata(MALL_KEY)) || "";
-$.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("is_debug")) || "false";
+$.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("bhg_debug")) || "false";
 $.messages = [];
 
 const HOST = "https://a.china-smartech.com";
