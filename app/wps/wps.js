@@ -75,6 +75,7 @@ const ENC_KEY = "https://personal-bus.wps.cn/sign_in/v1/encrypt/key"; // 服务�
 const DAY_INFO = "https://personal-bus.wps.cn/sign_in/v1/day_info";
 const SIGN_IN = "https://personal-bus.wps.cn/sign_in/v1/sign_in";
 const COMPONENT = "https://personal-act.wps.cn/activity-rubik/activity/component_action";
+const PAGE_INFO = "https://personal-act.wps.cn/activity-rubik/activity/page_info"; // 取组件当前状态(打卡序列 series_id 在此)
 
 // 小程序每日打卡(独立活动,与上面福利中心 H5 不同):info 取动态密钥 s_key,CONF 取动态盐 ss,clock_in 执行
 const CLOCK_INFO = "https://personal-bus.wps.cn/activity/clock_in/v1/info";
@@ -160,9 +161,7 @@ async function main() {
         ["wps_task_hot", () => taskComponent("限量爆款", COMPONENTS.hot, "privilege_grant.exec", {}, "已领取")], // 库存少,放最前
         ["wps_task_trial", () => taskTrial()],
         ["wps_task_signin", () => taskSignIn(uid)],
-        ["wps_task_fragment", () => taskComponent("打卡领会员", COMPONENTS.fragment, "fragment_collect.sign_in", {
-            fragment_collect: { sign_date: beijingDate(), series_id: "", is_new_sign_series: true },
-        }, "已打卡")],
+        ["wps_task_fragment", () => taskFragment()],
         ["wps_task_lottery", () => taskComponent("天天抽奖", COMPONENTS.lottery, "lottery_v2.exec", {
             lottery_v2: { session_id: COMPONENTS.lottery.session_id },
         }, "已完成")],
@@ -261,6 +260,78 @@ async function taskComponent(tag, comp, action, payload, doneLabel) {
             if (!reason && inner.error_code === 10005) reason = "次数用完";
             if (!reason) reason = j.msg || (inner.error_code ? `code ${inner.error_code}` : "");
             const st = classify(reason, doneLabel);
+            $.results.push(`${st.e} ${tag}:${st.t}`);
+            if (st.e !== "✅") debug(`${tag} 响应: ${r.body.slice(0, 300)}`);
+        }
+    } catch (e) {
+        $.results.push(`❌ ${tag}:异常`);
+        $.log(`[ERROR] ${tag}: ${e}`);
+    }
+}
+
+// ============ 任务:福利中心打卡免费领会员(连续打卡)============
+// 关键:必须先取当前签到序列 sign_series_id 再签——服务端靠它累计连续天数。
+// 旧实现固定传 series_id:"" + is_new_sign_series:true,等于每天「新建序列」→ 永远停在第 1 天。
+// 正确逻辑(对齐官方 H5 fragment-collect 组件):有序列就复用、is_new_sign_series=false;
+// 只有从无序列(第一次)时才置 true。series_id 从 page_info 的 fragment 组件里取。
+async function taskFragment() {
+    const tag = "打卡领会员";
+    const comp = COMPONENTS.fragment;
+    try {
+        const today = beijingDate();
+
+        // 1) 取当前序列状态:page_info 返回各组件,fragment 组件挂 sign_series_id + sign_records
+        const pi = await httpReq("GET",
+            `${PAGE_INFO}?activity_number=${FLZX.activity_number}&page_number=${FLZX.page_number}`);
+        const pj = safeJson(pi.body);
+        let seriesId = "", records = [];
+        if (pj && pj.result === "ok" && Array.isArray(pj.data)) {
+            const node = pj.data.find((c) => c && c.number === comp.component_number);
+            const fc = (node && node.fragment_collect) || {};
+            seriesId = fc.sign_series_id || "";
+            records = fc.sign_records || [];
+        } else {
+            debug(`${tag} page_info 异常: ${pi.body.slice(0, 300)}`);
+        }
+
+        // 今天已签则跳过(sign_records 里今天 sign_status==signed)
+        const todayRec = records.find((r) => r && r.sign_date === today);
+        if (todayRec && todayRec.sign_status === "signed") {
+            $.results.push(`✅ ${tag}:已打卡`);
+            return;
+        }
+
+        // 2) 签到:有序列就复用(is_new_sign_series=false),无序列才新建
+        const isNew = !seriesId;
+        const reqObj = {
+            component_uniq_number: {
+                activity_number: FLZX.activity_number,
+                page_number: FLZX.page_number,
+                component_number: comp.component_number,
+                component_node_id: comp.component_node_id,
+            },
+            component_type: comp.type,
+            component_action: "fragment_collect.sign_in",
+            fragment_collect: { sign_date: today, series_id: seriesId, is_new_sign_series: isNew },
+        };
+        const r = await httpReq("POST", COMPONENT, { body: JSON.stringify(reqObj) });
+        const j = safeJson(r.body);
+        if (!j) {
+            $.results.push(`❌ ${tag}:无响应`);
+            debug(`${tag} 响应: ${r.body.slice(0, 300)}`);
+            return;
+        }
+        if (j.result !== "ok") {
+            const st = classify(j.msg || j.ext_msg, "已打卡");
+            $.results.push(`${st.e} ${tag}:${st.t}`);
+            if (st.e !== "✅") debug(`${tag} 响应: ${r.body.slice(0, 300)}`);
+            return;
+        }
+        const inner = (j.data || {}).fragment_collect || {};
+        if (inner.success === true) {
+            $.results.push(`✅ ${tag}:成功${isNew ? "(新序列)" : ""}`);
+        } else {
+            const st = classify(inner.reason || j.msg, "已打卡");
             $.results.push(`${st.e} ${tag}:${st.t}`);
             if (st.e !== "✅") debug(`${tag} 响应: ${r.body.slice(0, 300)}`);
         }
