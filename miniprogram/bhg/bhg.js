@@ -52,7 +52,7 @@
 
 const $ = new Env("北京华联");
 
-const SCRIPT_VERSION = "2026-06-23.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-23.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const CK_NAME = "bhg_token";
 const MALL_KEY = "bhg_mallid"; // 华联是连锁,mall_id 不在 JWT 里,从抓取 URL 提取后存这里
@@ -134,7 +134,7 @@ async function checkin() {
     const mallId = $.mallId;
     $.log(`[INFO] mall_id=${mallId} user_id=${payload.sub}`);
 
-    // 查签到状态(可选,提供丰富通知信息;签名可能因 mgms 不完全匹配,但接口宽容)
+    // 查签到状态:用于 401 判定 + 已签时展示连签/累计/本月(数据全在这接口里)
     const formPath = `restful/mall/${mallId}/checkInForm?with_records=1`;
     const formRes = await request("GET", formPath, null);
     debug(formRes, "checkInForm");
@@ -154,20 +154,30 @@ async function checkin() {
         return;
     }
 
-    // 成功
-    if (res.code === 200 && res.data) {
-        const { point, point_total, total_point, extra, num } = res.data;
-        const earned = point_total || point || 0;
-        const extraLine = extra && extra > 0 ? ` (含连签 +${extra})` : "";
-        const totalLine = typeof total_point === "number" ? `, 累计 ${total_point} 分` : "";
-        const numLine = typeof num === "number" ? `\n📅 本月已签 ${num} 天` : "";
-        $.messages.push(`✅ 签到成功: +${earned} 分${extraLine}${totalLine}${numLine}`);
+    // 真实积分余额签到接口里没有,单独拉会员信息(member.info)取 —— 此时已签完,余额是最新的
+    const balLine = await balanceLine(mallId, payload.sub);
+
+    // 成功:checkInRecord 的 data 字段含义混乱(extra 是逐日累加器、total_point 不是余额),
+    // 改从 checkInForm 取准确数字 —— 签到后再拉一次拿到更新后的连签/累计/本月
+    if (res.code === 200) {
+        let sum = summarizeForm(formRes);
+        const form2 = await request("GET", formPath, null);
+        debug(form2, "checkInForm(签到后)");
+        const s2 = summarizeForm(form2);
+        if (s2) sum = s2;
+        const earned =
+            (res.data && (res.data.point_total || res.data.point)) ||
+            (sum && sum.todayEarned) ||
+            0;
+        $.messages.push(`✅ 签到成功: +${earned} 分${statLine(sum)}${balLine}`);
         return;
     }
 
-    // 已签
-    if (res.code === 422 || /已签|已经签到/.test(res.msg || "")) {
-        $.messages.push(`✨ 今日已签到${res.msg ? `: ${res.msg}` : ""}`);
+    // 已签(华联返回 code=400 "今日已签到");此时 formRes 已是最新状态
+    if (res.code === 400 || res.code === 422 || /已签|已经签到/.test(res.msg || "")) {
+        const sum = summarizeForm(formRes);
+        const earned = sum && sum.todayEarned ? ` (+${sum.todayEarned} 分)` : "";
+        $.messages.push(`✨ 今日已签到${earned}${statLine(sum)}${balLine}`);
         return;
     }
 
@@ -178,6 +188,51 @@ async function checkin() {
     }
 
     $.messages.push(`❌ 签到失败: code=${res.code} msg=${res.msg || $.toStr(res)}`);
+}
+
+// 从 checkInForm 响应提取可信字段:
+//   stat.continuous_count = 当前连签天数,stat.count = 累计签到总天数
+//   days[] 正好是当月 1 号~月底,point_total>0 即当天已签 → 数出本月已签
+//   today===1 那条的 point_total = 今日入账积分
+function summarizeForm(formRes) {
+    const d = formRes && formRes.data;
+    if (!d || typeof d !== "object") return null;
+    const stat = d.stat || {};
+    const days = Array.isArray(d.days) ? d.days : [];
+    const monthDays = days.filter((x) => x && x.point_total > 0).length;
+    const todayItem = days.find((x) => x && x.today === 1);
+    return {
+        streak: typeof stat.continuous_count === "number" ? stat.continuous_count : null,
+        totalDays: typeof stat.count === "number" ? stat.count : null,
+        monthDays,
+        todayEarned: todayItem ? todayItem.point_total || 0 : 0,
+    };
+}
+
+// 拉会员信息取真实积分余额:member.info = restful/mall/{mall}/member/{member}
+//   member_id = JWT 的 sub;余额字段优先 data.balance,否则 data.point;data.level_name = 会员等级
+async function balanceLine(mallId, memberId) {
+    if (!memberId) return "";
+    const res = await request("GET", `restful/mall/${mallId}/member/${memberId}`, null);
+    debug(res, "member.info");
+    const d = res && res.data;
+    if (!d || typeof d !== "object") return "";
+    const point =
+        typeof d.balance === "number" ? d.balance : typeof d.point === "number" ? d.point : null;
+    if (point == null) return "";
+    return `\n💰 当前积分: ${point}${d.level_name ? ` · ${d.level_name}` : ""}`;
+}
+
+// 拼装连签/累计/本月附加行,字段缺失时自动省略
+function statLine(sum) {
+    if (!sum) return "";
+    const out = [];
+    const a = [];
+    if (sum.streak != null) a.push(`已连签 ${sum.streak} 天`);
+    if (sum.totalDays != null) a.push(`累计签到 ${sum.totalDays} 天`);
+    if (a.length) out.push(`\n🔥 ${a.join(" · ")}`);
+    if (sum.monthDays) out.push(`\n📅 本月已签 ${sum.monthDays} 天`);
+    return out.join("");
 }
 
 // ============ 请求 ============
