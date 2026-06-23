@@ -52,7 +52,7 @@
 
 const $ = new Env("一点万象");
 
-const SCRIPT_VERSION = "2026-06-23.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-23.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'newmixc_data';
@@ -96,34 +96,23 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
     $.log(`▶️ 开始签到 账号=${phoneMasked} 商场=${ck.mallNo}`);
 
     try {
-        // 1. 查签到状态
+        // 1. 查状态:latticeList 顶层有真实积分余额(remaindPoints)和当前连签(currentStep)
+        //    注意:latticeList 数组只是奖励布局,不含每日签到记录,无法判断今日是否已签
         const status = await call(ck, 'mixc.app.memberSign.latticeList');
         debug(`latticeList 完整返回: ${JSON.stringify(status)}`);
-        let alreadySigned = false;
-        if (status && status.code === 0 && status.data && Array.isArray(status.data.signPointList)) {
-            const todayStr = formatDate(new Date());
-            const today = status.data.signPointList.find(x => x.signDate === todayStr);
-            if (today && today.sign === 1) alreadySigned = true;
-            $.log(`📋 状态: 今日${alreadySigned ? '已签' : '未签'},连签 ${status.data.continuousSign || 0} 天`);
-        } else {
-            debug(`状态查询异常: ${JSON.stringify(status).slice(0, 200)}`);
-        }
+        const st = parseStatus(status);
+        $.log(`📋 状态: 连签 ${st.streak != null ? st.streak : '?'} 天,积分 ${st.balance != null ? st.balance : '?'}`);
 
-        if (alreadySigned) {
-            $.msg('一点万象', `✨ ${phoneMasked} 今日已签`,
-                `连签 ${status.data.continuousSign || 0} 天`);
-            $.done();
-            return;
-        }
-
-        // 2. 执行签到
+        // 2. 执行签到(已签/限流都从签到响应判断)
         const r = await call(ck, 'mixc.app.memberSign.sign');
         debug(`sign 完整返回: ${JSON.stringify(r)}`);
         if (!r || r.code !== 0) {
             const m = (r && (r.message || r.msg)) || JSON.stringify(r).slice(0, 200);
-            // 兜底: 接口可能用其它字段表达"已签"
-            if (/已签|签过/.test(m)) {
-                $.msg('一点万象', `✨ ${phoneMasked} 今日已签`, m);
+            if (/已签|签过|不可重复/.test(m)) {
+                $.msg('一点万象', `✨ ${phoneMasked} 今日已签`, `${m}${statTail(st)}`);
+            } else if (/频繁|稍后|过于/.test(m)) {
+                // code=-1 限流,不是真失败,提示稍后(下次 cron 会自动重试)
+                $.msg('一点万象', `⏳ ${phoneMasked} 请求频繁`, `${m},稍后再试${statTail(st)}`);
             } else {
                 $.msg('一点万象', `❌ ${phoneMasked} 签到失败`, m);
             }
@@ -133,8 +122,6 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
 
         const sd = (r.data && r.data.signDataMap) || {};
         const todayPoint = sd.todayPoint || r.data.point || 0;
-        const continuous = sd.continuousSign || 0;
-        const userPoints = r.data.userPoints;
         $.log(`✅ 签到成功 +${todayPoint} 积分`);
 
         // 3. 尝试领阶段奖(签到接口本身已发主积分,nextStep 可能有连签奖)
@@ -154,7 +141,10 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
             }
         }
 
-        const body = `+${todayPoint} 积分 · 连签 ${continuous} 天${userPoints != null ? ` · 总积分 ${userPoints}` : ''}${extraMsg}`;
+        // 签到后重查一次,拿更新后的真实积分 + 连签(签到响应里 userPoints 不是余额)
+        const after = parseStatus(await call(ck, 'mixc.app.memberSign.latticeList'));
+        const tail = statTail(after.balance != null || after.streak != null ? after : st);
+        const body = `+${todayPoint} 积分${tail}${extraMsg}`;
         $.msg('一点万象', `✅ ${phoneMasked} 签到成功`, body);
     } catch (e) {
         $.log('❌ 异常: ' + (e.message || e));
@@ -163,6 +153,22 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
 
     $.done();
 })();
+}
+
+// 从 latticeList 响应提取真实积分余额(remaindPoints)和当前连签(currentStep)
+function parseStatus(status) {
+    const d = status && status.code === 0 && status.data;
+    if (!d || typeof d !== 'object') return { balance: null, streak: null };
+    return {
+        balance: typeof d.remaindPoints === 'number' ? d.remaindPoints : null,
+        streak: typeof d.currentStep === 'number' ? d.currentStep : null,
+    };
+}
+
+// 拼接通知尾部「· 连签 X 天 · 积分 Y」,字段缺失自动省略
+function statTail(st) {
+    if (!st) return '';
+    return `${st.streak != null ? ` · 连签 ${st.streak} 天` : ''}${st.balance != null ? ` · 积分 ${st.balance}` : ''}`;
 }
 
 // 调一次网关接口
