@@ -156,16 +156,19 @@ async function main() {
     }
 
     // 任务清单:每项可在 BoxJS 单独开关(默认开;关闭则整项跳过,连同它的随机间隔)。
-    // 10 点 cron 触发:抢完限量爆款顺手把其余做了,逐个串行、动作间随机间隔(模拟真人,避风控)。
+    // 10 点 cron 触发,逐个串行、动作间随机间隔(模拟真人,避风控)。
+    // 顺序讲究:① 小程序打卡放最前——它走 personal-bus 域 + Signature 签名,是最敏感的请求,
+    //   排在一串 activity-rubik 突发请求之后易被短暂限流(整点 cron 必挂、手动重跑就好),故趁
+    //   session 干净时第一个签;② 限量爆款紧随其后(库存少,只差一个随机间隔基本不影响抢)。
     const tasks = [
-        ["wps_task_hot", () => taskComponent("限量爆款", COMPONENTS.hot, "privilege_grant.exec", {}, "已领取")], // 库存少,放最前
+        ["wps_task_clockin", () => taskClockIn()],
+        ["wps_task_hot", () => taskComponent("限量爆款", COMPONENTS.hot, "privilege_grant.exec", {}, "已领取")],
         ["wps_task_trial", () => taskTrial()],
         ["wps_task_signin", () => taskSignIn(uid)],
         ["wps_task_fragment", () => taskFragment()],
         ["wps_task_lottery", () => taskComponent("天天抽奖", COMPONENTS.lottery, "lottery_v2.exec", {
             lottery_v2: { session_id: COMPONENTS.lottery.session_id },
         }, "已完成")],
-        ["wps_task_clockin", () => taskClockIn()],
     ];
     // 打印每个开关实际读到的原始值(排查 BoxJS 是否生效:null=未设置默认开)
     $.log(`[INFO] 任务开关 ${tasks.map(([k]) => `${k.slice(9)}=${JSON.stringify($.getdata(k))}`).join(" ")}`);
@@ -412,9 +415,14 @@ async function taskClockIn() {
     try {
         const sid = $.getdata(CK_KEY);
 
-        // 动态盐 ss(配置端点在 CDN,不需登录)
-        const cf = await rawReq("GET", CLOCK_CONF, {});
-        const ss = (((safeJson(cf.body) || {}).data || {}).value || {}).ss;
+        // 动态盐 ss(配置端点在 CDN,不需登录);整点 cron 易撞网络抖动 → 与 s_key 一样重试
+        let ss = "", cfBody = "";
+        for (let i = 0; i < 2 && !ss; i++) {
+            if (i > 0) await sleep(2000);
+            const cf = await rawReq("GET", CLOCK_CONF, {});
+            cfBody = cf.body || "";
+            ss = (((safeJson(cfBody) || {}).data || {}).value || {}).ss;
+        }
 
         // 动态密钥 s_key(带 wps_sid);info 偶发服务端错(invalid connection 等)→ 重试一次
         let s_key = "", infBody = "";
@@ -426,10 +434,12 @@ async function taskClockIn() {
         }
 
         if (!ss || !s_key) {
-            // 服务端偶发错,优雅降级为接口异常(不抛 ❌,写清原因)
-            const m = ((safeJson(infBody) || {}).msg) || infBody.slice(0, 60) || "缺 ss/s_key";
-            $.results.push(`⚠️ ${tag}:接口异常(${m})`);
-            debug(`${tag} info: ss=${!!ss} s_key=${!!s_key} ${infBody.slice(0, 160)}`);
+            // 服务端/网络偶发错,优雅降级为接口异常(不抛 ❌,写清是 ss 还是 s_key 没拿到)
+            const which = !ss ? "ss" : "s_key";
+            const src = !ss ? cfBody : infBody;
+            const m = ((safeJson(src) || {}).msg) || src.slice(0, 60) || `缺 ${which}`;
+            $.results.push(`⚠️ ${tag}:接口异常(取 ${which} 失败:${m})`);
+            debug(`${tag} info: ss=${!!ss} s_key=${!!s_key} cf=${cfBody.slice(0, 120)} inf=${infBody.slice(0, 120)}`);
             return;
         }
 
