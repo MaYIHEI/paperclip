@@ -52,7 +52,7 @@
 
 const $ = new Env("WPS");
 
-const SCRIPT_VERSION = "2026-06-24.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-24.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -170,9 +170,7 @@ async function main() {
         ["wps_task_trial", () => taskTrial()],
         ["wps_task_signin", () => taskSignIn(uid)],
         ["wps_task_fragment", () => taskFragment()],
-        ["wps_task_lottery", () => taskComponent("天天抽奖", COMPONENTS.lottery, "lottery_v2.exec", {
-            lottery_v2: { session_id: COMPONENTS.lottery.session_id },
-        }, "已完成")],
+        ["wps_task_lottery", () => taskLottery()],
         ["wps_task_clockin", () => taskClockIn()],
     ];
     // 打印每个开关实际读到的原始值(排查 BoxJS 是否生效:null=未设置默认开)
@@ -419,6 +417,59 @@ async function taskFragment() {
             const st = classify(inner.reason || j.msg, "已打卡");
             $.results.push(`${st.e} ${tag}:${st.t}`);
             if (st.e !== "✅") debug(`${tag} 响应: ${r.body.slice(0, 300)}`);
+        }
+    } catch (e) {
+        $.results.push(`❌ ${tag}:异常`);
+        $.log(`[ERROR] ${tag}: ${e}`);
+    }
+}
+
+// ============ 任务:天天抽奖(lottery_v2,免费次数 10 点后才刷新)============
+// 免费抽奖次数(lottery_list[].times)在每天 10:00 之后才刷出来(实测 cron 10:00 那刻常是 0、
+// 10:05 才变 1)。旧实现不看次数直接 exec,撞 0 次 → 服务端回 10005,被误判成「已达上限」。
+// 改为先读 page_info 的 times:有次数才抽、没次数如实报(不再假报已达上限);session_id 动态取。
+async function taskLottery() {
+    const tag = "天天抽奖";
+    const comp = COMPONENTS.lottery;
+    try {
+        const list = await fetchPageInfo();
+        const node = findComp(list, comp.component_number, comp.component_node_id);
+        const lv = (node && node.lottery_v2) || {};
+        const sessions = lv.lottery_list || [];
+        // 优先进行中的场次,取不到再退活动内置 session_id(3002)
+        const sess = sessions.find((s) => s && s.session_status === "IN_PROGRESS") || sessions[0];
+        const sessionId = (sess && sess.session_id) || comp.session_id;
+        const times = (sess && sess.times) || 0;
+
+        if (times < 1) {
+            // 免费次数还没刷出来(cron 跑太早)= 正常,如实报,别误判已达上限
+            $.results.push(`✅ ${tag}:今日暂无免费次数`);
+            return;
+        }
+
+        const reqObj = {
+            component_uniq_number: {
+                activity_number: FLZX.activity_number,
+                page_number: FLZX.page_number,
+                component_number: comp.component_number,
+                component_node_id: comp.component_node_id,
+            },
+            component_type: comp.type,
+            component_action: "lottery_v2.exec",
+            lottery_v2: { session_id: sessionId },
+        };
+        const r = await httpReq("POST", COMPONENT, { body: JSON.stringify(reqObj) });
+        const j = safeJson(r.body);
+        const inner = (j && j.data && j.data.lottery_v2) || {};
+        if (j && j.result === "ok" && inner.success === true) {
+            $.results.push(`✅ ${tag}:成功${inner.reward_name ? " " + inner.reward_name : ""}`);
+        } else {
+            // 极少数:刚读到次数但 exec 时已被用掉 → error_code 10005 归「次数用完」
+            let reason = inner.send_msg || "";
+            if (!reason && inner.error_code === 10005) reason = "次数用完";
+            const st = classify(reason || (j && j.msg), "已完成");
+            $.results.push(`${st.e} ${tag}:${st.t}`);
+            if (st.e !== "✅") debug(`${tag} 响应: ${(r.body || "").slice(0, 300)}`);
         }
     } catch (e) {
         $.results.push(`❌ ${tag}:异常`);
