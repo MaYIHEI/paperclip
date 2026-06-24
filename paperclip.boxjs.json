@@ -1369,6 +1369,48 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/linghu.png",
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/linghu.png"
       ]
+    },
+    {
+      "id": "paperclip.baidupan",
+      "name": "百度网盘",
+      "keys": [
+        "baidupan_data",
+        "baidupan_clear",
+        "baidupan_debug"
+      ],
+      "settings": [
+        {
+          "id": "baidupan_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开后，运行下一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭，之后重新抓取"
+        },
+        {
+          "id": "baidupan_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "开启后打印签到 / 状态接口原始响应"
+        }
+      ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/baidupan",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/baidupan/baidupan.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/baidupan.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/baidupan.png"
+      ]
     }
   ]
 }
