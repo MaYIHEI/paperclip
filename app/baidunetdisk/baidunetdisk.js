@@ -52,7 +52,7 @@
 
 const $ = new Env("百度网盘");
 
-const SCRIPT_VERSION = "2026-06-24.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-24.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'baidunetdisk_data';
@@ -62,6 +62,14 @@ const BASE   = 'https://pan.baidu.com/coins/taskcenter';
 const DAILY_TASK_ID = '7268916321758720';
 const TASK_FROM     = 'task_sys_daily';
 const IS_GROWTH     = '0';
+
+// 会员成长值 → SVIP 等级阈值(升级到 SVIPn 所需成长值,平台稳定配置;SVIP10 满级)
+const MEMBER_URL   = 'https://pan.baidu.com/rest/2.0/membership/user';
+const MEMBER_APPID = '250528';
+const LEVEL_THRESHOLDS = {
+    2: 1000, 3: 3000, 4: 7000, 5: 15000, 6: 27000,
+    7: 43000, 8: 56000, 9: 68000, 10: 100000,
+};
 
 // 抓取时要随 Cookie 一起存下来的设备参数(都来自签到页 URL,非签名,过期不了)
 const DEV_KEYS = ['version', 'channel', 'app', 'caller', 'clienttype',
@@ -153,7 +161,7 @@ async function main() {
     const ld = list.data || {};
     if (ld.signed_today === 1) {
         $.msg($.name, '✨ 今日已签到',
-            `连签 ${ld.signin_days || 0} 天${await coinsTail(ck)}`);
+            `连签 ${ld.signin_days || 0} 天${await growthTail(ck)}`);
         return;
     }
 
@@ -166,20 +174,66 @@ async function main() {
         return;
     }
 
-    const days = (r.data && r.data.signin_days) || ld.signin_days || 0;
-    $.msg($.name, '✅ 百度网盘签到成功', `连签 ${days} 天${await coinsTail(ck)}`);
+    // 今日签到送的成长值(签到日历里今天那格的成长值奖励,type 3)
+    const gain = signinGrowth(ld);
+    const head = gain ? `签到 +${gain} 成长值` : '签到成功';
+    $.msg($.name, '✅ 百度网盘签到成功', `${head}${await growthTail(ck)}`);
 }
 
-// 拼「金币余额」尾巴(失败不影响主结果)
-async function coinsTail(ck) {
+// 从签到日历里取今日签到送的成长值(type 3 = 成长值,type 10 = 金币)
+function signinGrowth(d) {
     try {
-        const home = await call('home', ck, false);
-        const bal = home && home.data && home.data.points_balance;
-        if (bal != null) return ` · 金币余额 ${bal}`;
+        const days = d.signin_days;
+        const today = (d.signin_list || []).find(x => x.day === days);
+        const g = today && (today.prize || []).find(p => p.type === 3);
+        return g ? g.unit : 0;
     } catch (e) {
-        debug('查金币余额异常,忽略: ' + e);
+        return 0;
+    }
+}
+
+// 拼「会员成长值 / 等级 / 距下一级」尾巴(签到主要是为了升级,失败不影响主结果)
+async function growthTail(ck) {
+    try {
+        const m = await queryMember(ck);
+        const d = m && m.level_info;
+        if (d && d.current_level != null) {
+            const L = d.current_level, V = d.current_value;
+            let t = ` · SVIP${L} 成长值 ${V}`;
+            const next = LEVEL_THRESHOLDS[L + 1];
+            if (next != null && V != null) t += ` · 距 SVIP${L + 1} 还差 ${next - V}`;
+            else t += ' · 已满级';
+            return t;
+        }
+    } catch (e) {
+        debug('查成长值异常,忽略: ' + e);
     }
     return '';
+}
+
+// 查会员成长值 + 等级(POST membership/user?method=query,鉴权同样靠 Cookie)
+function queryMember(ck) {
+    return new Promise((resolve) => {
+        const params = {
+            ...ck.dev,
+            app_id: MEMBER_APPID,
+            method: 'query',
+            time:   String(Math.floor(Date.now() / 1000)),
+            rand:   randHex(),
+            rand2:  randHex(),
+        };
+        const opts = {
+            url: `${MEMBER_URL}?${buildQuery(params)}`,
+            headers: baseHeaders(ck),
+            body: '',
+            timeout: 10000,
+        };
+        $.post(opts, (err, _resp, data) => {
+            if (err) { debug(`[member] 错误: ${JSON.stringify(err)}`); resolve(null); return; }
+            try { resolve(JSON.parse(data)); }
+            catch (e) { debug(`[member] 解析失败: ${String(data).slice(0, 200)}`); resolve(null); }
+        });
+    });
 }
 
 // ─── 调一次 taskcenter 接口 ──────────────────────────────────────────────────
@@ -203,18 +257,7 @@ function call(endpoint, ck, withTask) {
 
         const opts = {
             url: `${BASE}/${endpoint}?${buildQuery(params)}`,
-            headers: {
-                'Host':             'pan.baidu.com',
-                'Accept':           'application/json, text/plain, */*',
-                'Accept-Language':  'zh-CN,zh-Hans;q=0.9',
-                'X-Requested-With': 'XMLHttpRequest',
-                'Sec-Fetch-Site':   'same-origin',
-                'Sec-Fetch-Mode':   'cors',
-                'Sec-Fetch-Dest':   'empty',
-                'Referer':          'https://pan.baidu.com/operation/activitys/taskSystem/main',
-                'User-Agent':       ck.ua || FALLBACK_UA,
-                'Cookie':           ck.cookie,
-            },
+            headers: baseHeaders(ck),
             timeout: 10000,
         };
 
@@ -236,6 +279,22 @@ function call(endpoint, ck, withTask) {
 }
 
 // ─── 工具函数 ─────────────────────────────────────────────────────────────────
+// pan.baidu.com 通用请求头(回放现场抓的 UA + Cookie)
+function baseHeaders(ck) {
+    return {
+        'Host':             'pan.baidu.com',
+        'Accept':           'application/json, text/plain, */*',
+        'Accept-Language':  'zh-CN,zh-Hans;q=0.9',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Sec-Fetch-Site':   'same-origin',
+        'Sec-Fetch-Mode':   'cors',
+        'Sec-Fetch-Dest':   'empty',
+        'Referer':          'https://pan.baidu.com/operation/activitys/taskSystem/main',
+        'User-Agent':       ck.ua || FALLBACK_UA,
+        'Cookie':           ck.cookie,
+    };
+}
+
 function buildQuery(obj) {
     return Object.keys(obj)
         .map(k => `${k}=${encodeURIComponent(obj[k])}`)
