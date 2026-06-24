@@ -12,23 +12,23 @@
  * [MITM]
  * hostname = pan.baidu.com
  * [Script]
- * http-request ^https:\/\/pan\.baidu\.com\/coins\/taskcenter\/signinlist tag=百度网盘 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidupan/baidupan.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidupan.png
- * cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidupan/baidupan.js, tag=百度网盘签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidupan.png, enable=true
+ * http-request ^https:\/\/pan\.baidu\.com\/coins\/taskcenter\/signinlist tag=百度网盘 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png
+ * cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js, tag=百度网盘签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png, enable=true
  *
  * ===== Surge =====
  * [MITM]
  * hostname = pan.baidu.com
  * [Script]
- * 百度网盘 Cookie = type=http-request,pattern=^https:\/\/pan\.baidu\.com\/coins\/taskcenter\/signinlist,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidupan/baidupan.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidupan.png
- * 百度网盘签到 = type=cron,cronexp=15 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidupan/baidupan.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidupan.png
+ * 百度网盘 Cookie = type=http-request,pattern=^https:\/\/pan\.baidu\.com\/coins\/taskcenter\/signinlist,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png
+ * 百度网盘签到 = type=cron,cronexp=15 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png
  *
  * ===== Quantumult X =====
  * [MITM]
  * hostname = pan.baidu.com
  * [rewrite_local]
- * ^https:\/\/pan\.baidu\.com\/coins\/taskcenter\/signinlist url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidupan/baidupan.js
+ * ^https:\/\/pan\.baidu\.com\/coins\/taskcenter\/signinlist url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js
  * [task_local]
- * 15 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidupan/baidupan.js, tag=百度网盘签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidupan.png, enabled=true
+ * 15 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js, tag=百度网盘签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png, enabled=true
  *
  * ===== Stash =====
  * cron:
@@ -46,7 +46,7 @@
  *       require-body: false
  * script-providers:
  *   百度网盘签到:
- *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidupan/baidupan.js
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js
  *     interval: 86400
  */
 
@@ -55,7 +55,7 @@ const $ = new Env("百度网盘");
 const SCRIPT_VERSION = "2026-06-24.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
-const CK_KEY = 'baidupan_data';
+const CK_KEY = 'baidunetdisk_data';
 const BASE   = 'https://pan.baidu.com/coins/taskcenter';
 
 // 「每日签到领奖」任务标识(活动级常量,所有账号一致;活动改版失效就重抓对照)
@@ -77,9 +77,9 @@ if (typeof $request !== "undefined") {
     $.done();
 } else {
     (async () => {
-        if (JSON.parse($.getdata("baidupan_clear") || "false")) {
+        if (JSON.parse($.getdata("baidunetdisk_clear") || "false")) {
             $.setdata("", CK_KEY);
-            $.setdata("false", "baidupan_clear");
+            $.setdata("false", "baidunetdisk_clear");
             $.msg($.name, "", "✅ Cookie 已清除，请重新抓取");
             return $.done();
         }
@@ -282,9 +282,9 @@ function maskToken(s) {
     return s.slice(0, 6) + '...' + s.slice(-4);
 }
 
-// 调试日志:BoxJS 设 baidupan_debug=true 才打印接口原始响应
+// 调试日志:BoxJS 设 baidunetdisk_debug=true 才打印接口原始响应
 function debug(content) {
-    if (($.getdata("baidupan_debug") || "false") !== "true") return;
+    if (($.getdata("baidunetdisk_debug") || "false") !== "true") return;
     $.log(`[DEBUG] ${typeof content === "string" ? content : JSON.stringify(content)}`);
 }
 
