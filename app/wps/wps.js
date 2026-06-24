@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-23
+ * @Updated: 2026-06-24
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("WPS");
 
-const SCRIPT_VERSION = "2026-06-23.r5"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-24.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -84,7 +84,10 @@ const CLOCK_CONF = "https://personal-act.wpscdn.cn/srcapi/act/rubik-service/hone
 
 // ===== 福利中心活动「WPS618 天天领福利」的组件标识(活动换期需更新) =====
 const FLZX = { activity_number: "HD2025031721339450", page_number: "YM2025060910400185" };
-// 注:lottery/grant 的 filter_params(渠道追踪)不参与鉴权,故不带
+// page_info 必带的 position:真 app 用它定位「福利中心」页,缺了服务端会返回未带用户态的空渲染
+//(打卡的 sign_series_id 读不到 → 误判没序列 → 又新建序列从第 1 天起)。mk_key 是渠道追踪,留空即可。
+const FLZX_POSITION = "ios_flzx_grzxsdjg3001";
+// component_action(签到/领取)的 component_uniq_number 不需要 filter_params(实测不参与鉴权),故不带
 
 const COMPONENTS = {
     // 福利中心打卡免费领会员
@@ -277,8 +280,10 @@ async function taskComponent(tag, comp, action, payload, doneLabel) {
 // ============ 福利中心 page_info 复用助手 ============
 // page_info 返回活动页全部组件的实时状态(各组件挂自己的业务字段),多个任务都从这里取状态。
 async function fetchPageInfo() {
+    // 必带 filter_params 的 position,否则服务端返回的组件不含本用户态(打卡序列/选择记录读不到)
+    const filter = encodeURIComponent(JSON.stringify({ cs_from: "", mk_key: "", position: FLZX_POSITION }));
     const pi = await httpReq("GET",
-        `${PAGE_INFO}?activity_number=${FLZX.activity_number}&page_number=${FLZX.page_number}`);
+        `${PAGE_INFO}?activity_number=${FLZX.activity_number}&page_number=${FLZX.page_number}&filter_params=${filter}`);
     const pj = safeJson(pi.body);
     if (!pj || pj.result !== "ok" || !Array.isArray(pj.data)) {
         debug(`page_info 异常: ${(pi.body || "").slice(0, 300)}`);
@@ -362,9 +367,17 @@ async function taskFragment() {
         // 1) 取当前序列状态:page_info 返回各组件,fragment 组件挂 sign_series_id + sign_records
         const list = await fetchPageInfo();
         const node = findComp(list, comp.component_number);
-        const fc = (node && node.fragment_collect) || {};
+        // 安全闸:page_info 没拿到 fragment 组件(网络错/换期)→ 绝不盲签,否则会被当「新序列」从头开始。
+        // 宁可今天不签(用户开 app 点一下即可),也不把已坚持的连续天数清零。
+        if (!node) {
+            $.results.push(`⚠️ ${tag}:未取到序列状态,跳过(避免误清零连续天数)`);
+            debug(`${tag} page_info 未含 fragment 组件 ${comp.component_number}`);
+            return;
+        }
+        const fc = node.fragment_collect || {};
         const seriesId = fc.sign_series_id || "";
         const records = fc.sign_records || [];
+        debug(`${tag} 读到 series_id=${seriesId || "(空)"} records=${records.map((r) => r.sign_date + ":" + r.sign_status).join(",")}`);
 
         // 今天已签则跳过(sign_records 里今天 sign_status==signed)
         const todayRec = records.find((r) => r && r.sign_date === today);
