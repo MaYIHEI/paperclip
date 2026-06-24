@@ -67,6 +67,10 @@ const IS_GROWTH     = '0';
 const DEV_KEYS = ['version', 'channel', 'app', 'caller', 'clienttype',
                   'cuid', 'devuid', 'z', 'aid', 'idfa', 'idfv'];
 
+// 仅当历史抓取没存到 UA 时的兜底(通用串,不含任何机型/版本/个人痕迹;正常都用现场抓的 ck.ua)
+const FALLBACK_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS like Mac OS X) ' +
+                    'AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;netdisk;';
+
 // ─── 入口 ────────────────────────────────────────────────────────────────────
 if (typeof $request !== "undefined") {
     getCookie();
@@ -108,7 +112,10 @@ function getCookie() {
         return;
     }
 
-    $.setdata(JSON.stringify({ cookie, dev }), CK_KEY);
+    // UA 同样现场抓、随 Cookie 存(含客户端版本/机型,脚本里不写死任何个人/设备痕迹)
+    const ua = headerVal('user-agent');
+
+    $.setdata(JSON.stringify({ cookie, dev, ua }), CK_KEY);
     const uid = (cookie.match(/BDUSS=([^;]{0,8})/) || [])[1] || '';
     $.msg($.name, '✅ 百度网盘 Cookie 获取成功',
         `BDUSS: ${uid}…\ncuid: ${maskToken(dev.cuid)}`);
@@ -205,9 +212,7 @@ function call(endpoint, ck, withTask) {
                 'Sec-Fetch-Mode':   'cors',
                 'Sec-Fetch-Dest':   'empty',
                 'Referer':          'https://pan.baidu.com/operation/activitys/taskSystem/main',
-                'User-Agent':       'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) ' +
-                                    'AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;netdisk;' +
-                                    '13.27.5;iPhone14ProMax;ios-iphone;26.1;zh_CN;JSbridge4.4.2;jointBridge;1.1.0;',
+                'User-Agent':       ck.ua || FALLBACK_UA,
                 'Cookie':           ck.cookie,
             },
             timeout: 10000,
