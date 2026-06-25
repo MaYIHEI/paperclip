@@ -45,20 +45,28 @@ function handleRequest() {
         $.done(); return;
     }
 
-    const old = $.getdata(CK_KEY) || "";
-    const oldPjwt = (old.match(/pjwt=([^;]+)/) || [])[1] || "";
-    const newPjwt = (cookie.match(/pjwt=([^;]+)/) || [])[1] || "";
+    const old    = $.getdata(CK_KEY) || "";
+    const oldPjwt = (old.match(/pjwt=([^;]+)/)          || [])[1] || "";
+    const newPjwt = (cookie.match(/pjwt=([^;]+)/)        || [])[1] || "";
+    const oldCf   = (old.match(/cf_clearance=([^;]+)/)   || [])[1] || "";
+    const newCf   = (cookie.match(/cf_clearance=([^;]+)/) || [])[1] || "";
 
     if (oldPjwt && oldPjwt === newPjwt) {
+        // pjwt unchanged; but if Safari is sending a fresher cf_clearance, save it
+        if (newCf && newCf !== oldCf) {
+            let updated = old
+                .replace(/;\s*cf_clearance=[^;]+/, "")
+                .replace(/^cf_clearance=[^;]+;\s*/, "")
+                .trimRight().replace(/;$/, "").trim();
+            $.setdata(updated + "; cf_clearance=" + newCf, CK_KEY);
+            $.log("[INFO] cf_clearance refreshed from request");
+        }
         $.done(); return;
     }
 
-    // Preserve any existing cf_clearance if new request doesn't have it
+    // pjwt changed: save full new cookie, preserving cf_clearance if not present
     let savedCookie = cookie;
-    if (!cookie.includes("cf_clearance")) {
-        const oldCf = (old.match(/cf_clearance=([^;]+)/) || [])[1];
-        if (oldCf) savedCookie = cookie + "; cf_clearance=" + oldCf;
-    }
+    if (!newCf && oldCf) savedCookie = cookie + "; cf_clearance=" + oldCf;
 
     $.setdata(savedCookie, CK_KEY);
     $.msg("NodeSeek", "✅ NodeSeek Cookie 获取成功", "");

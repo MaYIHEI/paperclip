@@ -75,6 +75,8 @@ const REFRACT_KEY_DEFAULT = "CHICZkKViFoZmVbIH1Y6"; // from sw.js: this.refractK
     }
     const random = ($.getdata(RANDOM_KEY) || "false") === "true";
 
+    $.log("[INFO] cookie has cf_clearance=" + cookie.includes("cf_clearance") + " len=" + cookie.length);
+
     try {
         const refractKey = await ping(cookie);
         await attend(cookie, refractKey, random);
