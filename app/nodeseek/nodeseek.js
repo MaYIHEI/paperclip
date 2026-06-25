@@ -52,7 +52,7 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-06-25.r11";
+const SCRIPT_VERSION = "2026-06-25.r12";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY        = "nodeseek_cookie";
@@ -131,10 +131,14 @@ function attend(cookie, UA, random, relayUrl, relayKey) {
                 $.msg("NodeSeek", "❌ 中继错误", result.error);
                 return resolve();
             }
-            if (result.success) {
-                $.msg("NodeSeek", "✅ 签到成功", result.message + "\n积分+" + result.gain + " 当前" + result.current);
-            } else {
+            // NodeSeek returns {} on success (no success:true), {"success":false,...} on failure
+            if (result.success === false) {
                 $.msg("NodeSeek", "❌ 签到失败", result.message || "未知错误");
+            } else {
+                const detail = result.message
+                    ? result.message + (result.gain != null ? "\n积分+" + result.gain + " 当前" + result.current : "")
+                    : "";
+                $.msg("NodeSeek", "✅ 签到成功", detail);
             }
             resolve();
         });
