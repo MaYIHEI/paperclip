@@ -52,7 +52,7 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-06-25.r8";
+const SCRIPT_VERSION = "2026-06-25.r9";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY     = "nodeseek_cookie";
@@ -82,8 +82,8 @@ const REFRACT_KEY_DEFAULT = "CHICZkKViFoZmVbIH1Y6"; // from sw.js: this.refractK
     $.log("[INFO] ua=" + UA.substring(0, 60));
 
     try {
-        const refractKey = await ping(cookie, UA);
-        await attend(cookie, refractKey, random, UA);
+        const { key: refractKey, cfBm } = await ping(cookie, UA);
+        await attend(cookie, refractKey, random, UA, cfBm);
     } catch (e) {
         $.msg("NodeSeek", "❌ 签到异常", String(e));
     }
@@ -113,62 +113,92 @@ function ping(cookie, UA) {
             },
             timeout: 15000,
         }, (err, resp) => {
-            const updated = resp && resp.headers && (resp.headers["refract-key-update"] || resp.headers["Refract-Key-Update"]);
-            $.log("[INFO] ping status=" + (resp && resp.status) + " updated=" + (updated ? "yes" : "no(using default)"));
-            resolve(updated || REFRACT_KEY_DEFAULT);
+            const h = (resp && resp.headers) || {};
+            const updated = h["refract-key-update"] || h["Refract-Key-Update"];
+            const cfBm = extractCfBm(h["Set-Cookie"] || h["set-cookie"]);
+            $.log("[INFO] ping status=" + (resp && resp.status) + " updated=" + (updated ? "yes" : "no") + " cfbm=" + (cfBm ? "yes" : "no"));
+            resolve({ key: updated || REFRACT_KEY_DEFAULT, cfBm });
         });
     });
 }
 
-// POST /api/attendance with manually computed refract headers
-function attend(cookie, refractKey, random, UA) {
+// POST /api/attendance; cfBm is optional __cf_bm from ping or prior attempt
+function attend(cookie, refractKey, random, UA, cfBm) {
     return new Promise((resolve) => {
         const url = "https://www.nodeseek.com/api/attendance?random=" + random;
-        const sign = refractSign("POST", url, "", refractKey, UA);
-        $.log("[INFO] attend sign=" + sign.substring(0, 16) + "...");
-        $.post({
-            url,
-            headers: {
-                "Cookie": cookie,
-                "User-Agent": UA,
-                "Content-Type": "text/plain;charset=UTF-8",
-                "Origin": "https://www.nodeseek.com",
-                "Referer": "https://www.nodeseek.com/",
-                "Accept": "*/*",
-                "Accept-Language": "zh-CN,zh;q=0.9",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Sec-Fetch-Site": "same-origin",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Dest": "empty",
-                "refract-sign": sign,
-                "refract-version": REFRACT_VERSION,
-                "refract-key": refractKey,
-            },
-            body: "",
-            timeout: 15000,
-        }, (err, resp, data) => {
-            if (err) {
-                $.msg("NodeSeek", "❌ 请求失败", String(err));
-                return resolve();
-            }
-            $.log("[INFO] attend status=" + resp.status + " body=" + String(data).substring(0, 300));
 
-            let result;
-            try { result = JSON.parse(atob(data)); } catch (_) {
-                try { result = JSON.parse(data); } catch (_2) {
-                    $.msg("NodeSeek", "❌ 响应异常", "status=" + resp.status + "\n" + String(data).substring(0, 120));
+        function doPost(extraCfBm, attempt) {
+            // Merge __cf_bm: strip stale one (if any) then add fresh
+            let reqCookie = cookie.replace(/;\s*__cf_bm=[^;]+/g, "").replace(/^__cf_bm=[^;]+;\s*/g, "").trim();
+            if (extraCfBm) reqCookie += "; __cf_bm=" + extraCfBm;
+
+            const sign = refractSign("POST", url, "", refractKey, UA);
+            if (attempt === 1) $.log("[INFO] attend sign=" + sign.substring(0, 16) + "... cfbm=" + (extraCfBm ? "yes" : "no"));
+
+            $.post({
+                url,
+                headers: {
+                    "Cookie": reqCookie,
+                    "User-Agent": UA,
+                    "Content-Type": "text/plain;charset=UTF-8",
+                    "Origin": "https://www.nodeseek.com",
+                    "Referer": "https://www.nodeseek.com/",
+                    "Accept": "*/*",
+                    "Accept-Language": "zh-CN,zh;q=0.9",
+                    "Accept-Encoding": "gzip, deflate, br",
+                    "Sec-Fetch-Site": "same-origin",
+                    "Sec-Fetch-Mode": "cors",
+                    "Sec-Fetch-Dest": "empty",
+                    "refract-sign": sign,
+                    "refract-version": REFRACT_VERSION,
+                    "refract-key": refractKey,
+                },
+                body: "",
+                timeout: 15000,
+            }, (err, resp, data) => {
+                if (err) {
+                    $.msg("NodeSeek", "❌ 请求失败", String(err));
                     return resolve();
                 }
-            }
+                $.log("[INFO] attend#" + attempt + " status=" + resp.status + " body=" + String(data).substring(0, 200));
 
-            if (result.success) {
-                $.msg("NodeSeek", "✅ 签到成功", result.message + "\n积分+" + result.gain + " 当前" + result.current);
-            } else {
-                $.msg("NodeSeek", "❌ 签到失败", result.message || "未知错误");
-            }
-            resolve();
-        });
+                // CF block: try to extract fresh __cf_bm and retry once
+                if (resp.status === 403 && String(data).includes("Just a moment") && attempt === 1) {
+                    const newCfBm = extractCfBm((resp.headers || {})["Set-Cookie"] || (resp.headers || {})["set-cookie"]);
+                    $.log("[INFO] CF block, retry cfbm=" + (newCfBm ? "yes" : "no"));
+                    doPost(newCfBm, 2);
+                    return;
+                }
+
+                let result;
+                try { result = JSON.parse(atob(data)); } catch (_) {
+                    try { result = JSON.parse(data); } catch (_2) {
+                        $.msg("NodeSeek", "❌ 响应异常", "status=" + resp.status + "\n" + String(data).substring(0, 120));
+                        return resolve();
+                    }
+                }
+
+                if (result.success) {
+                    $.msg("NodeSeek", "✅ 签到成功", result.message + "\n积分+" + result.gain + " 当前" + result.current);
+                } else {
+                    $.msg("NodeSeek", "❌ 签到失败", result.message || "未知错误");
+                }
+                resolve();
+            });
+        }
+
+        doPost(cfBm, 1);
     });
+}
+
+function extractCfBm(raw) {
+    if (!raw) return null;
+    const arr = typeof raw === "string" ? [raw] : raw;
+    for (const h of arr) {
+        const m = (h || "").match(/__cf_bm=([^;,\s]+)/);
+        if (m) return m[1];
+    }
+    return null;
 }
 
 // Mirrors sw.js kt() + wt(): SHA-1(hex) of method\n\nurl\n\nUA\n\nbody\n\nkey
