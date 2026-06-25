@@ -1371,6 +1371,68 @@
       ]
     },
     {
+      "id": "paperclip.nodeseek",
+      "name": "NodeSeek",
+      "keys": [
+        "nodeseek_cookie",
+        "nodeseek_vps_url",
+        "nodeseek_vps_key",
+        "nodeseek_random"
+      ],
+      "settings": [
+        {
+          "id": "nodeseek_vps_url",
+          "name": "VPS 服务地址",
+          "val": "",
+          "type": "text",
+          "placeholder": "https://ns-attend.example.com",
+          "desc": "自建 CF 穿透服务的地址，留空则签到不可用"
+        },
+        {
+          "id": "nodeseek_vps_key",
+          "name": "VPS API 密钥",
+          "val": "",
+          "type": "text",
+          "placeholder": "ns-xxxxxxxxxxxxxxxx",
+          "desc": "与服务端 API_KEY 一致，留空则不鉴权（仅限内网）"
+        },
+        {
+          "id": "nodeseek_random",
+          "name": "随机积分",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "固定"
+            },
+            {
+              "key": "true",
+              "label": "随机"
+            }
+          ],
+          "desc": "签到奖励模式：固定 = 每次 +5 积分；随机 = 1-10 随机"
+        }
+      ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/nodeseek",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/nodeseek/nodeseek.js",
+      "scripts": [
+        {
+          "name": "主签到",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/nodeseek/nodeseek.js"
+        },
+        {
+          "name": "抓 Cookie",
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/nodeseek/nodeseek.cookie.js"
+        }
+      ],
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/nodeseek.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/nodeseek.png"
+      ]
+    },
+    {
       "id": "paperclip.baidunetdisk",
       "name": "百度网盘",
       "keys": [
