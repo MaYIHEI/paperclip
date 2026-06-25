@@ -52,16 +52,19 @@
 
 const $ = new Env("百度网盘");
 
-const SCRIPT_VERSION = "2026-06-24.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-25.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'baidunetdisk_data';
 const BASE   = 'https://pan.baidu.com/coins/taskcenter';
 
-// 「每日签到领奖」任务标识(活动级常量,所有账号一致;活动改版失效就重抓对照)
-const DAILY_TASK_ID = '7268916321758720';
-const TASK_FROM     = 'task_sys_daily';
-const IS_GROWTH     = '0';
+// 「每日签到领奖」任务:task_id 前缀按活动周期轮换,运行时从 tasklist 动态取(下面两个是稳定识别特征)
+// 识别:task_type==='166'(签到类),task_class_id 固定;DAILY_TASK_ID 仅作 tasklist 拿不到时的兜底
+const SIGN_TASK_TYPE = '166';
+const SIGN_CLASS_ID  = '916321758720';
+const DAILY_TASK_ID  = '7268916321758720';
+const TASK_FROM      = 'task_sys_daily';
+const IS_GROWTH      = '0';
 
 // 会员成长值 → SVIP 等级阈值(升级到 SVIPn 所需成长值,平台稳定配置;SVIP10 满级)
 const MEMBER_URL   = 'https://pan.baidu.com/rest/2.0/membership/user';
@@ -156,8 +159,11 @@ async function main() {
         return;
     }
 
-    // 1. 查签到状态(同时验证 Cookie 是否还有效)
-    const list = await call('signinlist', ck, true);
+    // 1. 取当前签到任务 task_id(前缀按周期轮换,必须现取;失败兜底用常量)
+    const taskId = (await resolveTaskId(ck)) || DAILY_TASK_ID;
+
+    // 2. 查签到状态(同时验证 Cookie 是否还有效)
+    const list = await call('signinlist', ck, true, taskId);
     if (!list || list.errno !== 0) {
         const err = list ? `errno ${list.errno}` : '无响应';
         $.msg($.name, '❌ 状态查询失败',
@@ -174,8 +180,8 @@ async function main() {
         return;
     }
 
-    // 2. 执行签到
-    const r = await call('signin', ck, true);
+    // 3. 执行签到
+    const r = await call('signin', ck, true, taskId);
     if (!r || r.errno !== 0) {
         const err = r ? `errno ${r.errno}${r.error ? ' ' + r.error : ''}` : '无响应';
         $.msg($.name, '❌ 签到失败',
@@ -185,6 +191,24 @@ async function main() {
 
     const head = gain ? `签到 +${gain} 成长值` : '签到成功';
     $.msg($.name, '✅ 百度网盘签到成功', `${head}${await growthTail(ck, gain)}`);
+}
+
+// 从任务列表里取当前「签到领奖」任务的 task_id(task_id 前缀按周期轮换,task_type/class_id 稳定)
+async function resolveTaskId(ck) {
+    try {
+        const tl = await call('tasklist', ck, false);
+        const list = (tl && tl.result && tl.result.list) || [];
+        const t = list.find(x => String(x.task_type) === SIGN_TASK_TYPE)
+               || list.find(x => String(x.task_class_id) === SIGN_CLASS_ID);
+        if (t && t.task_id != null) {
+            debug(`签到 task_id=${t.task_id}`);
+            return String(t.task_id);
+        }
+        debug('tasklist 未找到签到任务,用兜底常量');
+    } catch (e) {
+        debug('取 task_id 异常,用兜底常量: ' + e);
+    }
+    return null;
 }
 
 // 从签到日历里取今日签到送的成长值(type 3 = 成长值,type 10 = 金币)
@@ -252,8 +276,8 @@ function queryMember(ck) {
 }
 
 // ─── 调一次 taskcenter 接口 ──────────────────────────────────────────────────
-// withTask=true 的接口(signin/signinlist)需要带签到任务参数
-function call(endpoint, ck, withTask) {
+// withTask=true 的接口(signin/signinlist)需要带签到任务参数;taskId 由 resolveTaskId 现取
+function call(endpoint, ck, withTask, taskId) {
     return new Promise((resolve) => {
         const now = String(Math.floor(Date.now() / 1000));
         const params = {
@@ -264,8 +288,9 @@ function call(endpoint, ck, withTask) {
             themeinfo: '0',
         };
         if (withTask) {
-            params.task_id     = DAILY_TASK_ID;
-            params.task_id_str = DAILY_TASK_ID;
+            const tid = taskId || DAILY_TASK_ID;
+            params.task_id     = tid;
+            params.task_id_str = tid;
             params.task_from   = TASK_FROM;
             params.is_growth   = IS_GROWTH;
         }
