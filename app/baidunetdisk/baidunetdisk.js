@@ -2,7 +2,7 @@
  * 百度网盘 · 每日签到,得金币 + 成长值,支持连签奖励
  *
  * 抓取:打开百度网盘 APP →「我的」→「签到」页面停留 1 秒,自动抓 Cookie + 设备指纹(两条规则)
- * 签到:cron 先用指纹刷新 ab_sr(2h 风控票据),再签到(每日签到领奖)
+ * 签到:cron 定时自动签到(每日签到领奖)
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
