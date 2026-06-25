@@ -1,8 +1,8 @@
 /**
  * NodeSeek · 每日签到
  *
- * 抓取：用 Safari 打开 nodeseek.com 任意页面（需先配置 Cookie 抓取脚本）
- * 签到：cron 定时自动签到；Cookie 中须包含 pjwt + cf_clearance
+ * 抓取：用 Safari 打开 nodeseek.com 任意页面（触发 Cookie 抓取脚本）
+ * 签到：cron 定时自动签到；需在 BoxJS 配置中继地址和密钥
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei

@@ -1,28 +1,11 @@
 /**
  * NodeSeek · Cookie 抓取
  *
- * 抓取：用 Safari 打开 nodeseek.com 任意页面，停留片刻自动保存 Cookie
- * 签到：nodeseek.js 每日自动签到
+ * 抓取：用 Safari 打开 nodeseek.com 任意页面，自动保存 pjwt 登录凭证
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Updated: 2026-06-25
- *
- * ===== Loon =====
- * [MITM]
- * hostname = www.nodeseek.com
- * [Script]
- * # 抓 pjwt（请求头）
- * http-request ^https://www\.nodeseek\.com/ tag=NodeSeek Cookie, script-path=nodeseek.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/nodeseek.png
- * # 抓 cf_clearance（响应头 Set-Cookie）
- * http-response ^https://www\.nodeseek\.com/ tag=NodeSeek CF, script-path=nodeseek.cookie.js, requires-body=false
- *
- * ===== Surge =====
- * [MITM]
- * hostname = www.nodeseek.com
- * [Script]
- * NodeSeek Cookie = type=http-request,pattern=^https://www\.nodeseek\.com/,requires-body=false,max-size=0,script-path=nodeseek.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/nodeseek.png
- * NodeSeek CF = type=http-response,pattern=^https://www\.nodeseek\.com/,requires-body=false,max-size=0,script-path=nodeseek.cookie.js
  */
 
 const $ = new Env("NodeSeek [Cookie]");
