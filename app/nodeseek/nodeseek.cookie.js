@@ -59,6 +59,7 @@ function handleRequest() {
                 .replace(/^cf_clearance=[^;]+;\s*/, "")
                 .trimRight().replace(/;$/, "").trim();
             $.setdata(updated + "; cf_clearance=" + newCf, CK_KEY);
+            $.msg("NodeSeek", "🔄 cf_clearance 已更新", "");
             $.log("[INFO] cf_clearance refreshed from request");
         }
         $.done(); return;
@@ -97,7 +98,8 @@ function handleResponse() {
         .trimRight().replace(/;$/, "").trim();
     updated = updated + "; cf_clearance=" + cfClearance;
     $.setdata(updated, CK_KEY);
-    $.log("[INFO] cf_clearance updated");
+    $.msg("NodeSeek", "🔄 cf_clearance 已更新", "");
+    $.log("[INFO] cf_clearance updated via response");
     $.done({});
 }
 

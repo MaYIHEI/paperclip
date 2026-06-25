@@ -52,7 +52,7 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-06-25.r5";
+const SCRIPT_VERSION = "2026-06-25.r6";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY     = "nodeseek_cookie";
