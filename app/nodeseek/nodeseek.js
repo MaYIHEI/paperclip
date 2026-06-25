@@ -2,12 +2,7 @@
  * NodeSeek · 每日签到
  *
  * 抓取：用 Safari 打开 nodeseek.com 任意页面（需先配置 Cookie 抓取脚本）
- * 签到：cron 定时自动签到；需在 BoxJS 中配置 VPS 服务地址与密钥
- *
- * BoxJS 配置项：
- *   nodeseek_vps_url  — VPS 服务地址，例：https://ns-attend.example.com
- *   nodeseek_vps_key  — VPS API 密钥（与服务端 API_KEY 一致）
- *   nodeseek_random   — true/false，是否随机积分（默认 false）
+ * 签到：cron 定时自动签到；Cookie 中须包含 pjwt + cf_clearance
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
@@ -57,41 +52,37 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-06-25.r4";
+const SCRIPT_VERSION = "2026-06-25.r5";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
-const CK_KEY      = "nodeseek_cookie";
-const VPS_URL_KEY = "nodeseek_vps_url";
-const VPS_KEY_KEY = "nodeseek_vps_key";
+const CK_KEY     = "nodeseek_cookie";
+const RANDOM_KEY = "nodeseek_random";
 
-const useRandom = ($.getdata("nodeseek_random") || "false") === "true";
+// Must match UA set in browser context for refract signature to verify
+const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1";
+const REFRACT_VERSION     = "0.3.33";
+const REFRACT_KEY_DEFAULT = "CHICZkKViFoZmVbIH1Y6"; // from sw.js: this.refractKey="..."
 
 (async () => {
     const cookie = $.getdata(CK_KEY) || "";
     if (!cookie) {
         $.msg("NodeSeek", "🚫 缺少 Cookie", "请先用 Safari 打开 nodeseek.com 触发 Cookie 抓取");
-        $.done();
-        return;
+        $.done(); return;
     }
     if (!cookie.includes("pjwt")) {
         $.msg("NodeSeek", "🚫 Cookie 无效", "缺少 pjwt，请重新抓取");
-        $.done();
-        return;
+        $.done(); return;
+    }
+    if (!cookie.includes("cf_clearance")) {
+        $.msg("NodeSeek", "🚫 缺少 CF 凭证", "请重新用 Safari 打开 nodeseek.com，等待页面加载完成后重试");
+        $.done(); return;
     }
 
-    const vpsUrl = ($.getdata(VPS_URL_KEY) || "").trim().replace(/\/$/, "");
-    const vpsKey = ($.getdata(VPS_KEY_KEY) || "").trim();
-
-    if (!vpsUrl) {
-        $.msg("NodeSeek", "🚫 未配置 VPS 服务", "请在 BoxJS 中填写 nodeseek_vps_url");
-        $.done();
-        return;
-    }
-
-    $.log("[INFO] 调用 VPS 签到服务...");
+    const random = ($.getdata(RANDOM_KEY) || "false") === "true";
 
     try {
-        await attend(cookie, vpsUrl, vpsKey, useRandom);
+        const refractKey = await ping(cookie);
+        await attend(cookie, refractKey, random);
     } catch (e) {
         $.msg("NodeSeek", "❌ 签到异常", String(e));
     }
@@ -99,34 +90,60 @@ const useRandom = ($.getdata("nodeseek_random") || "false") === "true";
     $.done();
 })();
 
-function attend(cookie, vpsUrl, vpsKey, random) {
+// GET /edge-cgi/ping with default key → returns updated key from refract-key-update header
+function ping(cookie) {
     return new Promise((resolve) => {
-        const headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        };
-        if (vpsKey) headers["x-api-key"] = vpsKey;
+        const url = "https://www.nodeseek.com/edge-cgi/ping";
+        const sign = refractSign("GET", url, "", REFRACT_KEY_DEFAULT);
+        $.get({
+            url,
+            headers: {
+                "Cookie": cookie,
+                "User-Agent": UA,
+                "refract-sign": sign,
+                "refract-version": REFRACT_VERSION,
+                "refract-key": REFRACT_KEY_DEFAULT,
+            },
+            timeout: 15000,
+        }, (err, resp) => {
+            const updated = resp && resp.headers && (resp.headers["refract-key-update"] || resp.headers["Refract-Key-Update"]);
+            $.log("[INFO] ping status=" + (resp && resp.status) + " updated=" + (updated ? "yes" : "no(using default)"));
+            resolve(updated || REFRACT_KEY_DEFAULT);
+        });
+    });
+}
 
+// POST /api/attendance with manually computed refract headers
+function attend(cookie, refractKey, random) {
+    return new Promise((resolve) => {
+        const url = "https://www.nodeseek.com/api/attendance?random=" + random;
+        const sign = refractSign("POST", url, "", refractKey);
+        $.log("[INFO] attend sign=" + sign.substring(0, 16) + "...");
         $.post({
-            url: vpsUrl + "/attend",
-            headers: headers,
-            body: JSON.stringify({ cookie: cookie, random: random }),
-            timeout: 60000,
+            url,
+            headers: {
+                "Cookie": cookie,
+                "User-Agent": UA,
+                "Content-Type": "text/plain;charset=UTF-8",
+                "refract-sign": sign,
+                "refract-version": REFRACT_VERSION,
+                "refract-key": refractKey,
+            },
+            body: "",
+            timeout: 15000,
         }, (err, resp, data) => {
             if (err) {
-                $.msg("NodeSeek", "❌ VPS 请求失败", String(err));
+                $.msg("NodeSeek", "❌ 请求失败", String(err));
                 return resolve();
             }
-
-            $.log("[INFO] VPS status=" + resp.status);
-            $.log("[INFO] VPS body=" + String(data).substring(0, 200));
+            $.log("[INFO] attend status=" + resp.status + " body=" + String(data).substring(0, 300));
 
             let result;
-            try {
-                result = JSON.parse(data);
-            } catch (e) {
-                $.msg("NodeSeek", "❌ VPS 响应解析失败", "status=" + resp.status + "\n" + String(data).substring(0, 100));
-                return resolve();
+            try { result = JSON.parse(atob(data)); } catch (_) {
+                try { result = JSON.parse(data); } catch (_2) {
+                    $.msg("NodeSeek", "❌ 响应异常", "status=" + resp.status + "\n" + String(data).substring(0, 120));
+                    return resolve();
+                }
             }
 
             if (result.success) {
@@ -137,6 +154,40 @@ function attend(cookie, vpsUrl, vpsKey, random) {
             resolve();
         });
     });
+}
+
+// Mirrors sw.js kt() + wt(): SHA-1(hex) of method\n\nurl\n\nUA\n\nbody\n\nkey
+function refractSign(method, url, body, key) {
+    const cleanUrl = url.replace(/#.*$/, "");
+    return sha1([method, cleanUrl, UA, body, key].join("\n\n"));
+}
+
+// Pure-JS SHA-1 (hex output); TextEncoder equivalent via unescape(encodeURIComponent())
+function sha1(str) {
+    function rol(n, s) { return (n << s) | (n >>> (32 - s)); }
+    const msg = unescape(encodeURIComponent(str));
+    const bs = msg.length;
+    const words = [];
+    for (let i = 0; i < bs; i++) words[i >> 2] |= msg.charCodeAt(i) << (24 - (i & 3) * 8);
+    words[bs >> 2] |= 0x80 << (24 - (bs & 3) * 8);
+    words[((bs + 8 >> 6) + 1) * 16 - 1] = bs * 8;
+    let H0 = 0x67452301, H1 = 0xEFCDAB89, H2 = 0x98BADCFE, H3 = 0x10325476, H4 = 0xC3D2E1F0;
+    const W = [];
+    for (let i = 0; i < words.length; i += 16) {
+        let a = H0, b = H1, c = H2, d = H3, e = H4;
+        for (let j = 0; j < 80; j++) {
+            W[j] = j < 16 ? (words[i + j] | 0) : rol(W[j-3] ^ W[j-8] ^ W[j-14] ^ W[j-16], 1);
+            let T = (rol(a, 5) + e + W[j]) | 0;
+            if (j < 20)      T = (T + ((b & c) | (~b & d)) + 0x5A827999) | 0;
+            else if (j < 40) T = (T + (b ^ c ^ d) + 0x6ED9EBA1) | 0;
+            else if (j < 60) T = (T + ((b & c) | (b & d) | (c & d)) + 0x8F1BBCDC) | 0;
+            else             T = (T + (b ^ c ^ d) + 0xCA62C1D6) | 0;
+            e = d; d = c; c = rol(b, 30); b = a; a = T;
+        }
+        H0 = (H0 + a) | 0; H1 = (H1 + b) | 0; H2 = (H2 + c) | 0;
+        H3 = (H3 + d) | 0; H4 = (H4 + e) | 0;
+    }
+    return [H0, H1, H2, H3, H4].map(n => ("0000000" + (n >>> 0).toString(16)).slice(-8)).join("");
 }
 
 function Env(s) {

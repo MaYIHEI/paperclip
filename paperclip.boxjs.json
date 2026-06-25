@@ -1375,27 +1375,9 @@
       "name": "NodeSeek",
       "keys": [
         "nodeseek_cookie",
-        "nodeseek_vps_url",
-        "nodeseek_vps_key",
         "nodeseek_random"
       ],
       "settings": [
-        {
-          "id": "nodeseek_vps_url",
-          "name": "VPS 服务地址",
-          "val": "",
-          "type": "text",
-          "placeholder": "https://ns-attend.example.com",
-          "desc": "自建 CF 穿透服务的地址，留空则签到不可用"
-        },
-        {
-          "id": "nodeseek_vps_key",
-          "name": "VPS API 密钥",
-          "val": "",
-          "type": "text",
-          "placeholder": "ns-xxxxxxxxxxxxxxxx",
-          "desc": "与服务端 API_KEY 一致，留空则不鉴权（仅限内网）"
-        },
         {
           "id": "nodeseek_random",
           "name": "随机积分",
