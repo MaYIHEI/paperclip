@@ -57,7 +57,7 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-06-25.r3";
+const SCRIPT_VERSION = "2026-06-25.r4";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY      = "nodeseek_cookie";
@@ -111,7 +111,7 @@ function attend(cookie, vpsUrl, vpsKey, random) {
             url: vpsUrl + "/attend",
             headers: headers,
             body: JSON.stringify({ cookie: cookie, random: random }),
-            timeout: 60,
+            timeout: 60000,
         }, (err, resp, data) => {
             if (err) {
                 $.msg("NodeSeek", "❌ VPS 请求失败", String(err));
