@@ -60,7 +60,7 @@
 
 const $ = new Env("百度网盘");
 
-const SCRIPT_VERSION = "2026-06-25.r5"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-25.r6"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY   = 'baidunetdisk_data';
@@ -188,18 +188,18 @@ async function main() {
 
     // 0. 刷新 ab_sr:存的那个只活 2h、cron 时早过期,signin 写接口会拒(errno 9230)
     //    用抓到的设备指纹重放 abdr 端点换一个新鲜 ab_sr,拼回 Cookie
+    //    全程 $.log 打点,即使今日已签也能在日志看到这步通没通
+    let absrTag;
     const abdr = $.getdata(ABDR_KEY);
-    if (abdr) {
-        const fresh = await refreshAbsr(ck, abdr);
-        if (fresh) {
-            ck.cookie = replaceAbsr(ck.cookie, fresh);
-            debug('ab_sr 已刷新: ' + maskToken(fresh));
-        } else {
-            debug('ab_sr 刷新失败,沿用旧值(signin 可能 9230)');
-        }
+    if (!abdr) {
+        absrTag = '⚠️ ab_sr 未刷新(没抓到指纹)';
+        $.log('[ab_sr] 未存设备指纹,跳过刷新 → signin 大概率 9230');
     } else {
-        debug('未存设备指纹,跳过 ab_sr 刷新(signin 可能 9230)');
+        const res = await refreshAbsr(ck, abdr);
+        absrTag = res.tag;
+        if (res.absr) ck.cookie = replaceAbsr(ck.cookie, res.absr);
     }
+    $.log('[ab_sr] 结果: ' + absrTag);
 
     // 1. 取当前签到任务 task_id(前缀按周期轮换,必须现取;失败兜底用常量)
     const taskId = (await resolveTaskId(ck)) || DAILY_TASK_ID;
@@ -218,7 +218,7 @@ async function main() {
 
     if (ld.signed_today === 1) {
         $.msg($.name, '✨ 今日已签到',
-            `连签 ${ld.signin_days || 0} 天${await growthTail(ck, gain)}`);
+            `连签 ${ld.signin_days || 0} 天${await growthTail(ck, gain)}\n${absrTag}`);
         return;
     }
 
@@ -227,7 +227,7 @@ async function main() {
     if (!r || r.errno !== 0) {
         const err = r ? `errno ${r.errno}${r.error ? ' ' + r.error : ''}` : '无响应';
         $.msg($.name, '❌ 签到失败',
-            `${err}\n(若提示登录失效,请重新抓 Cookie)`);
+            `${err}\n${absrTag}\n(9230=ab_sr 没刷成功;登录失效则重新抓 Cookie)`);
         return;
     }
 
@@ -318,8 +318,10 @@ function queryMember(ck) {
 }
 
 // ─── 用设备指纹重放 abdr,换一个新鲜 ab_sr ────────────────────────────────────
+// 返回 {absr, tag};全程 $.log 打点,方便今天就看出这步通没通
 function refreshAbsr(ck, abdrBody) {
     return new Promise((resolve) => {
+        $.log(`[ab_sr] 已存指纹(${abdrBody.length} 字节),POST ${ABDR_URL}`);
         const opts = {
             url: ABDR_URL,
             headers: {
@@ -336,9 +338,24 @@ function refreshAbsr(ck, abdrBody) {
             timeout: 10000,
         };
         $.post(opts, (err, resp, data) => {
-            if (err) { debug('abdr 错误: ' + JSON.stringify(err)); resolve(null); return; }
-            const m = /ab_sr=([^;,\s]+)/.exec(setCookieOf(resp));
-            resolve(m ? m[1] : null);
+            if (err) {
+                $.log('[ab_sr] abdr 请求出错: ' + JSON.stringify(err));
+                resolve({ absr: null, tag: '❌ ab_sr 刷新失败(请求出错)' });
+                return;
+            }
+            const status = resp && (resp.status || resp.statusCode);
+            const keys = (resp && resp.headers) ? Object.keys(resp.headers).join(', ') : '(无 headers)';
+            $.log(`[ab_sr] abdr HTTP ${status};响应头有: ${keys}`);
+            const sc = setCookieOf(resp);
+            $.log('[ab_sr] Set-Cookie = ' + (sc ? sc.slice(0, 140) : '(空 → Loon 没暴露 Set-Cookie)'));
+            const m = /ab_sr=([^;,\s]+)/.exec(sc);
+            if (m) {
+                $.log('[ab_sr] ✅ 拿到新 ab_sr: ' + m[1].slice(0, 40) + '…');
+                resolve({ absr: m[1], tag: '✅ ab_sr 已刷新' });
+            } else {
+                $.log('[ab_sr] ❌ 响应里没有 ab_sr');
+                resolve({ absr: null, tag: '❌ ab_sr 刷新失败(响应无 ab_sr)' });
+            }
         });
     });
 }
