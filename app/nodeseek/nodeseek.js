@@ -52,7 +52,7 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-06-25.r9";
+const SCRIPT_VERSION = "2026-06-25.r10";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY     = "nodeseek_cookie";
@@ -80,6 +80,11 @@ const REFRACT_KEY_DEFAULT = "CHICZkKViFoZmVbIH1Y6"; // from sw.js: this.refractK
     const cookieKeys = cookie.split(";").map(c => c.trim().split("=")[0]).join(", ");
     $.log("[INFO] cookie keys=" + cookieKeys);
     $.log("[INFO] ua=" + UA.substring(0, 60));
+
+    // Diagnose exit IP — compare with browser IP to check proxy usage
+    await new Promise(r => $.get({ url: "https://api.ipify.org?format=json", timeout: 5000 }, (e, _, d) => {
+        $.log("[INFO] script exit IP=" + (d || e)); r();
+    }));
 
     try {
         const { key: refractKey, cfBm } = await ping(cookie, UA);
