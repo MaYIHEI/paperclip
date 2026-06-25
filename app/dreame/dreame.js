@@ -1,7 +1,7 @@
 /**
  * 追觅 · 追觅商城每日签到,得积分 / 成长值,支持连签奖励
  *
- * 抓取:打开「追觅」APP →「商城」或「我的」页停留 1 秒(自动触发 my/info),抓 Cookie
+ * 抓取:打开「追觅」APP → 进入「商城」或「我的」页,抓 Cookie
  * 签到:cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>

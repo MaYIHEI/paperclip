@@ -13,7 +13,7 @@
 ## 使用步骤
 
 1. 按下方对应平台配置,开启重写脚本 + cron
-2. 打开追觅 APP → 进入「商城」或「我的」页面,触发 `my/info`
+2. 打开追觅 APP → 进入「商城」或「我的」页
 3. 收到 `✅ 追觅 Cookie 获取成功` 通知即抓取成功
 4. cron 会按计划自动签到(Cookie 约 90 天有效,失效后重抓一次)
 
@@ -24,7 +24,7 @@
 hostname = cn-wxmall.dreame.tech
 
 [Script]
-http-request ^https:\/\/cn-wxmall\.dreame\.tech\/main\/ tag=追觅 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/dreame.png
+http-request ^https:\/\/cn-wxmall\.dreame\.tech\/main\/my\/info tag=追觅 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/dreame.png
 
 cron "33 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js, tag=追觅签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/dreame.png, enable=true
 ```
@@ -36,7 +36,7 @@ cron "33 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/papercli
 hostname = cn-wxmall.dreame.tech
 
 [Script]
-追觅 Cookie = type=http-request,pattern=^https:\/\/cn-wxmall\.dreame\.tech\/main\/,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/dreame.png
+追觅 Cookie = type=http-request,pattern=^https:\/\/cn-wxmall\.dreame\.tech\/main\/my\/info,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/dreame.png
 
 追觅签到 = type=cron,cronexp=33 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/dreame.png
 ```
@@ -48,7 +48,7 @@ hostname = cn-wxmall.dreame.tech
 hostname = cn-wxmall.dreame.tech
 
 [rewrite_local]
-^https:\/\/cn-wxmall\.dreame\.tech\/main\/ url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js
+^https:\/\/cn-wxmall\.dreame\.tech\/main\/my\/info url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js
 
 [task_local]
 33 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js, tag=追觅签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/dreame.png, enabled=true
@@ -67,7 +67,7 @@ http:
   mitm:
     - "cn-wxmall.dreame.tech"
   script:
-    - match: ^https:\/\/cn-wxmall\.dreame\.tech\/main\/
+    - match: ^https:\/\/cn-wxmall\.dreame\.tech\/main\/my\/info
       name: 追觅 Cookie
       type: request
       require-body: true
@@ -83,7 +83,7 @@ script-providers:
 | 日期 | 变更 |
 |---|---|
 | 2026-06-21 | 初版,基于追觅 2.5.1 抓包验证 |
-| 2026-06-25 | 捕获 URL 放宽至 `main/`,解决 my/info 触发不稳定问题 |
+| 2026-06-25 | 修复 Cookie 获取偶发失败问题 |
 
 ## 已知限制
 
