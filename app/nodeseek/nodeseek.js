@@ -52,14 +52,15 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-06-25.r6";
+const SCRIPT_VERSION = "2026-06-25.r7";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY     = "nodeseek_cookie";
+const UA_KEY     = "nodeseek_ua";
 const RANDOM_KEY = "nodeseek_random";
 
-// Must match UA set in browser context for refract signature to verify
-const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1";
+// Fallback UA; real UA captured from Safari by nodeseek.cookie.js (cf_clearance is UA-bound)
+const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
 const REFRACT_VERSION     = "0.3.33";
 const REFRACT_KEY_DEFAULT = "CHICZkKViFoZmVbIH1Y6"; // from sw.js: this.refractKey="..."
 
@@ -73,13 +74,15 @@ const REFRACT_KEY_DEFAULT = "CHICZkKViFoZmVbIH1Y6"; // from sw.js: this.refractK
         $.msg("NodeSeek", "🚫 Cookie 无效", "缺少 pjwt，请重新抓取");
         $.done(); return;
     }
+    const UA     = $.getdata(UA_KEY) || UA_FALLBACK;
     const random = ($.getdata(RANDOM_KEY) || "false") === "true";
 
     $.log("[INFO] cookie has cf_clearance=" + cookie.includes("cf_clearance") + " len=" + cookie.length);
+    $.log("[INFO] ua=" + UA.substring(0, 60));
 
     try {
-        const refractKey = await ping(cookie);
-        await attend(cookie, refractKey, random);
+        const refractKey = await ping(cookie, UA);
+        await attend(cookie, refractKey, random, UA);
     } catch (e) {
         $.msg("NodeSeek", "❌ 签到异常", String(e));
     }
@@ -88,10 +91,10 @@ const REFRACT_KEY_DEFAULT = "CHICZkKViFoZmVbIH1Y6"; // from sw.js: this.refractK
 })();
 
 // GET /edge-cgi/ping with default key → returns updated key from refract-key-update header
-function ping(cookie) {
+function ping(cookie, UA) {
     return new Promise((resolve) => {
         const url = "https://www.nodeseek.com/edge-cgi/ping";
-        const sign = refractSign("GET", url, "", REFRACT_KEY_DEFAULT);
+        const sign = refractSign("GET", url, "", REFRACT_KEY_DEFAULT, UA);
         $.get({
             url,
             headers: {
@@ -111,10 +114,10 @@ function ping(cookie) {
 }
 
 // POST /api/attendance with manually computed refract headers
-function attend(cookie, refractKey, random) {
+function attend(cookie, refractKey, random, UA) {
     return new Promise((resolve) => {
         const url = "https://www.nodeseek.com/api/attendance?random=" + random;
-        const sign = refractSign("POST", url, "", refractKey);
+        const sign = refractSign("POST", url, "", refractKey, UA);
         $.log("[INFO] attend sign=" + sign.substring(0, 16) + "...");
         $.post({
             url,
@@ -157,7 +160,7 @@ function attend(cookie, refractKey, random) {
 }
 
 // Mirrors sw.js kt() + wt(): SHA-1(hex) of method\n\nurl\n\nUA\n\nbody\n\nkey
-function refractSign(method, url, body, key) {
+function refractSign(method, url, body, key, UA) {
     const cleanUrl = url.replace(/#.*$/, "");
     return sha1([method, cleanUrl, UA, body, key].join("\n\n"));
 }

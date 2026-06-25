@@ -28,6 +28,7 @@
 const $ = new Env("NodeSeek [Cookie]");
 
 const CK_KEY = "nodeseek_cookie";
+const UA_KEY = "nodeseek_ua";
 
 (function main() {
     if (typeof $response !== "undefined") {
@@ -45,11 +46,15 @@ function handleRequest() {
         $.done(); return;
     }
 
-    const old    = $.getdata(CK_KEY) || "";
+    const ua      = ($request.headers["User-Agent"] || $request.headers["user-agent"] || "").trim();
+    const old     = $.getdata(CK_KEY) || "";
     const oldPjwt = (old.match(/pjwt=([^;]+)/)          || [])[1] || "";
     const newPjwt = (cookie.match(/pjwt=([^;]+)/)        || [])[1] || "";
     const oldCf   = (old.match(/cf_clearance=([^;]+)/)   || [])[1] || "";
     const newCf   = (cookie.match(/cf_clearance=([^;]+)/) || [])[1] || "";
+
+    // Always keep UA in sync (cf_clearance is UA-bound)
+    if (ua) $.setdata(ua, UA_KEY);
 
     if (oldPjwt && oldPjwt === newPjwt) {
         // pjwt unchanged; but if Safari is sending a fresher cf_clearance, save it
