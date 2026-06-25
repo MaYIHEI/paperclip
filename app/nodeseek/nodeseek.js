@@ -52,7 +52,7 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-06-25.r1";
+const SCRIPT_VERSION = "2026-06-25.r2";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY = "nodeseek_cookie";
@@ -132,6 +132,12 @@ function attend(cookie, key) {
                 "refract-sign": sign,
                 "content-type": "text/plain;charset=UTF-8",
                 "accept": "*/*",
+                "accept-language": "zh-CN,zh-Hans;q=0.9",
+                "accept-encoding": "gzip, deflate, br",
+                "sec-fetch-site": "same-origin",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-dest": "empty",
+                "priority": "u=3, i",
                 "cookie": cookie,
                 "origin": "https://www.nodeseek.com",
                 "referer": "https://www.nodeseek.com/sw.js?v=" + REFRACT_VERSION,
