@@ -1375,7 +1375,9 @@
       "name": "NodeSeek",
       "keys": [
         "nodeseek_cookie",
-        "nodeseek_random"
+        "nodeseek_random",
+        "nodeseek_relay_url",
+        "nodeseek_relay_key"
       ],
       "settings": [
         {
@@ -1394,6 +1396,20 @@
             }
           ],
           "desc": "签到奖励模式：固定 = 每次 +5 积分；随机 = 1-10 随机"
+        },
+        {
+          "id": "nodeseek_relay_url",
+          "name": "中继地址",
+          "val": "",
+          "type": "input",
+          "desc": "VPS 中继服务器地址，格式：http://IP:3001/attend"
+        },
+        {
+          "id": "nodeseek_relay_key",
+          "name": "中继密钥",
+          "val": "",
+          "type": "input",
+          "desc": "中继服务器 API Key（x-api-key）"
         }
       ],
       "author": "@MaYIHEI",
