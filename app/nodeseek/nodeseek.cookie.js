@@ -21,7 +21,7 @@ const CK_KEY = "nodeseek_cookie";
     }
 
     const cookie = ($request.headers["Cookie"] || $request.headers["cookie"] || "").trim();
-    if (!cookie.includes("pjwt") || !cookie.includes("cf_clearance")) {
+    if (!cookie.includes("pjwt")) {
         $.done();
         return;
     }

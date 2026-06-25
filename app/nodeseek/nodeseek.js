@@ -73,11 +73,6 @@ const REFRACT_KEY_DEFAULT = "CHICZkKViFoZmVbIH1Y6"; // from sw.js: this.refractK
         $.msg("NodeSeek", "🚫 Cookie 无效", "缺少 pjwt，请重新抓取");
         $.done(); return;
     }
-    if (!cookie.includes("cf_clearance")) {
-        $.msg("NodeSeek", "🚫 缺少 CF 凭证", "请重新用 Safari 打开 nodeseek.com，等待页面加载完成后重试");
-        $.done(); return;
-    }
-
     const random = ($.getdata(RANDOM_KEY) || "false") === "true";
 
     try {
