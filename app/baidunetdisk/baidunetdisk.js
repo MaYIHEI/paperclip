@@ -60,7 +60,7 @@
 
 const $ = new Env("百度网盘");
 
-const SCRIPT_VERSION = "2026-06-25.r6"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-26.r7"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY   = 'baidunetdisk_data';
@@ -223,6 +223,8 @@ async function main() {
     }
 
     // 3. 执行签到
+    const sent = (ck.cookie.match(/ab_sr=([^;]+)/) || [])[1] || '(无)';
+    $.log('[signin] 实际发出的 ab_sr=' + sent.slice(0, 40) + '…(对比上面 [ab_sr] 拿到的新值是否一致)');
     const r = await call('signin', ck, true, taskId);
     if (!r || r.errno !== 0) {
         const err = r ? `errno ${r.errno}${r.error ? ' ' + r.error : ''}` : '无响应';
