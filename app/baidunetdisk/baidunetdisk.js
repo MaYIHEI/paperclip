@@ -52,11 +52,12 @@
 
 const $ = new Env("百度网盘");
 
-const SCRIPT_VERSION = "2026-06-26.r8"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-26.r9"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
-const CK_KEY  = 'baidunetdisk_data';
-const API     = 'https://pan.baidu.com';
+const CK_KEY    = 'baidunetdisk_data';
+const TRACK_KEY = 'baidunetdisk_track';   // 成长值基线 {value,ts},用真实变化算"约 N 天"
+const API       = 'https://pan.baidu.com';
 const COMMON  = 'app_id=250528&web=5';                       // 会员成长值(WAP)系统通用参数
 const REFERER = 'https://pan.baidu.com/wap/svip/growth/task';
 // 通用浏览器 UA(所有用户一致、无任何个人/设备痕迹;成长值是 WAP 系统,按浏览器身份请求)
@@ -83,6 +84,7 @@ if (typeof $request !== "undefined") {
     (async () => {
         if (JSON.parse($.getdata("baidunetdisk_clear") || "false")) {
             $.setdata("", CK_KEY);
+            $.setdata("", TRACK_KEY);
             $.setdata("false", "baidunetdisk_clear");
             $.msg($.name, "", "✅ Cookie 已清除，请重新抓取");
             return $.done();
@@ -171,9 +173,7 @@ async function growthTail(cookie, todayGain) {
         if (next != null) {
             const gap = next - V;
             t += ` · 距 SVIP${L + 1} 还差 ${gap}`;
-            // 每日净增 = 会员每日成长(按产品类型)+ 今日签到/答题所得,估算还要几天
-            const ptype = str(u, /"product_type"\s*:\s*"(.*?)"/);
-            const perDay = (DAILY_GROWTH[ptype] || 0) + (todayGain || 0);
+            const perDay = dailyRate(V, str(u, /"product_type"\s*:\s*"(.*?)"/), todayGain);
             if (perDay > 0 && gap > 0) t += `(约 ${Math.ceil(gap / perDay)} 天)`;
         } else {
             t += ' · 已满级';
@@ -183,6 +183,24 @@ async function growthTail(cookie, todayGain) {
         debug('查成长值异常,忽略: ' + e);
         return '';
     }
+}
+
+// 每日成长速率:优先用「成长值真实变化 ÷ 经过天数」(涵盖 app+web+答题+会员所有来源);
+// 首次跑没基线、或同日重跑(不足 ~1 天)时,退回「会员每日 + 今日所得」估算
+function dailyRate(V, ptype, todayGain) {
+    const now = Date.now();
+    try {
+        const tk = JSON.parse($.getdata(TRACK_KEY) || 'null');
+        if (tk && tk.value != null && tk.ts) {
+            const days = (now - tk.ts) / 86400000;
+            if (days >= 0.8 && V > tk.value) return (V - tk.value) / days;   // 实测日均
+        } else {
+            $.setdata(JSON.stringify({ value: V, ts: now }), TRACK_KEY);     // 建立基线
+        }
+    } catch (e) {
+        debug('成长值基线读写异常: ' + e);
+    }
+    return (DAILY_GROWTH[ptype] || 0) + (todayGain || 0);                    // 兜底估算
 }
 
 // ─── 调一次 pan.baidu.com 接口(GET,鉴权靠 Cookie),返回原始文本 ─────────────

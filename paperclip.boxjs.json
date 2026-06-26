@@ -1435,6 +1435,7 @@
       "name": "百度网盘",
       "keys": [
         "baidunetdisk_data",
+        "baidunetdisk_track",
         "baidunetdisk_clear",
         "baidunetdisk_debug"
       ],
