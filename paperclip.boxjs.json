@@ -1375,6 +1375,7 @@
       "name": "NodeSeek",
       "keys": [
         "nodeseek_cookie",
+        "nodeseek_ua",
         "nodeseek_random",
         "nodeseek_relay_url",
         "nodeseek_relay_key"
@@ -1401,14 +1402,16 @@
           "id": "nodeseek_relay_url",
           "name": "中继地址",
           "val": "",
-          "type": "input",
-          "desc": "VPS 中继服务器地址，格式：http://IP:3001/attend"
+          "type": "text",
+          "placeholder": "http://IP:3001/attend",
+          "desc": "VPS 中继服务器地址"
         },
         {
           "id": "nodeseek_relay_key",
           "name": "中继密钥",
           "val": "",
-          "type": "input",
+          "type": "text",
+          "placeholder": "中继 API Key",
           "desc": "中继服务器 API Key（x-api-key）"
         }
       ],
