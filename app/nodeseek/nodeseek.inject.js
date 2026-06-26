@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-25
+ * @Updated: 2026-06-26
  *
  * ===== Loon =====
  * [MITM]
@@ -67,12 +67,16 @@ function handleResult() {
         }
     }
 
-    if (result.success) {
-        $.msg("NodeSeek", "✅ 签到成功", (result.message || "") + "\n积分+" + result.gain + " 当前" + result.current);
-    } else if (result.message && result.message.includes("已签到")) {
-        // already signed in today, silent
+    // NodeSeek 成功返回 {}（无 success 字段），失败返回 {"success":false,...}
+    if (result.success === false) {
+        if (result.message && result.message.includes("已签到")) {
+            // 今天已签到，静默
+        } else {
+            $.msg("NodeSeek", "❌ 签到失败", result.message || "未知错误");
+        }
     } else {
-        $.msg("NodeSeek", "❌ 签到失败", result.message || "未知错误");
+        const detail = (result.message || "") + (result.gain != null ? "\n积分+" + result.gain + " 当前" + result.current : "");
+        $.msg("NodeSeek", "✅ 签到成功", detail);
     }
     $.done({});
 }
