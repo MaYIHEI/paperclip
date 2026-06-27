@@ -358,10 +358,9 @@
       "name": "米游社",
       "keys": [
         "mhy_stoken_cookie",
+        "mhy_game_roles",
         "mhy_web_cookie",
-        "mhy_bbs_headers",
-        "mhy_signin_headers",
-        "mhy_roles",
+        "mhy_web_headers",
         "mhy_delete_cookie",
         "mhy_games",
         "mhy_req_interval"
