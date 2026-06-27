@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-26
+ * @Updated: 2026-06-27
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("WPS");
 
-const SCRIPT_VERSION = "2026-06-26.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-06-27.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -568,7 +568,9 @@ async function taskClockIn() {
         const backoff = [0, 3000, 6000, 9000];
         for (let i = 0; i < backoff.length && !s_key; i++) {
             if (backoff[i]) await sleep(backoff[i]);
-            const inf = await rawReq("GET", CLOCK_INFO, { sid });
+            // 带上与真客户端一致的分页参数:s_key 不带也能回,但 reward_list(领昨日奖励要用)
+            // 不带 page_size 实测可能回空 → 领奖永远扫不到东西。对齐真请求,确保列表完整返回。
+            const inf = await rawReq("GET", `${CLOCK_INFO}?client_type=1&page_index=0&page_size=10`, { sid });
             infBody = inf.body || "";
             s_key = ((safeJson(infBody) || {}).data || {}).s_key;
             if (!s_key) debug(`${tag} info 重试 ${i + 1}/${backoff.length}: ${infBody.slice(0, 120)}`);
@@ -616,7 +618,14 @@ async function claimClockInRewards(infBody, sid, s_key, ss) {
     try {
         const list = (((safeJson(infBody) || {}).data || {}).reward_list || {}).list || [];
         const pend = list.filter((rw) => rw && rw.reward_status === 1);
-        if (!pend.length) return;
+        // 诊断:打印整张奖励表的状态分布(0=今天签明天开放 / 1=可领 / 2=已过期 / 3=已领),
+        // 用来区分两种「领不到」:列表空=接口/参数没取到;有奖励但无 1=开放时机没到。
+        debug(`奖励表(${list.length}): ${list.map((rw) => `${rw.reward_id}=${rw.reward_status}`).join(" ") || "空"}`);
+        if (!pend.length) {
+            // 空场也报一行,避免「跑没跑、有没有可领」全靠猜;两种成因分开提示
+            $.results.push(list.length ? "ℹ️ 昨日奖励:暂无可领(未到开放时间)" : "⚠️ 领奖:未取到奖励列表");
+            return;
+        }
 
         const got = [], fail = [];
         for (const rw of pend) {
