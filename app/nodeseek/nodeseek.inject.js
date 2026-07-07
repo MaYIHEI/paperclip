@@ -67,18 +67,23 @@ function handleResult() {
         }
     }
 
-    // NodeSeek 成功返回 {}（无 success 字段），失败返回 {"success":false,...}
-    if (result.success === false) {
-        if (result.message && result.message.includes("已签到")) {
-            // 今天已签到，静默
-        } else {
-            $.msg("NodeSeek", "❌ 签到失败", result.message || "未知错误");
-        }
+    const state = classifyResult(result);
+    if (state === "already") {
+        $.msg("NodeSeek", "ℹ️ 今日已签到", result.message || "");
+    } else if (state === "failed") {
+        $.msg("NodeSeek", "❌ 签到失败", result.message || "未知错误");
     } else {
         const detail = (result.message || "") + (result.gain != null ? "\n积分+" + result.gain + " 当前" + result.current : "");
         $.msg("NodeSeek", "✅ 签到成功", detail);
     }
     $.done({});
+}
+
+function classifyResult(result) {
+    const msg = String((result && result.message) || "");
+    if (/已签到|重复|already|duplicate|repeat/i.test(msg)) return "already";
+    if (result && result.success === false) return "failed";
+    return "success";
 }
 
 function handleInject() {

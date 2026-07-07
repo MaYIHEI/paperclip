@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """NodeSeek attendance relay — CF bypass via server-side curl POST"""
 import os, json, subprocess
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 API_KEY  = os.environ.get('NS_KEY', '')
 PORT     = int(os.environ.get('NS_PORT', '3001'))
@@ -23,14 +23,23 @@ def attend(cookie, ua, random_val):
          '-d', '', url,
          '-w', '\n===CODE:%{http_code}===',
          '--max-time', '25'],
-        capture_output=True, text=True, timeout=35)
-    raw = r.stdout
+        capture_output=True, timeout=35)
+    raw = r.stdout.decode('utf-8', 'replace')
     parts = raw.rsplit('\n===CODE:', 1)
     return parts[0].strip() if len(parts) == 2 else raw.strip()
 
 
 class Handler(BaseHTTPRequestHandler):
+    def setup(self):
+        super().setup()
+        self.request.settimeout(12)
+
     def log_message(self, *a): pass
+
+    def do_GET(self):
+        if self.path in ('/health', '/attend'):
+            return self._send(200, b'{"ok":true,"service":"ns-relay"}')
+        return self._send(404, b'{"error":"not found"}')
 
     def do_POST(self):
         if self.path != '/attend':
@@ -65,6 +74,6 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     if not API_KEY:
         raise SystemExit('NS_KEY env var required')
-    server = HTTPServer(('0.0.0.0', PORT), Handler)
+    server = ThreadingHTTPServer(('0.0.0.0', PORT), Handler)
     print('[ns-relay] :' + str(PORT))
     server.serve_forever()

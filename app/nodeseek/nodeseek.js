@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-25
+ * @Updated: 2026-07-07
  *
  * ===== Loon =====
  * [MITM]
@@ -55,7 +55,7 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-06-25.r12";
+const SCRIPT_VERSION = "2026-07-07.r1";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY        = "nodeseek_cookie";
@@ -77,10 +77,14 @@ const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) Appl
         $.done(); return;
     }
 
-    const relayUrl = $.getdata(RELAY_URL_KEY) || "";
+    const relayUrl = normalizeRelayUrl($.getdata(RELAY_URL_KEY) || "");
     const relayKey = $.getdata(RELAY_KEY_KEY) || "";
     if (!relayUrl || !relayKey) {
         $.msg("NodeSeek", "🚫 未配置中继", "请在 BoxJS 中设置 nodeseek_relay_url 和 nodeseek_relay_key");
+        $.done(); return;
+    }
+    if (!/^https?:\/\/.+\/attend(?:\?.*)?$/i.test(relayUrl)) {
+        $.msg("NodeSeek", "🚫 中继地址格式错误", "请填写完整地址，例如 http://VPS_IP:3001/attend");
         $.done(); return;
     }
 
@@ -109,14 +113,21 @@ function attend(cookie, UA, random, relayUrl, relayKey) {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({ cookie, ua: UA, random }),
-            timeout: 35000,
         }, (err, resp, data) => {
             if (err) {
-                $.msg("NodeSeek", "❌ 中继请求失败", String(err));
+                $.msg("NodeSeek", "❌ 中继请求失败", relayErrorHint(err));
                 return resolve();
             }
             $.log("[INFO] relay status=" + (resp && resp.status) + " body=" + String(data).substring(0, 200));
 
+            if ((resp && resp.status) === 401) {
+                $.msg("NodeSeek", "❌ 中继鉴权失败", "请检查 BoxJS 的中继密钥是否和 VPS 上的 NS_KEY 一致");
+                return resolve();
+            }
+            if ((resp && resp.status) === 404) {
+                $.msg("NodeSeek", "❌ 中继路径错误", "中继地址应以 /attend 结尾");
+                return resolve();
+            }
             if ((resp && resp.status) === 502) {
                 $.msg("NodeSeek", "❌ CF 拦截", "中继被 CF 拦截，请检查 VPS");
                 return resolve();
@@ -134,8 +145,10 @@ function attend(cookie, UA, random, relayUrl, relayKey) {
                 $.msg("NodeSeek", "❌ 中继错误", result.error);
                 return resolve();
             }
-            // NodeSeek returns {} on success (no success:true), {"success":false,...} on failure
-            if (result.success === false) {
+            const state = classifyResult(result);
+            if (state === "already") {
+                $.msg("NodeSeek", "ℹ️ 今日已签到", result.message || "");
+            } else if (state === "failed") {
                 $.msg("NodeSeek", "❌ 签到失败", result.message || "未知错误");
             } else {
                 const detail = result.message
@@ -146,6 +159,32 @@ function attend(cookie, UA, random, relayUrl, relayKey) {
             resolve();
         });
     });
+}
+
+function classifyResult(result) {
+    const msg = String((result && result.message) || "");
+    if (/已签到|重复|already|duplicate|repeat/i.test(msg)) return "already";
+    if (result && result.success === false) return "failed";
+    return "success";
+}
+
+function normalizeRelayUrl(raw) {
+    let u = String(raw || "").trim();
+    if (!u) return "";
+    u = u.replace(/\/+$/, "");
+    if (/^https?:\/\/[^/?#]+$/i.test(u)) u += "/attend";
+    return u;
+}
+
+function relayErrorHint(err) {
+    const s = String(err);
+    if (/connect to host timed out|timed out|timeout/i.test(s)) {
+        return "连接中继超时。请检查 VPS 服务是否运行、端口是否放行、BoxJS 中继地址是否可从手机直连访问；Loon cron 的请求通常不走代理。";
+    }
+    if (/Could not connect|connection refused|refused/i.test(s)) {
+        return "中继端口拒绝连接。请检查 ns-relay 服务是否启动、端口是否正确。";
+    }
+    return s;
 }
 
 function Env(s) {
