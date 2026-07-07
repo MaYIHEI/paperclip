@@ -23,7 +23,7 @@
 | [`camscanner/`](./camscanner/) | 扫描全能王 - 幸运大转盘每日抽奖(看视频转盘,每日 3 次) | ✅ 维护中 |
 | [`dreame/`](./dreame/) | 追觅商城 - 每日签到得积分 / 成长值(连签奖励) | ✅ 维护中 |
 | [`linghu/`](./linghu/) | 灵狐灵购 - 每日签到领红包(连签奖励) | ✅ 维护中 |
-| [`nodeseek/`](./nodeseek/) | NodeSeek - 每日签到(VPS 中继绕过 CF) | 🧪 待验证 |
+| [`nodeseek/`](./nodeseek/) | NodeSeek - 每日签到(VPS 中继绕过 CF) | ✅ 维护中 |
 | [`sgcc/`](./sgcc/) | 网上国网(国家电网 95598) - 积分每日签到(复用签到请求 + 本地抓 Cookie) | 🧪 待验证 |
 | [`baidunetdisk/`](./baidunetdisk/) | 百度网盘 - 会员成长值签到 + 每日答题(助力 SVIP 升级) | 🧪 待验证 |
 | [`cmccbj/`](./cmccbj/) | 北京移动 - 「签到赢好礼」每日签到(送流量/积分) | 📦 已归档 |

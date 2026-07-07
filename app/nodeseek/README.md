@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/nodeseek.png" width="80" alt="NodeSeek" />
 </p>
 
-# NodeSeek 🧪
+# NodeSeek ✅
 
 NodeSeek 每日签到。
 
