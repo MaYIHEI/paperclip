@@ -73,7 +73,7 @@ function handleResult() {
     } else if (state === "failed") {
         $.msg("NodeSeek", "❌ 签到失败", result.message || "未知错误");
     } else {
-        const detail = (result.message || "") + (result.gain != null ? "\n积分+" + result.gain + " 当前" + result.current : "");
+        const detail = (result.message || "") + (result.gain != null ? "\n鸡腿+" + result.gain + " 当前" + result.current : "");
         $.msg("NodeSeek", "✅ 签到成功", detail);
     }
     $.done({});

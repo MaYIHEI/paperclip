@@ -1335,12 +1335,13 @@
         "nodeseek_ua",
         "nodeseek_random",
         "nodeseek_relay_url",
-        "nodeseek_relay_key"
+        "nodeseek_relay_key",
+        "nodeseek_debug"
       ],
       "settings": [
         {
           "id": "nodeseek_random",
-          "name": "随机积分",
+          "name": "随机鸡腿",
           "val": "false",
           "type": "selects",
           "items": [
@@ -1353,7 +1354,7 @@
               "label": "随机"
             }
           ],
-          "desc": "签到奖励模式：固定 = 每次 +5 积分；随机 = 1-10 随机"
+          "desc": "签到奖励模式：固定 = 每次 +5 鸡腿；随机 = 1-10 随机"
         },
         {
           "id": "nodeseek_relay_url",
@@ -1370,6 +1371,23 @@
           "type": "text",
           "placeholder": "中继 API Key",
           "desc": "中继服务器 API Key（x-api-key）"
+        },
+        {
+          "id": "nodeseek_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "开启后打印中继响应和分类结果（不打印 Cookie / 密钥）"
         }
       ],
       "author": "@MaYIHEI",

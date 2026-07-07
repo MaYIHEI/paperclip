@@ -63,6 +63,7 @@ const UA_KEY        = "nodeseek_ua";
 const RANDOM_KEY    = "nodeseek_random";
 const RELAY_URL_KEY = "nodeseek_relay_url";
 const RELAY_KEY_KEY = "nodeseek_relay_key";
+const DEBUG_KEY     = "nodeseek_debug";
 
 const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
 
@@ -90,13 +91,18 @@ const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) Appl
 
     const UA     = $.getdata(UA_KEY) || UA_FALLBACK;
     const random = ($.getdata(RANDOM_KEY) || "false") === "true";
+    const DEBUG  = ($.getdata(DEBUG_KEY) || "false") === "true";
 
     const cookieKeys = cookie.split(";").map(c => c.trim().split("=")[0]).join(", ");
     $.log("[INFO] cookie keys=" + cookieKeys);
     $.log("[INFO] ua=" + UA.substring(0, 60));
+    if (DEBUG) {
+        $.log("[DEBUG] relay=" + maskRelayUrl(relayUrl));
+        $.log("[DEBUG] random=" + random);
+    }
 
     try {
-        await attend(cookie, UA, random, relayUrl, relayKey);
+        await attend(cookie, UA, random, relayUrl, relayKey, DEBUG);
     } catch (e) {
         $.msg("NodeSeek", "❌ 签到异常", String(e));
     }
@@ -104,7 +110,7 @@ const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) Appl
     $.done();
 })();
 
-function attend(cookie, UA, random, relayUrl, relayKey) {
+function attend(cookie, UA, random, relayUrl, relayKey, DEBUG) {
     return new Promise((resolve) => {
         $.post({
             url: relayUrl,
@@ -119,6 +125,9 @@ function attend(cookie, UA, random, relayUrl, relayKey) {
                 return resolve();
             }
             $.log("[INFO] relay status=" + (resp && resp.status) + " body=" + String(data).substring(0, 200));
+            if (DEBUG) {
+                $.log("[DEBUG] relay raw=" + String(data).substring(0, 800));
+            }
 
             if ((resp && resp.status) === 401) {
                 $.msg("NodeSeek", "❌ 中继鉴权失败", "请检查 BoxJS 的中继密钥是否和 VPS 上的 NS_KEY 一致");
@@ -146,19 +155,32 @@ function attend(cookie, UA, random, relayUrl, relayKey) {
                 return resolve();
             }
             const state = classifyResult(result);
+            if (DEBUG) {
+                $.log("[DEBUG] parsed keys=" + Object.keys(result || {}).join(","));
+                $.log("[DEBUG] classify=" + state + " success=" + result.success + " status=" + result.status + " gain=" + result.gain + " current=" + result.current + " message=" + (result.message || ""));
+            }
             if (state === "already") {
                 $.msg("NodeSeek", "ℹ️ 今日已签到", result.message || "");
             } else if (state === "failed") {
                 $.msg("NodeSeek", "❌ 签到失败", result.message || "未知错误");
             } else {
                 const detail = result.message
-                    ? result.message + (result.gain != null ? "\n积分+" + result.gain + " 当前" + result.current : "")
+                    ? result.message + (result.gain != null ? "\n鸡腿+" + result.gain + " 当前" + result.current : "")
                     : "";
                 $.msg("NodeSeek", "✅ 签到成功", detail);
             }
             resolve();
         });
     });
+}
+
+function maskRelayUrl(raw) {
+    try {
+        const u = new URL(raw);
+        return u.protocol + "//" + u.host + u.pathname;
+    } catch (_) {
+        return String(raw || "").replace(/[?&].*$/, "");
+    }
 }
 
 function classifyResult(result) {
