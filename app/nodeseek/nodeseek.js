@@ -55,7 +55,7 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-07-07.r1";
+const SCRIPT_VERSION = "2026-07-07.r2";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY        = "nodeseek_cookie";
@@ -162,6 +162,7 @@ function attend(cookie, UA, random, relayUrl, relayKey) {
 }
 
 function classifyResult(result) {
+    if (result && typeof result === "object" && Object.keys(result).length === 0) return "already";
     const msg = String((result && result.message) || "");
     if (/已签到|重复|already|duplicate|repeat/i.test(msg)) return "already";
     if (result && result.success === false) return "failed";

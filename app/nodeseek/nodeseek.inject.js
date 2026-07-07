@@ -80,6 +80,7 @@ function handleResult() {
 }
 
 function classifyResult(result) {
+    if (result && typeof result === "object" && Object.keys(result).length === 0) return "already";
     const msg = String((result && result.message) || "");
     if (/已签到|重复|already|duplicate|repeat/i.test(msg)) return "already";
     if (result && result.success === false) return "failed";
