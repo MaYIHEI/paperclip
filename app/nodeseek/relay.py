@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """NodeSeek attendance relay — CF bypass via server-side curl POST"""
-import os, json, subprocess
+import os, json, subprocess, base64
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 API_KEY  = os.environ.get('NS_KEY', '')
@@ -30,6 +30,32 @@ def attend(cookie, ua, random_val, rid='-'):
     code = parts[1].rstrip('=').strip() if len(parts) == 2 else '?'
     print(f'[attend] rid={rid} code={code} body={body[:200]!r}', flush=True)
     return body
+
+
+def normalize_body(body):
+    try:
+        data = json.loads(body or '{}')
+    except Exception:
+        return json.dumps({
+            'state': 'unconfirmed',
+            'raw_b64': base64.b64encode((body or '').encode()).decode(),
+        }, separators=(',', ':')).encode()
+
+    msg = data.get('message')
+    if isinstance(msg, str):
+        data['message_b64'] = base64.b64encode(msg.encode()).decode()
+        data.pop('message', None)
+
+    if data.get('success') is True:
+        data['state'] = 'success'
+    elif data.get('success') is False:
+        data['state'] = 'failed'
+    elif not data:
+        data['state'] = 'empty'
+    else:
+        data['state'] = 'unconfirmed'
+
+    return json.dumps(data, ensure_ascii=True, separators=(',', ':')).encode()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -64,7 +90,7 @@ class Handler(BaseHTTPRequestHandler):
             body = attend(cookie, ua, rand, rid)
             if 'challenge-platform' in body or 'Just a moment' in body:
                 return self._send(502, b'{"error":"cf_block"}')
-            payload = body.encode() if body else b'{"error":"empty"}'
+            payload = normalize_body(body)
             print(f'[relay] rid={rid} send_len={len(payload)} send_body={payload[:200]!r}', flush=True)
             self._send(200, payload)
         except Exception as e:
@@ -73,6 +99,8 @@ class Handler(BaseHTTPRequestHandler):
     def _send(self, code, body):
         self.send_response(code)
         self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Connection', 'close')
         self.end_headers()
         self.wfile.write(body)
 

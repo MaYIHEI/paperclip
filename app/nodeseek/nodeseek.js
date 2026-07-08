@@ -55,7 +55,7 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-07-08.r2";
+const SCRIPT_VERSION = "2026-07-08.r3";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY        = "nodeseek_cookie";
@@ -151,6 +151,7 @@ function attend(cookie, UA, random, relayUrl, relayKey, DEBUG, rid) {
                     return resolve();
                 }
             }
+            normalizeRelayResult(result);
 
             if (result.error) {
                 $.msg("NodeSeek", "❌ 中继错误", result.error);
@@ -193,12 +194,24 @@ function makeRequestId() {
 
 function classifyResult(result) {
     if (!result || typeof result !== "object") return "unconfirmed";
+    if (result.state === "success") return "success";
+    if (result.state === "empty") return "unconfirmed";
+    if (result.state === "unconfirmed") return "unconfirmed";
     if (Object.keys(result).length === 0) return "unconfirmed";
     const msg = String((result && result.message) || "");
     if (/已签到|重复|already|duplicate|repeat/i.test(msg)) return "already";
     if (result && result.success === false) return "failed";
     if (result && result.success === true) return "success";
     return "unconfirmed";
+}
+
+function normalizeRelayResult(result) {
+    if (!result || typeof result !== "object" || !result.message_b64) return;
+    try {
+        result.message = decodeURIComponent(escape(atob(result.message_b64)));
+    } catch (_) {
+        try { result.message = atob(result.message_b64); } catch (_2) {}
+    }
 }
 
 function normalizeRelayUrl(raw) {

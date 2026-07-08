@@ -66,6 +66,7 @@ function handleResult() {
             return;
         }
     }
+    normalizeRelayResult(result);
 
     const state = classifyResult(result);
     if (state === "unconfirmed") {
@@ -83,12 +84,24 @@ function handleResult() {
 
 function classifyResult(result) {
     if (!result || typeof result !== "object") return "unconfirmed";
+    if (result.state === "success") return "success";
+    if (result.state === "empty") return "unconfirmed";
+    if (result.state === "unconfirmed") return "unconfirmed";
     if (Object.keys(result).length === 0) return "unconfirmed";
     const msg = String((result && result.message) || "");
     if (/已签到|重复|already|duplicate|repeat/i.test(msg)) return "already";
     if (result && result.success === false) return "failed";
     if (result && result.success === true) return "success";
     return "unconfirmed";
+}
+
+function normalizeRelayResult(result) {
+    if (!result || typeof result !== "object" || !result.message_b64) return;
+    try {
+        result.message = decodeURIComponent(escape(atob(result.message_b64)));
+    } catch (_) {
+        try { result.message = atob(result.message_b64); } catch (_2) {}
+    }
 }
 
 function handleInject() {
