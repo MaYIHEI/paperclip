@@ -10,7 +10,7 @@ UA_DEF   = ('Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) '
             'Version/18.5 Mobile/15E148 Safari/604.1')
 
 
-def attend(cookie, ua, random_val):
+def attend(cookie, ua, random_val, rid='-'):
     rand = 'true' if random_val else 'false'
     url  = 'https://www.nodeseek.com/api/attendance?random=' + rand
     r = subprocess.run(
@@ -26,7 +26,10 @@ def attend(cookie, ua, random_val):
         capture_output=True, timeout=35)
     raw = r.stdout.decode('utf-8', 'replace')
     parts = raw.rsplit('\n===CODE:', 1)
-    return parts[0].strip() if len(parts) == 2 else raw.strip()
+    body = parts[0].strip() if len(parts) == 2 else raw.strip()
+    code = parts[1].rstrip('=').strip() if len(parts) == 2 else '?'
+    print(f'[attend] rid={rid} code={code} body={body[:200]!r}', flush=True)
+    return body
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -54,13 +57,16 @@ class Handler(BaseHTTPRequestHandler):
         cookie = req.get('cookie', '')
         ua     = req.get('ua', UA_DEF)
         rand   = req.get('random', False)
+        rid    = req.get('rid', '-')
         if not cookie or 'pjwt' not in cookie:
             return self._send(400, b'{"error":"missing pjwt"}')
         try:
-            body = attend(cookie, ua, rand)
+            body = attend(cookie, ua, rand, rid)
             if 'challenge-platform' in body or 'Just a moment' in body:
                 return self._send(502, b'{"error":"cf_block"}')
-            self._send(200, body.encode() if body else b'{"error":"empty"}')
+            payload = body.encode() if body else b'{"error":"empty"}'
+            print(f'[relay] rid={rid} send_len={len(payload)} send_body={payload[:200]!r}', flush=True)
+            self._send(200, payload)
         except Exception as e:
             self._send(500, json.dumps({'error': str(e)[:120]}).encode())
 

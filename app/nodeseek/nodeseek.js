@@ -55,7 +55,7 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-07-08.r1";
+const SCRIPT_VERSION = "2026-07-08.r2";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY        = "nodeseek_cookie";
@@ -92,17 +92,19 @@ const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) Appl
     const UA     = $.getdata(UA_KEY) || UA_FALLBACK;
     const random = ($.getdata(RANDOM_KEY) || "false") === "true";
     const DEBUG  = ($.getdata(DEBUG_KEY) || "false") === "true";
+    const rid    = makeRequestId();
 
     const cookieKeys = cookie.split(";").map(c => c.trim().split("=")[0]).join(", ");
     $.log("[INFO] cookie keys=" + cookieKeys);
     $.log("[INFO] ua=" + UA.substring(0, 60));
     if (DEBUG) {
+        $.log("[DEBUG] rid=" + rid);
         $.log("[DEBUG] relay=" + maskRelayUrl(relayUrl));
         $.log("[DEBUG] random=" + random);
     }
 
     try {
-        await attend(cookie, UA, random, relayUrl, relayKey, DEBUG);
+        await attend(cookie, UA, random, relayUrl, relayKey, DEBUG, rid);
     } catch (e) {
         $.msg("NodeSeek", "❌ 签到异常", String(e));
     }
@@ -110,7 +112,7 @@ const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) Appl
     $.done();
 })();
 
-function attend(cookie, UA, random, relayUrl, relayKey, DEBUG) {
+function attend(cookie, UA, random, relayUrl, relayKey, DEBUG, rid) {
     return new Promise((resolve) => {
         $.post({
             url: relayUrl,
@@ -118,7 +120,7 @@ function attend(cookie, UA, random, relayUrl, relayKey, DEBUG) {
                 "x-api-key": relayKey,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ cookie, ua: UA, random }),
+            body: JSON.stringify({ cookie, ua: UA, random, rid }),
         }, (err, resp, data) => {
             if (err) {
                 $.msg("NodeSeek", "❌ 中继请求失败", relayErrorHint(err));
@@ -183,6 +185,10 @@ function maskRelayUrl(raw) {
     } catch (_) {
         return String(raw || "").replace(/[?&].*$/, "");
     }
+}
+
+function makeRequestId() {
+    return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
 }
 
 function classifyResult(result) {
