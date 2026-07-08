@@ -68,8 +68,8 @@ function handleResult() {
     }
 
     const state = classifyResult(result);
-    if (state === "empty") {
-        $.msg("NodeSeek", "ℹ️ 无新签到结果", "NodeSeek 返回空对象，未获得鸡腿变化字段");
+    if (state === "unconfirmed") {
+        $.msg("NodeSeek", "❌ 签到未确认", "NodeSeek 未返回成功字段，需进站核对鸡腿是否变化");
     } else if (state === "already") {
         $.msg("NodeSeek", "ℹ️ 今日已签到", result.message || "");
     } else if (state === "failed") {
@@ -82,11 +82,13 @@ function handleResult() {
 }
 
 function classifyResult(result) {
-    if (result && typeof result === "object" && Object.keys(result).length === 0) return "empty";
+    if (!result || typeof result !== "object") return "unconfirmed";
+    if (Object.keys(result).length === 0) return "unconfirmed";
     const msg = String((result && result.message) || "");
     if (/已签到|重复|already|duplicate|repeat/i.test(msg)) return "already";
     if (result && result.success === false) return "failed";
-    return "success";
+    if (result && result.success === true) return "success";
+    return "unconfirmed";
 }
 
 function handleInject() {

@@ -55,7 +55,7 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-07-07.r2";
+const SCRIPT_VERSION = "2026-07-08.r1";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY        = "nodeseek_cookie";
@@ -159,8 +159,8 @@ function attend(cookie, UA, random, relayUrl, relayKey, DEBUG) {
                 $.log("[DEBUG] parsed keys=" + Object.keys(result || {}).join(","));
                 $.log("[DEBUG] classify=" + state + " success=" + result.success + " status=" + result.status + " gain=" + result.gain + " current=" + result.current + " message=" + (result.message || ""));
             }
-            if (state === "empty") {
-                $.msg("NodeSeek", "ℹ️ 无新签到结果", "NodeSeek 返回空对象，未获得鸡腿变化字段");
+            if (state === "unconfirmed") {
+                $.msg("NodeSeek", "❌ 签到未确认", "NodeSeek 未返回成功字段，需进站核对鸡腿是否变化");
             } else if (state === "already") {
                 $.msg("NodeSeek", "ℹ️ 今日已签到", result.message || "");
             } else if (state === "failed") {
@@ -186,11 +186,13 @@ function maskRelayUrl(raw) {
 }
 
 function classifyResult(result) {
-    if (result && typeof result === "object" && Object.keys(result).length === 0) return "empty";
+    if (!result || typeof result !== "object") return "unconfirmed";
+    if (Object.keys(result).length === 0) return "unconfirmed";
     const msg = String((result && result.message) || "");
     if (/已签到|重复|already|duplicate|repeat/i.test(msg)) return "already";
     if (result && result.success === false) return "failed";
-    return "success";
+    if (result && result.success === true) return "success";
+    return "unconfirmed";
 }
 
 function normalizeRelayUrl(raw) {
