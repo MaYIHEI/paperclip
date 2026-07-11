@@ -26,9 +26,9 @@
 hostname = webapi.qmai.cn
 
 [Script]
-http-request ^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar) tag=林里 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+http-request ^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar) tag=林里 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
 
-cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js, tag=林里签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
+cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, tag=林里签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
 ```
 
 ## Surge
@@ -38,9 +38,9 @@ cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/papercli
 hostname = webapi.qmai.cn
 
 [Script]
-林里 Cookie = type=http-request,pattern=^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+林里 Cookie = type=http-request,pattern=^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
 
-林里签到 = type=cron,cronexp=15 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+林里签到 = type=cron,cronexp=15 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
 ```
 
 ## Quantumult X
@@ -50,10 +50,10 @@ hostname = webapi.qmai.cn
 hostname = webapi.qmai.cn
 
 [rewrite_local]
-^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js
+^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js
 
 [task_local]
-15 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js, tag=林里签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enabled=true
+15 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, tag=林里签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enabled=true
 ```
 
 ## Stash
@@ -76,7 +76,7 @@ http:
 
 script-providers:
   林里签到:
-    url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js
+    url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js
     interval: 86400
 ```
 
