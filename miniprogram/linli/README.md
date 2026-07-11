@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png" width="80" alt="林里" />
+  <img src="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png" width="80" alt="林里" />
 </p>
 
 # 林里
@@ -26,9 +26,9 @@
 hostname = webapi.qmai.cn
 
 [Script]
-http-request ^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar) tag=林里 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+http-request ^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar) tag=林里 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
 
-cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, tag=林里签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
+cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, tag=林里签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png, enable=true
 ```
 
 ## Surge
@@ -38,9 +38,9 @@ cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/papercli
 hostname = webapi.qmai.cn
 
 [Script]
-林里 Cookie = type=http-request,pattern=^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+林里 Cookie = type=http-request,pattern=^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
 
-林里签到 = type=cron,cronexp=15 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+林里签到 = type=cron,cronexp=15 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
 ```
 
 ## Quantumult X
@@ -53,7 +53,7 @@ hostname = webapi.qmai.cn
 ^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js
 
 [task_local]
-15 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, tag=林里签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enabled=true
+15 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, tag=林里签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png, enabled=true
 ```
 
 ## Stash
@@ -89,4 +89,3 @@ script-providers:
 ## 已知限制
 
 - Cookie 的服务端有效期仍待跨日观察;失效后重新进入签到页即可更新
-- 当前使用 paperclip 通用图标,后续可替换为林里专用图标

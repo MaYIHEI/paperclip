@@ -1489,8 +1489,8 @@
       "repo": "https://github.com/MaYIHEI/paperclip/tree/testing/miniprogram/linli",
       "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/testing/miniprogram/linli/linli.js",
       "icons": [
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/paperclip.png",
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/paperclip.png"
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/linli.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/linli.png"
       ]
     }
   ]
