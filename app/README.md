@@ -14,6 +14,7 @@
 | [`mihoyo/`](./mihoyo/) | 米游社 - 游戏每日签到 | ✅ 维护中 |
 | [`newmixc/`](./newmixc/) | 一点万象(华润万象 APP) - 每日签到 | ✅ 维护中 |
 | [`mishop/`](./mishop/) | 小米商城 - 每日签到 | ✅ 维护中 |
+| [`milottery/`](./milottery/) | 小米商城 - 活动任务与自动抽奖 | 🧪 待验证 |
 | [`youpin/`](./youpin/) | 小米有品 - 每日签到红包 | ✅ 维护中 |
 | [`lhtj/`](./lhtj/) | 龙湖天街 App - 每日签到 + 幸运抽奖 | ✅ 维护中 |
 | [`qqmusic/`](./qqmusic/) | QQ 音乐 - 绿钻成长值每日签到(免签名通道 + refresh_key 自动续期) | ✅ 维护中 |
