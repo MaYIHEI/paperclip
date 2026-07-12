@@ -666,7 +666,7 @@
         },
         {
           "id": "qqmusic_task_favorite",
-          "name": "收藏歌曲任务",
+          "name": "收藏任务",
           "val": "true",
           "type": "selects",
           "items": [
@@ -679,7 +679,7 @@
               "label": "关闭"
             }
           ],
-          "desc": "临时收藏一首榜单歌曲，领取任务金币后自动取消收藏"
+          "desc": "临时收藏歌曲和有声书，领取任务金币后自动恢复收藏状态"
         },
         {
           "id": "qqmusic_debug",

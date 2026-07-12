@@ -52,7 +52,7 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-07-12.r7"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-12.r8"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -64,6 +64,11 @@ const APP_API_URL = "https://u6.y.qq.com/cgi-bin/musics.fcg";
 const MINA_APPID = "wxada7aab80ba27074"; // QQ 音乐微信小程序 appid(comm.appid)
 const COIN_SIGN_ACT_ID = "Z25hHGi"; // 金币签到活动,抓到新值时自动覆盖
 const COIN_SIGN_SCENE_ID = "2";
+const AUDIOBOOK_CANDIDATES = [
+    667539578, 667540691, 667541703, 667540570, 667540307,
+    667541417, 667541717, 667539836, 667540347, 667539821,
+    667539680, 667540587, 667542373, 667540939,
+];
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) MicroMessenger/8.0 miniProgram";
 
 $.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("qqmusic_debug")) || "false";
@@ -297,18 +302,21 @@ async function claimDailyTaskRewards(snap, uin) {
     if (!tasks) return;
 
     let temporarySong = null;
+    let temporaryAudiobook = null;
     try {
-        const favoriteTask = tasks.find((task) => task.ID === "Z1mKlEI" || task.TaskActTypID === "2tuNRp" || task.Type === 8);
-        if (favoriteTask && favoriteTask.State === 1 && !taskOff("qqmusic_task_favorite")) {
-            temporarySong = await addTemporaryFavorite(snap, uin);
+        const favoriteSongTask = tasks.find((task) => task.ID === "Z1mKlEI" || task.TaskActTypID === "2tuNRp" || task.Type === 8);
+        if (favoriteSongTask && favoriteSongTask.State === 1 && !taskOff("qqmusic_task_favorite")) {
+            temporarySong = await addTemporarySongFavorite(snap, uin);
             if (temporarySong) {
-                await $.wait(800);
-                tasks = await getDailyTasks(snap, uin, false) || tasks;
-                const refreshedFavorite = tasks.find((task) => task.ID === favoriteTask.ID);
-                if (refreshedFavorite && refreshedFavorite.State === 1) {
-                    await $.wait(1200);
-                    tasks = await getDailyTasks(snap, uin, false) || tasks;
-                }
+                tasks = await refreshTasksAfterAction(tasks, favoriteSongTask, snap, uin);
+            }
+        }
+
+        const favoriteAudiobookTask = tasks.find((task) => task.ID === "Z5bnvq" || task.TaskActTypID === "CeYSX" || task.Type === 36);
+        if (favoriteAudiobookTask && favoriteAudiobookTask.State === 1 && !taskOff("qqmusic_task_favorite")) {
+            temporaryAudiobook = await addTemporaryAudiobookFavorite(snap, uin);
+            if (temporaryAudiobook) {
+                tasks = await refreshTasksAfterAction(tasks, favoriteAudiobookTask, snap, uin);
             }
         }
 
@@ -345,7 +353,22 @@ async function claimDailyTaskRewards(snap, uin) {
             const removed = await updateFavoriteSong(snap, uin, "DelSonglist", temporarySong);
             if (!removed) $.messages.push("⚠️ 临时收藏歌曲清理失败,请到“我喜欢”检查最新一首");
         }
+        if (temporaryAudiobook) {
+            const removed = await updateFavoriteAudiobook(snap, uin, 2, temporaryAudiobook);
+            if (!removed) $.messages.push("⚠️ 临时收藏有声书清理失败,请到收藏的播客中检查");
+        }
     }
+}
+
+async function refreshTasksAfterAction(tasks, target, snap, uin) {
+    await $.wait(800);
+    let refreshed = await getDailyTasks(snap, uin, false) || tasks;
+    const current = refreshed.find((task) => task.ID === target.ID);
+    if (current && current.State === 1) {
+        await $.wait(1200);
+        refreshed = await getDailyTasks(snap, uin, false) || refreshed;
+    }
+    return refreshed;
 }
 
 async function getDailyTasks(snap, uin, notifyError) {
@@ -384,7 +407,7 @@ async function getDailyTasks(snap, uin, notifyError) {
     return tasks;
 }
 
-async function addTemporaryFavorite(snap, uin) {
+async function addTemporarySongFavorite(snap, uin) {
     const topRes = await post(API_URL, JSON.stringify({
         comm: makeComm(snap, uin),
         req_0: {
@@ -404,6 +427,56 @@ async function addTemporaryFavorite(snap, uin) {
     }
     $.log("[WARN] 未找到可临时收藏的榜单歌曲,跳过收藏任务");
     return null;
+}
+
+async function addTemporaryAudiobookFavorite(snap, uin) {
+    const queryBody = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.favorSystemRead.FavorSystem",
+            method: "get_long_audio_songinfo",
+            param: { userid: String(uin), page_num: 0, page_size: 100, fav_type: 1 },
+        },
+    };
+    const queryRes = await appPost(snap, uin, "get_long_audio_songinfo", queryBody);
+    debug(queryRes, "Favorite Audiobooks");
+    const queryReq = queryRes && queryRes.req_0;
+    const queryData = queryReq && queryReq.data;
+    if (!queryRes || queryRes.code !== 0 || !queryReq || queryReq.code !== 0 || !queryData || queryData.ret !== 0) {
+        $.log("[WARN] 收藏的有声书查询失败,为避免误删用户收藏,跳过任务");
+        return null;
+    }
+
+    const favoriteIDs = new Set((queryData.songlist || []).map((item) => Number(item.id || item.songid || 0)));
+    for (const songID of AUDIOBOOK_CANDIDATES) {
+        if (favoriteIDs.has(songID)) continue;
+        const candidate = { songID, version: 7, favType: 1 };
+        if (await updateFavoriteAudiobook(snap, uin, 1, candidate)) return candidate;
+    }
+
+    $.log("[WARN] 未找到可临时收藏的有声书,跳过任务");
+    return null;
+}
+
+async function updateFavoriteAudiobook(snap, uin, requestType, audiobook) {
+    const body = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.favorSystemWrite.FavorSystem",
+            method: "fav_long_audio_songid",
+            param: {
+                vec_songid: [audiobook.songID],
+                reqtype: requestType,
+                vec_version: [audiobook.version],
+                fav_type: audiobook.favType,
+            },
+        },
+    };
+    const res = await appPost(snap, uin, "fav_long_audio_songid", body);
+    debug(res, requestType === 1 ? "Add Audiobook Favorite" : "Remove Audiobook Favorite");
+    const req = res && res.req_0;
+    const data = req && req.data;
+    return Boolean(res && res.code === 0 && req && req.code === 0 && data && data.ret === 0);
 }
 
 async function updateFavoriteSong(snap, uin, method, song) {
