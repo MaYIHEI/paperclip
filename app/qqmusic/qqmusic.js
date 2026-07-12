@@ -1,8 +1,8 @@
 /**
- * QQ 音乐 · 绿钻成长值 + 金币中心每日签到
+ * QQ 音乐 · 绿钻成长值 + 金币中心签到与每日任务
  *
  * 抓取:打开 QQ 音乐 →「我的 / 会员 / 每日签到」或「金币中心 / 每日签到」,抓 Cookie
- * 签到:cron 自动续期后完成绿钻成长值与金币中心签到
+ * 签到:cron 自动续期后完成两套签到,并领取已完成的每日任务奖励
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
@@ -52,7 +52,7 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-07-12.r6"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-12.r7"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -60,6 +60,7 @@ const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_a
 // musicu.fcg + comm.authst(musickey) 鉴权,无私有 sign / 无 g_tk / 无 cookie。
 // 实测 App 抓的 qm_keyst 直接当 authst 即可(跨通道通用)。
 const API_URL = "https://u.y.qq.com/cgi-bin/musicu.fcg";
+const APP_API_URL = "https://u6.y.qq.com/cgi-bin/musics.fcg";
 const MINA_APPID = "wxada7aab80ba27074"; // QQ 音乐微信小程序 appid(comm.appid)
 const COIN_SIGN_ACT_ID = "Z25hHGi"; // 金币签到活动,抓到新值时自动覆盖
 const COIN_SIGN_SCENE_ID = "2";
@@ -132,6 +133,9 @@ async function checkin() {
     // 2) 两套签到都走小程序免签名通道,共用刚刷新的 authst。
     await checkLvzScore(snap, uin);
     await checkCoinSignIn(snap, uin);
+
+    // 3) App 每日任务需 zzc 动态签名;领取所有已达到完成条件的金币奖励。
+    await claimDailyTaskRewards(snap, uin);
 }
 
 async function checkLvzScore(snap, uin) {
@@ -288,6 +292,164 @@ function formatCoinReward(task) {
     return "";
 }
 
+async function claimDailyTaskRewards(snap, uin) {
+    let tasks = await getDailyTasks(snap, uin, true);
+    if (!tasks) return;
+
+    let temporarySong = null;
+    try {
+        const favoriteTask = tasks.find((task) => task.ID === "Z1mKlEI" || task.TaskActTypID === "2tuNRp" || task.Type === 8);
+        if (favoriteTask && favoriteTask.State === 1 && !taskOff("qqmusic_task_favorite")) {
+            temporarySong = await addTemporaryFavorite(snap, uin);
+            if (temporarySong) {
+                await $.wait(800);
+                tasks = await getDailyTasks(snap, uin, false) || tasks;
+                const refreshedFavorite = tasks.find((task) => task.ID === favoriteTask.ID);
+                if (refreshedFavorite && refreshedFavorite.State === 1) {
+                    await $.wait(1200);
+                    tasks = await getDailyTasks(snap, uin, false) || tasks;
+                }
+            }
+        }
+
+        const ready = tasks.filter((task) =>
+            task &&
+            task.State === 2 &&
+            Array.isArray(task.PrizeList) &&
+            task.PrizeList.some((prize) => prize && prize.Type === 12 && Number(prize.Value || 0) > 0)
+        );
+        const claimed = [];
+        for (const task of ready) {
+            const awardBody = {
+                comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+                req_0: {
+                    module: "music.activeCenter.ActTaskNewSvr",
+                    method: "AwardTaskPrize",
+                    param: { actID: task._actID, TaskID: task.ID },
+                },
+            };
+            const awardRes = await appPost(snap, uin, "AwardTaskPrize", awardBody);
+            debug(awardRes, `Award ${task.ID}`);
+            const awardReq = awardRes && awardRes.req_0;
+            const awardData = awardReq && awardReq.data;
+            if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && awardData.retCode === 0) {
+                const value = Number(awardData.awardValue || 0);
+                claimed.push(`${task.Name || task.ID}${value ? ` +${value}` : ""}`);
+            } else {
+                $.log(`[WARN] 每日任务领奖失败 (${task.Name || task.ID}, code=${awardReq ? awardReq.code : "?"}, ret=${awardData ? awardData.retCode : "?"})`);
+            }
+        }
+        if (claimed.length) $.messages.push(`✅ 每日任务领奖: ${claimed.join("、")}`);
+    } finally {
+        if (temporarySong) {
+            const removed = await updateFavoriteSong(snap, uin, "DelSonglist", temporarySong);
+            if (!removed) $.messages.push("⚠️ 临时收藏歌曲清理失败,请到“我喜欢”检查最新一首");
+        }
+    }
+}
+
+async function getDailyTasks(snap, uin, notifyError) {
+    const queryBody = {
+        comm: makeAppComm(snap, uin, 1, 200600, "DevopsCoinCenter3"),
+        req_0: {
+            module: "music.activeCenter.FloorManagerSvr",
+            method: "GetFloors",
+            param: { Release: 1, PageID: "songpopup", PersonalityMode: 1, FloorIDs: [85] },
+        },
+    };
+    const res = await appPost(snap, uin, "GetFloors", queryBody);
+    debug(res, "Daily Tasks");
+    const req = res && res.req_0;
+    const data = req && req.data;
+    if (!res || res.code !== 0 || !req || req.code !== 0 || !data || data.RetCode !== 0) {
+        if (notifyError) $.messages.push(`❌ 每日任务查询失败 (code=${req ? req.code : "?"})`);
+        $.log(`[DEBUG] 每日任务响应前300: ${$.toStr(res).slice(0, 300)}`);
+        return null;
+    }
+
+    const tasks = [];
+    for (const floor of data.Floors || []) {
+        for (const item of floor.ItemList || []) {
+            try {
+                const conf = typeof item.ResourceConf === "string" ? JSON.parse(item.ResourceConf) : item.ResourceConf;
+                for (const task of ((((conf || {}).ActTaskModule || {}).TaskList) || [])) {
+                    tasks.push({ ...task, _actID: (conf || {}).ActID || "Z1NRf2o" });
+                }
+            } catch (e) {
+                $.log(`[WARN] 每日任务配置解析失败: ${e.message || e}`);
+            }
+        }
+    }
+
+    return tasks;
+}
+
+async function addTemporaryFavorite(snap, uin) {
+    const topRes = await post(API_URL, JSON.stringify({
+        comm: makeComm(snap, uin),
+        req_0: {
+            module: "music.musicToplist.Toplist",
+            method: "GetDetail",
+            param: { topId: 26, offset: 0, num: 10, withTags: true },
+        },
+    }));
+    debug(topRes, "Favorite Candidates");
+    const songs = topRes && topRes.req_0 && topRes.req_0.data && topRes.req_0.data.data
+        ? topRes.req_0.data.data.song || []
+        : [];
+    for (const song of songs) {
+        const candidate = { songId: Number(song.songId), songType: Number(song.songType || 0) };
+        if (!candidate.songId) continue;
+        if (await updateFavoriteSong(snap, uin, "AddSonglist", candidate)) return candidate;
+    }
+    $.log("[WARN] 未找到可临时收藏的榜单歌曲,跳过收藏任务");
+    return null;
+}
+
+async function updateFavoriteSong(snap, uin, method, song) {
+    const res = await post(API_URL, JSON.stringify({
+        comm: makeComm(snap, uin),
+        req_0: {
+            module: "music.musicasset.PlaylistDetailWrite",
+            method,
+            param: {
+                dirId: 201,
+                tid: 0,
+                bFmtUtf8: true,
+                v_songInfo: [{ songId: song.songId, songType: song.songType }],
+            },
+        },
+    }));
+    debug(res, method);
+    return Boolean(res && res.code === 0 && res.req_0 && res.req_0.code === 0 && res.req_0.data && res.req_0.data.retCode === 0);
+}
+
+function makeAppComm(snap, uin, ct, cv, mesh) {
+    return {
+        g_tk: hash33(snap.authst),
+        uin: Number(uin),
+        format: "json",
+        inCharset: "utf-8",
+        outCharset: "utf-8",
+        notice: 0,
+        platform: "h5",
+        needNewCode: 1,
+        ct,
+        cv,
+        mesh_devops: mesh,
+    };
+}
+
+function appPost(snap, uin, cgiKey, payload) {
+    const body = JSON.stringify(payload);
+    const sign = zzcSign(body);
+    const url = `${APP_API_URL}?_webcgikey=${encodeURIComponent(cgiKey)}&_=${Date.now()}&sign=${sign}`;
+    return post(url, body, {
+        "content-type": "application/x-www-form-urlencoded",
+        Cookie: `uin=o${uin}; qm_keyst=${snap.authst}`,
+    });
+}
+
 // 用 refresh_key 换新 musickey。实测(2026-06-15):
 //   - musickey(qm_keyst)keyExpiresIn=259200 秒 = 3 天,每次续期换全新值 → 必须滚动存
 //   - refresh_key 长期不变(needRefreshKeyIn=0),是续期的根凭据
@@ -324,7 +486,7 @@ async function refreshKey(snap, uin) {
 
 // ============ 请求 ============
 
-function post(url, body) {
+function post(url, body, extraHeaders = {}) {
     return new Promise((resolve) => {
         const opts = {
             url,
@@ -332,6 +494,7 @@ function post(url, body) {
                 "content-type": "application/json",
                 accept: "application/json",
                 "User-Agent": UA,
+                ...extraHeaders,
             },
             body,
         };
@@ -357,6 +520,107 @@ function post(url, body) {
 function lowerKeys(obj) {
     if (!obj) return {};
     return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v]));
+}
+
+function taskOff(key) {
+    const value = $.getdata(key);
+    return value === false || value === 0 || value === "false" || value === "0";
+}
+
+function hash33(text) {
+    let hash = 5381;
+    for (let i = 0; i < text.length; i++) hash += (hash << 5) + text.charCodeAt(i);
+    return hash & 0x7fffffff;
+}
+
+function zzcSign(payload) {
+    const hash = sha1Hex(payload).toUpperCase();
+    const part1Indexes = [23, 14, 6, 36, 16, 7, 19];
+    const part2Indexes = [16, 1, 32, 12, 19, 27, 8, 5];
+    const scramble = [89, 39, 179, 150, 218, 82, 58, 252, 177, 52, 186, 123, 120, 64, 242, 133, 143, 161, 121, 179];
+    const part1 = part1Indexes.map((i) => hash[i]).join("");
+    const part2 = part2Indexes.map((i) => hash[i]).join("");
+    const bytes = scramble.map((value, i) => value ^ parseInt(hash.slice(i * 2, i * 2 + 2), 16));
+    const middle = bytesToBase64(bytes).replace(/[\\/+=]/g, "");
+    return `zzc${part1}${middle}${part2}`.toLowerCase();
+}
+
+function sha1Hex(text) {
+    const input = unescape(encodeURIComponent(text));
+    const words = [];
+    for (let i = 0; i < input.length; i++) {
+        words[i >> 2] = (words[i >> 2] || 0) | input.charCodeAt(i) << (24 - (i % 4) * 8);
+    }
+    words[input.length >> 2] = (words[input.length >> 2] || 0) | 0x80 << (24 - (input.length % 4) * 8);
+    words[(((input.length + 8) >> 6) + 1) * 16 - 1] = input.length * 8;
+
+    let h0 = 0x67452301;
+    let h1 = 0xefcdab89;
+    let h2 = 0x98badcfe;
+    let h3 = 0x10325476;
+    let h4 = 0xc3d2e1f0;
+    const w = new Array(80);
+    for (let offset = 0; offset < words.length; offset += 16) {
+        for (let i = 0; i < 80; i++) {
+            w[i] = i < 16 ? (words[offset + i] || 0) : rotateLeft(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
+        }
+        let a = h0;
+        let b = h1;
+        let c = h2;
+        let d = h3;
+        let e = h4;
+        for (let i = 0; i < 80; i++) {
+            let f;
+            let k;
+            if (i < 20) {
+                f = b & c | ~b & d;
+                k = 0x5a827999;
+            } else if (i < 40) {
+                f = b ^ c ^ d;
+                k = 0x6ed9eba1;
+            } else if (i < 60) {
+                f = b & c | b & d | c & d;
+                k = 0x8f1bbcdc;
+            } else {
+                f = b ^ c ^ d;
+                k = 0xca62c1d6;
+            }
+            const temp = (rotateLeft(a, 5) + f + e + k + w[i]) | 0;
+            e = d;
+            d = c;
+            c = rotateLeft(b, 30);
+            b = a;
+            a = temp;
+        }
+        h0 = h0 + a | 0;
+        h1 = h1 + b | 0;
+        h2 = h2 + c | 0;
+        h3 = h3 + d | 0;
+        h4 = h4 + e | 0;
+    }
+    return [h0, h1, h2, h3, h4]
+        .map((value) => (`00000000${(value >>> 0).toString(16)}`).slice(-8))
+        .join("");
+}
+
+function rotateLeft(value, bits) {
+    return value << bits | value >>> (32 - bits);
+}
+
+function bytesToBase64(bytes) {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let out = "";
+    for (let i = 0; i < bytes.length; i += 3) {
+        const a = bytes[i];
+        const b = i + 1 < bytes.length ? bytes[i + 1] : 0;
+        const c = i + 2 < bytes.length ? bytes[i + 2] : 0;
+        const value = a << 16 | b << 8 | c;
+        out += chars[(value >>> 18) & 63];
+        out += chars[(value >>> 12) & 63];
+        out += i + 1 < bytes.length ? chars[(value >>> 6) & 63] : "=";
+        out += i + 2 < bytes.length ? chars[value & 63] : "=";
+    }
+    return out;
 }
 
 function getCoinSignConfig(rawBody) {
@@ -405,7 +669,8 @@ function redactSensitive(text) {
         .replace(/("(?:authst|musickey|refresh_key|uin|musicid|str_musicid)"\s*:\s*")[^"]*/gi, "$1<redacted>")
         .replace(/("(?:uin|musicid)"\s*:\s*)\d+/gi, "$1<redacted>")
         .replace(/(qm_keyst=)[^;\s]+/gi, "$1<redacted>")
-        .replace(/(refresh_key=)[^;\s]+/gi, "$1<redacted>");
+        .replace(/(refresh_key=)[^;\s]+/gi, "$1<redacted>")
+        .replace(/(sign=)[^&\s]+/gi, "$1<redacted>");
 }
 
 async function sendMsg(message) {
