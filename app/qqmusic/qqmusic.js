@@ -10,23 +10,26 @@
  *
  * ===== Loon =====
  * [MITM]
- * hostname = u6.y.qq.com
+ * hostname = u6.y.qq.com, music.y.qq.com
  * [Script]
  * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * http-request ^https:\/\/music\.y\.qq\.com\/maproxy\/getInfo tag=QQ音乐广告模板, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  * cron "20 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
  *
  * ===== Surge =====
  * [MITM]
- * hostname = u6.y.qq.com
+ * hostname = u6.y.qq.com, music.y.qq.com
  * [Script]
  * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐广告模板 = type=http-request,pattern=^https:\/\/music\.y\.qq\.com\/maproxy\/getInfo,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  * QQ音乐签到 = type=cron,cronexp=20 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  *
  * ===== Quantumult X =====
  * [MITM]
- * hostname = u6.y.qq.com
+ * hostname = u6.y.qq.com, music.y.qq.com
  * [rewrite_local]
  * ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
+ * ^https:\/\/music\.y\.qq\.com\/maproxy\/getInfo url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
  * [task_local]
  * 20 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
  *
@@ -39,9 +42,14 @@
  * http:
  *   mitm:
  *     - "u6.y.qq.com"
+ *     - "music.y.qq.com"
  *   script:
  *     - match: ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary)
  *       name: QQ音乐 Cookie
+ *       type: request
+ *       require-body: true
+ *     - match: ^https:\/\/music\.y\.qq\.com\/maproxy\/getInfo
+ *       name: QQ音乐广告模板
  *       type: request
  *       require-body: true
  * script-providers:
@@ -52,10 +60,11 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-07-12.r8"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-12.r9"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
+const AD_TEMPLATE_KEY = "qqmusic_ad_request";
 // 签到走小程序免签名通道:解包 wxada7aab80ba27074 发现所有 CGI 都用
 // musicu.fcg + comm.authst(musickey) 鉴权,无私有 sign / 无 g_tk / 无 cookie。
 // 实测 App 抓的 qm_keyst 直接当 authst 即可(跨通道通用)。
@@ -114,6 +123,25 @@ function getCookie() {
         $.log(`[INFO] 已保存 (loginType=${login_type}, refresh_key=${saved.refresh_key ? "有" : "无"}, 金币活动${saved.coin_act_id ? "已识别" : "用默认值"})`);
     } catch (e) {
         $.log(`[ERROR] 抓取异常: ${e}`);
+    }
+}
+
+function captureAdTemplate() {
+    try {
+        const body = JSON.parse($request.body || "{}");
+        const reqInfo = body.msg_ad_req_info || {};
+        if (Number(reqInfo.ad_channel_id) !== 300507 || !/"source_id"\s*:\s*5001103/.test(reqInfo.custom_param || "")) return;
+
+        const headers = lowerKeys($request.headers);
+        $.setjson({
+            body,
+            cookie: normalizeCookie(headers.cookie),
+            userAgent: headers["user-agent"] || UA,
+            ts: Date.now(),
+        }, AD_TEMPLATE_KEY);
+        $.log("[INFO] 定时金币广告请求模板已更新");
+    } catch (e) {
+        $.log(`[WARN] 广告请求模板解析失败: ${e.message || e}`);
     }
 }
 
@@ -327,6 +355,7 @@ async function claimDailyTaskRewards(snap, uin) {
             task.PrizeList.some((prize) => prize && prize.Type === 12 && Number(prize.Value || 0) > 0)
         );
         const claimed = [];
+        const doubleCandidates = [];
         for (const task of ready) {
             const awardBody = {
                 comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
@@ -343,11 +372,15 @@ async function claimDailyTaskRewards(snap, uin) {
             if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && awardData.retCode === 0) {
                 const value = Number(awardData.awardValue || 0);
                 claimed.push(`${task.Name || task.ID}${value ? ` +${value}` : ""}`);
+                if (/定时.*(?:金币|积分)/.test(task.Name || "")) doubleCandidates.push(task);
             } else {
                 $.log(`[WARN] 每日任务领奖失败 (${task.Name || task.ID}, code=${awardReq ? awardReq.code : "?"}, ret=${awardData ? awardData.retCode : "?"})`);
             }
         }
         if (claimed.length) $.messages.push(`✅ 每日任务领奖: ${claimed.join("、")}`);
+        if (taskOn("qqmusic_task_ad")) {
+            for (const task of doubleCandidates) await tryDoubleTimedReward(snap, uin, task);
+        }
     } finally {
         if (temporarySong) {
             const removed = await updateFavoriteSong(snap, uin, "DelSonglist", temporarySong);
@@ -357,6 +390,96 @@ async function claimDailyTaskRewards(snap, uin) {
             const removed = await updateFavoriteAudiobook(snap, uin, 2, temporaryAudiobook);
             if (!removed) $.messages.push("⚠️ 临时收藏有声书清理失败,请到收藏的播客中检查");
         }
+    }
+}
+
+async function tryDoubleTimedReward(snap, uin, sourceTask) {
+    const template = $.getjson(AD_TEMPLATE_KEY, null);
+    if (!template || !template.body) {
+        $.messages.push("⚠️ 广告翻倍未运行: 请开启广告抓取后进一次金币中心");
+        return;
+    }
+
+    const doubleBody = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.activeCenter.ActTaskNewSvr",
+            method: "GetTaskDoubleTasks",
+            param: { actID: sourceTask._actID, taskIDs: [sourceTask.ID] },
+        },
+    };
+    const doubleRes = await appPost(snap, uin, "GetTaskDoubleTasks", doubleBody);
+    debug(doubleRes, `Double Tasks ${sourceTask.ID}`);
+    const taskInfos = doubleRes && doubleRes.req_0 && doubleRes.req_0.data && doubleRes.req_0.data.taskInfos;
+    const candidates = taskInfos && taskInfos[sourceTask.ID];
+    const doubleTask = Array.isArray(candidates) && candidates.find((task) => task && task.Ext && String(task.Ext.Ecpm) === "1");
+    if (!doubleTask) {
+        $.log(`[INFO] ${sourceTask.Name || sourceTask.ID} 当前无 ECPM 翻倍任务`);
+        return;
+    }
+
+    const adRequest = JSON.parse(JSON.stringify(template.body));
+    const now = Date.now();
+    adRequest.time = now;
+    adRequest.last_pull_time = now - 5000;
+    adRequest.cid = randomHex32();
+    adRequest.seq = randomHex32();
+    if (adRequest.user_info) adRequest.user_info.id = String(uin);
+    if (adRequest.msg_ad_req_info) adRequest.msg_ad_req_info.ad_channel_id = 300507;
+
+    const adRes = await post("https://music.y.qq.com/maproxy/getInfo", JSON.stringify(adRequest), {
+        "content-type": "application/json;charset=UTF-8",
+        Cookie: template.cookie || "",
+        "User-Agent": template.userAgent || UA,
+    }, false);
+    debug({
+        ret: adRes && adRes.ret,
+        positions: ((adRes && adRes.rpt_msg_pos_ad_info) || []).map((pos) => ({
+            posID: pos.pos_id,
+            adCount: (pos.rpt_msg_ad_info || []).length,
+        })),
+    }, "Reward Ad getInfo");
+    if (adRes && adRes.cookie) {
+        template.body.cookie = adRes.cookie;
+        template.ts = Date.now();
+        $.setjson(template, AD_TEMPLATE_KEY);
+    }
+
+    const positions = (adRes && adRes.rpt_msg_pos_ad_info) || [];
+    const ad = positions
+        .filter((pos) => Number(pos.pos_id) === 30050701)
+        .flatMap((pos) => pos.rpt_msg_ad_info || [])
+        .find((item) => item && item.base && item.base.verify_str && item.ui && Number(item.ui.reward_gold) > 0);
+    if (!ad) {
+        $.messages.push("⚠️ 定时金币翻倍: 当前未下发广告(可能已达频控)");
+        return;
+    }
+
+    // 留足活动要求的停留时间再提交奖励。
+    await $.wait(18000);
+    const reportBody = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.activeCenter.ActTaskNewSvr",
+            method: "TaskActDataReport",
+            param: {
+                actID: sourceTask._actID,
+                taskID: doubleTask.ID,
+                actData: 1,
+                actDataExt: {
+                    EcpmToken: ad.base.verify_str,
+                    RewardGold: String(ad.ui.reward_gold),
+                },
+            },
+        },
+    };
+    const reportRes = await appPost(snap, uin, "TaskActDataReport", reportBody);
+    debug(reportRes, `Ad Reward ${doubleTask.ID}`);
+    const data = reportRes && reportRes.req_0 && reportRes.req_0.data;
+    if (reportRes && reportRes.code === 0 && reportRes.req_0 && reportRes.req_0.code === 0 && data && data.retCode === 0) {
+        $.messages.push(`✅ 定时金币广告翻倍 +${Number(data.awardValue || ad.ui.reward_gold)}`);
+    } else {
+        $.messages.push(`⚠️ 定时金币广告翻倍未通过 (ret=${data ? data.retCode : "?"})`);
     }
 }
 
@@ -559,7 +682,7 @@ async function refreshKey(snap, uin) {
 
 // ============ 请求 ============
 
-function post(url, body, extraHeaders = {}) {
+function post(url, body, extraHeaders = {}, logRequest = true) {
     return new Promise((resolve) => {
         const opts = {
             url,
@@ -571,7 +694,7 @@ function post(url, body, extraHeaders = {}) {
             },
             body,
         };
-        debug({ url, body }, "POST request");
+        if (logRequest) debug(`${url}\n${body}`, "POST request");
         $.post(opts, (err, resp, data) => {
             if (err) {
                 $.log(`[ERROR] POST 失败: ${$.toStr(err)}`);
@@ -598,6 +721,17 @@ function lowerKeys(obj) {
 function taskOff(key) {
     const value = $.getdata(key);
     return value === false || value === 0 || value === "false" || value === "0";
+}
+
+function taskOn(key) {
+    const value = $.getdata(key);
+    return value === true || value === 1 || value === "true" || value === "1";
+}
+
+function randomHex32() {
+    let value = "";
+    while (value.length < 32) value += Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, "0");
+    return value.slice(0, 32);
 }
 
 function hash33(text) {
@@ -739,7 +873,7 @@ function debug(content, title = "debug") {
 
 function redactSensitive(text) {
     return String(text || "")
-        .replace(/("(?:authst|musickey|refresh_key|uin|musicid|str_musicid)"\s*:\s*")[^"]*/gi, "$1<redacted>")
+        .replace(/("(?:authst|musickey|refresh_key|uin|musicid|str_musicid|cookie|verify_str|EcpmToken|AdToken)"\s*:\s*")[^"]*/gi, "$1<redacted>")
         .replace(/("(?:uin|musicid)"\s*:\s*)\d+/gi, "$1<redacted>")
         .replace(/(qm_keyst=)[^;\s]+/gi, "$1<redacted>")
         .replace(/(refresh_key=)[^;\s]+/gi, "$1<redacted>")
@@ -763,11 +897,13 @@ async function sendMsg(message) {
 // ============ 入口 ============
 
 if (typeof $request !== "undefined") {
-    getCookie();
+    if (/\/maproxy\/getInfo(?:\?|$)/.test($request.url || "")) captureAdTemplate();
+    else getCookie();
     $.done();
 } else if (JSON.parse($.getdata("qqmusic_clear") || "false")) {
     // BoxJS 一键清除 Cookie:清完自动复位开关
     $.setdata("", CK_KEY);
+    $.setdata("", AD_TEMPLATE_KEY);
     $.setdata("false", "qqmusic_clear");
     $.msg($.name, "", "✅ Cookie 已清除,请重新抓取");
     $.done();
