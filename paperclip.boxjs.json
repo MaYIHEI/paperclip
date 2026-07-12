@@ -654,6 +654,7 @@
         "qqmusic_data",
         "qqmusic_clear",
         "qqmusic_task_favorite",
+        "qqmusic_task_ad",
         "qqmusic_debug"
       ],
       "settings": [
@@ -680,6 +681,23 @@
             }
           ],
           "desc": "临时收藏歌曲和有声书，领取任务金币后自动恢复收藏状态"
+        },
+        {
+          "id": "qqmusic_task_ad",
+          "name": "广告翻倍实验",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "实验性完成定时金币的广告翻倍；需配置广告请求抓取并进入一次金币中心"
         },
         {
           "id": "qqmusic_debug",
