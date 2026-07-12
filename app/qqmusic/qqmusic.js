@@ -1,34 +1,34 @@
 /**
- * QQ 音乐 · 绿钻成长值每日签到(QQ 音乐 App「我的-会员-每日签到」)
+ * QQ 音乐 · 绿钻成长值 + 金币中心每日签到
  *
- * 抓取:打开 QQ 音乐 →「我的 / 会员 / 每日签到」进签到页,抓 Cookie
- * 签到:cron 自动续期后签到,挂着代理永不用再开 App
+ * 抓取:打开 QQ 音乐 →「我的 / 会员 / 每日签到」或「金币中心 / 每日签到」,抓 Cookie
+ * 签到:cron 自动续期后完成绿钻成长值与金币中心签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-15
+ * @Updated: 2026-07-12
  *
  * ===== Loon =====
  * [MITM]
  * hostname = u6.y.qq.com
  * [Script]
- * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * cron "20 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
+ * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * cron "20 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
  *
  * ===== Surge =====
  * [MITM]
  * hostname = u6.y.qq.com
  * [Script]
- * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * QQ音乐签到 = type=cron,cronexp=20 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐签到 = type=cron,cronexp=20 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  *
  * ===== Quantumult X =====
  * [MITM]
  * hostname = u6.y.qq.com
  * [rewrite_local]
- * ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js
+ * ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
  * [task_local]
- * 20 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
+ * 20 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
  *
  * ===== Stash =====
  * cron:
@@ -40,27 +40,29 @@
  *   mitm:
  *     - "u6.y.qq.com"
  *   script:
- *     - match: ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore
+ *     - match: ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary)
  *       name: QQ音乐 Cookie
  *       type: request
- *       require-body: false
+ *       require-body: true
  * script-providers:
  *   QQ音乐签到:
- *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
  *     interval: 86400
  */
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-06-15.r5"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-12.r6"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
-const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, ts }
+const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
 // 签到走小程序免签名通道:解包 wxada7aab80ba27074 发现所有 CGI 都用
 // musicu.fcg + comm.authst(musickey) 鉴权,无私有 sign / 无 g_tk / 无 cookie。
 // 实测 App 抓的 qm_keyst 直接当 authst 即可(跨通道通用)。
 const API_URL = "https://u.y.qq.com/cgi-bin/musicu.fcg";
 const MINA_APPID = "wxada7aab80ba27074"; // QQ 音乐微信小程序 appid(comm.appid)
+const COIN_SIGN_ACT_ID = "Z25hHGi"; // 金币签到活动,抓到新值时自动覆盖
+const COIN_SIGN_SCENE_ID = "2";
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) MicroMessenger/8.0 miniProgram";
 
 $.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("qqmusic_debug")) || "false";
@@ -68,8 +70,7 @@ $.messages = [];
 
 // ============ 抓取 ============
 
-// 进会员中心/签到页时触发(musics.fcg 的 query 含 EveryDaySignLvzScore,含首页合并请求),
-// 只需从 Cookie 里取 uin + qm_keyst + refresh_key,不需要请求体。
+// 会员签到页或金币签到页触发。Cookie 提取长期登录材料,金币页 body 额外提取动态活动 ID。
 function getCookie() {
     try {
         const headers = lowerKeys($request.headers);
@@ -90,9 +91,21 @@ function getCookie() {
             $.log("[WARN] Cookie 缺 refresh_key,将无法自动续期(只能撑 ~3 天)");
         }
 
-        $.setjson({ uin, authst, refresh_key, login_type, ts: Date.now() }, CK_KEY);
+        const old = $.getjson(CK_KEY, {}) || {};
+        const coin = getCoinSignConfig($request.body);
+        const saved = {
+            ...old,
+            uin,
+            authst,
+            refresh_key: refresh_key || old.refresh_key || "",
+            login_type,
+            coin_act_id: coin.actID || old.coin_act_id || "",
+            coin_scene_id: coin.sceneID || old.coin_scene_id || "",
+            ts: Date.now(),
+        };
+        $.setjson(saved, CK_KEY);
         $.msg($.name, "✅ QQ音乐 Cookie 获取成功", "可关闭抓包,主脚本会自动续期并签到");
-        $.log(`[INFO] 已保存 (uin=${uin}, authst…${authst.slice(-6)}, refresh_key${refresh_key ? "…" + refresh_key.slice(-6) : "(无)"}, loginType=${login_type})`);
+        $.log(`[INFO] 已保存 (loginType=${login_type}, refresh_key=${saved.refresh_key ? "有" : "无"}, 金币活动${saved.coin_act_id ? "已识别" : "用默认值"})`);
     } catch (e) {
         $.log(`[ERROR] 抓取异常: ${e}`);
     }
@@ -105,7 +118,7 @@ async function checkin() {
     if (!snap || !snap.authst || !snap.uin) {
         $.messages.push(
             "🚫 未抓到 Cookie\n" +
-            "👉 打开 QQ 音乐 →「我的 / 会员 / 每日签到」进签到页一次"
+            "👉 打开 QQ 音乐 →「我的 / 会员 / 每日签到」或「金币中心 / 每日签到」一次"
         );
         return;
     }
@@ -116,9 +129,14 @@ async function checkin() {
     //    续期失败不致命(库存 musickey 可能还没过期),继续尝试签到。
     await refreshKey(snap, uin);
 
-    // 2) 签到:用(刚刷新的)authst
+    // 2) 两套签到都走小程序免签名通道,共用刚刷新的 authst。
+    await checkLvzScore(snap, uin);
+    await checkCoinSignIn(snap, uin);
+}
+
+async function checkLvzScore(snap, uin) {
     const body = {
-        comm: { uin: Number(uin), authst: snap.authst, mina: 1, appid: MINA_APPID, ct: 29, cv: 0, format: "json" },
+        comm: makeComm(snap, uin),
         req_0: {
             module: "music.lvz.MuFest13TaskSvr",
             method: "EveryDaySignLvzScore",
@@ -130,7 +148,7 @@ async function checkin() {
     debug(res, "EveryDaySignLvzScore");
 
     if (!res) {
-        $.messages.push("❌ 签到无响应(详情见日志)");
+        $.messages.push("❌ 绿钻成长值签到无响应(详情见日志)");
         return;
     }
     const r0 = res.req_0 || {};
@@ -139,7 +157,7 @@ async function checkin() {
     // 外层鉴权失败(authst 失效)→ code!=0,需重抓
     if (res.code !== 0 || (r0.code !== 0 && r0.code !== undefined && data.Ret === undefined)) {
         $.messages.push(
-            `❌ 签到失败 (code=${res.code}, req_0.code=${r0.code})\n` +
+            `❌ 绿钻成长值签到失败 (code=${res.code}, req_0.code=${r0.code})\n` +
             "续期可能也失败(refresh_key 失效或离线 >3 天),请重进「每日签到」页重抓"
         );
         $.log(`[DEBUG] 响应前300: ${$.toStr(res).slice(0, 300)}`);
@@ -150,11 +168,124 @@ async function checkin() {
         const score = (data.Info && data.Info.Score) || 0;
         $.messages.push(`✅ 绿钻成长值签到成功${score ? `: 今日 +${score}` : ""}`);
     } else if (data.Ret === 20019 || /已.*领取|已签|重复/.test(data.Msg || "")) {
-        $.messages.push(`✨ 今日已签到${data.Msg ? `(${data.Msg})` : ""}`);
+        $.messages.push(`✨ 绿钻成长值今日已签到${data.Msg ? `(${data.Msg})` : ""}`);
     } else {
-        $.messages.push(`⚠️ 已处理 (Ret=${data.Ret})${data.Msg ? `: ${data.Msg}` : ""}`);
+        $.messages.push(`⚠️ 绿钻成长值已处理 (Ret=${data.Ret})${data.Msg ? `: ${data.Msg}` : ""}`);
         $.log(`[DEBUG] 响应前300: ${$.toStr(res).slice(0, 300)}`);
     }
+}
+
+async function checkCoinSignIn(snap, uin) {
+    const actID = snap.coin_act_id || COIN_SIGN_ACT_ID;
+    const sceneID = snap.coin_scene_id || COIN_SIGN_SCENE_ID;
+    let state = await getCoinSignState(snap, uin, actID, sceneID);
+    if (!state) return;
+
+    let signedNow = false;
+    if (!state.info.IsSignIn) {
+        const signRes = await post(API_URL, JSON.stringify({
+            comm: makeComm(snap, uin),
+            req_0: {
+                module: "music.actCenter.ActCenterSignNewSvr",
+                method: "SignIn",
+                param: { ActID: actID, ScenesID: sceneID },
+            },
+        }));
+        debug(signRes, "Coin SignIn");
+        const signReq = signRes && signRes.req_0;
+        const signData = signReq && signReq.data;
+        if (!signRes || signRes.code !== 0 || !signReq || signReq.code !== 0 || !signData || signData.retCode !== 0 || !signData.Info || !signData.Info.IsSignIn) {
+            const code = signReq ? signReq.code : "?";
+            const ret = signData ? signData.retCode : "?";
+            $.messages.push(`❌ 金币中心签到失败 (code=${code}, ret=${ret})`);
+            $.log(`[DEBUG] 金币签到响应前300: ${$.toStr(signRes).slice(0, 300)}`);
+            return;
+        }
+        signedNow = true;
+        state = await getCoinSignState(snap, uin, actID, sceneID);
+        if (!state) return;
+    }
+
+    const day = Number(state.info.ContinueSignInCount || 0);
+    const taskMap = state.taskList || {};
+    const task = Object.values(taskMap).find((item) => item && item.State === 2) || taskMap[String(day)];
+    const reward = formatCoinReward(task);
+
+    if (task && task.State === 2) {
+        const awardRes = await post(API_URL, JSON.stringify({
+            comm: makeComm(snap, uin),
+            req_0: {
+                module: "music.actCenter.ActCenterSignNewSvr",
+                method: "AwardPrize",
+                param: { ActID: actID, TaskID: task.ID },
+            },
+        }));
+        debug(awardRes, "Coin AwardPrize");
+        const awardReq = awardRes && awardRes.req_0;
+        const awardData = awardReq && awardReq.data;
+        if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && (awardData.retCode === 0 || awardData.retCode === 100004)) {
+            $.messages.push(`${signedNow ? "✅ 金币中心签到成功" : "✅ 金币中心奖励已领取"}${reward}`);
+        } else {
+            const code = awardReq ? awardReq.code : "?";
+            const ret = awardData ? awardData.retCode : "?";
+            $.messages.push(`⚠️ 金币中心已签到,领奖失败 (code=${code}, ret=${ret})`);
+            $.log(`[DEBUG] 金币领奖响应前300: ${$.toStr(awardRes).slice(0, 300)}`);
+        }
+    } else if (state.info.IsSignIn) {
+        $.messages.push(`✨ 金币中心今日已签到${reward}`);
+    } else {
+        $.messages.push("⚠️ 金币中心签到状态未确认(详情见日志)");
+    }
+}
+
+async function getCoinSignState(snap, uin, actID, sceneID) {
+    const res = await post(API_URL, JSON.stringify({
+        comm: makeComm(snap, uin),
+        req_0: {
+            module: "music.actCenter.ActCenterSignNewSvr",
+            method: "GetSignInSummary",
+            param: { ActID: actID },
+        },
+        req_1: {
+            module: "music.actCenter.ActCenterSignNewSvr",
+            method: "GetSignInTaskList",
+            param: { ActID: actID, ScenesID: sceneID },
+        },
+    }));
+    debug(res, "Coin Sign State");
+    const summary = res && res.req_0;
+    const tasks = res && res.req_1;
+    const summaryData = summary && summary.data;
+    const taskData = tasks && tasks.data;
+    if (!res || res.code !== 0 || !summary || summary.code !== 0 || !tasks || tasks.code !== 0 || !summaryData || summaryData.retCode !== 0 || !taskData || taskData.retCode !== 0) {
+        $.messages.push(`❌ 金币中心状态查询失败 (summary=${summary ? summary.code : "?"}, tasks=${tasks ? tasks.code : "?"})`);
+        $.log(`[DEBUG] 金币状态响应前300: ${$.toStr(res).slice(0, 300)}`);
+        return null;
+    }
+    return {
+        info: taskData.Info || summaryData.Info || {},
+        taskList: (((taskData.TaskListInfo || {}).TaskList || {}).ContinueTaskList) || {},
+    };
+}
+
+function makeComm(snap, uin) {
+    return {
+        uin: Number(uin),
+        authst: snap.authst,
+        mina: 1,
+        appid: MINA_APPID,
+        ct: 29,
+        cv: 0,
+        format: "json",
+    };
+}
+
+function formatCoinReward(task) {
+    const prize = task && Array.isArray(task.PrizeList) ? task.PrizeList[0] : null;
+    if (!prize) return "";
+    if (prize.Name) return ` (${prize.Name})`;
+    if (prize.Value) return ` (+${prize.Value} 金币)`;
+    return "";
 }
 
 // 用 refresh_key 换新 musickey。实测(2026-06-15):
@@ -184,7 +315,7 @@ async function refreshKey(snap, uin) {
         if (data.refresh_key) snap.refresh_key = data.refresh_key; // 通常不变,变了也跟上
         snap.ts = Date.now();
         $.setjson(snap, CK_KEY);
-        $.log(`[INFO] musickey 已续期 (…${data.musickey.slice(-6)}, ${Math.round((data.keyExpiresIn || 0) / 86400)} 天有效)`);
+        $.log(`[INFO] musickey 已续期 (${Math.round((data.keyExpiresIn || 0) / 86400)} 天有效)`);
     } else {
         // 续期失败:refresh_key 可能已失效,或 cron 停了 >3 天 musickey 也过期了
         $.log(`[WARN] 续期失败 (req1.code=${res && res.req1 ? res.req1.code : "?"}),用库存 authst 继续`);
@@ -228,6 +359,29 @@ function lowerKeys(obj) {
     return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v]));
 }
 
+function getCoinSignConfig(rawBody) {
+    if (!rawBody) return {};
+    try {
+        const body = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
+        const reqs = body && typeof body === "object" ? Object.values(body) : [];
+        const matches = reqs.filter((item) =>
+            item &&
+            item.module === "music.actCenter.ActCenterSignNewSvr" &&
+            item.param &&
+            item.param.ActID
+        );
+        const req = matches[0];
+        const sceneReq = matches.find((item) => item.param.ScenesID);
+        return req ? {
+            actID: String(req.param.ActID),
+            sceneID: sceneReq ? String(sceneReq.param.ScenesID) : "",
+        } : {};
+    } catch (e) {
+        $.log(`[WARN] 金币签到配置解析失败,继续使用默认值: ${e.message || e}`);
+        return {};
+    }
+}
+
 // 清理代理合并多 cookie 头时残留的 "cookie:" 脏前缀,拼回标准 "k=v; k=v"
 function normalizeCookie(raw) {
     if (!raw) return "";
@@ -241,8 +395,17 @@ function normalizeCookie(raw) {
 function debug(content, title = "debug") {
     if ($.is_debug !== "true") return;
     $.log(`\n----- ${title} -----`);
-    $.log(typeof content === "string" ? content : $.toStr(content));
+    const text = typeof content === "string" ? content : $.toStr(content);
+    $.log(redactSensitive(text));
     $.log(`----- end -----\n`);
+}
+
+function redactSensitive(text) {
+    return String(text || "")
+        .replace(/("(?:authst|musickey|refresh_key|uin|musicid|str_musicid)"\s*:\s*")[^"]*/gi, "$1<redacted>")
+        .replace(/("(?:uin|musicid)"\s*:\s*)\d+/gi, "$1<redacted>")
+        .replace(/(qm_keyst=)[^;\s]+/gi, "$1<redacted>")
+        .replace(/(refresh_key=)[^;\s]+/gi, "$1<redacted>");
 }
 
 async function sendMsg(message) {

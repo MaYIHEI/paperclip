@@ -678,20 +678,20 @@
               "label": "开启"
             }
           ],
-          "desc": "开启后打印续期/签到请求与响应"
+          "desc": "开启后打印续期、绿钻签到与金币签到诊断日志，不输出 Cookie"
         }
       ],
       "author": "@MaYIHEI",
-      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/qqmusic",
-      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/qqmusic/qqmusic.js",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/testing/app/qqmusic",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/testing/app/qqmusic/qqmusic.js",
       "scripts": [
         {
           "name": "主签到",
-          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/qqmusic/qqmusic.js"
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/testing/app/qqmusic/qqmusic.js"
         },
         {
           "name": "抓 Cookie",
-          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/qqmusic/qqmusic.js"
+          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/testing/app/qqmusic/qqmusic.js"
         }
       ],
       "icons": [
