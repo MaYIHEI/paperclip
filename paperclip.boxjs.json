@@ -1450,6 +1450,48 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/baidunetdisk.png",
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/baidunetdisk.png"
       ]
+    },
+    {
+      "id": "paperclip.milottery",
+      "name": "小米抽奖",
+      "keys": [
+        "milottery_data",
+        "milottery_clear",
+        "milottery_debug"
+      ],
+      "settings": [
+        {
+          "id": "milottery_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "开启后运行一次脚本会清空已抓的 Cookie 与活动配置，完成后自动复位"
+        },
+        {
+          "id": "milottery_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "开启后打印接口诊断日志，不输出 Cookie"
+        }
+      ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/milottery",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/milottery/milottery.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/mishop.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/mishop.png"
+      ]
     }
   ]
 }
