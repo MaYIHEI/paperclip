@@ -1570,6 +1570,48 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/mishop.png",
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/mishop.png"
       ]
+    },
+    {
+      "id": "paperclip.pan1",
+      "name": "123社区",
+      "keys": [
+        "pan1_data",
+        "pan1_clear",
+        "pan1_debug"
+      ],
+      "settings": [
+        {
+          "id": "pan1_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "开启后运行一次脚本会清空已抓的 Cookie，完成后自动复位"
+        },
+        {
+          "id": "pan1_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "开启后打印签到响应和诊断日志，不输出 Cookie"
+        }
+      ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/testing/app/pan1",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/testing/app/pan1/pan1.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/pan1.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/pan1.png"
+      ]
     }
   ]
 }
