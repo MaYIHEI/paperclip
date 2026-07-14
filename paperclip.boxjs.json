@@ -1499,9 +1499,45 @@
       "keys": [
         "linli_data",
         "linli_clear",
-        "linli_debug"
+        "linli_debug",
+        "linli_task_exchange_coupon",
+        "linli_task_exchange_toy"
       ],
       "settings": [
+        {
+          "id": "linli_task_exchange_coupon",
+          "name": "兑换单杯免单券",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "默认关闭；开启后仅在商品售卖时间内检查库存并消耗 1 鸭币兑换"
+        },
+        {
+          "id": "linli_task_exchange_toy",
+          "name": "兑换游乐园周边",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "默认关闭；开启后仅在商品售卖时间内检查库存并消耗 1 鸭币兑换，实体订单仍待真机验证"
+        },
         {
           "id": "linli_clear",
           "name": "清除 Cookie",
@@ -1524,7 +1560,7 @@
               "label": "开启"
             }
           ],
-          "desc": "开启后打印签到和状态接口原始响应"
+          "desc": "开启后打印签到、商品和兑换接口原始响应"
         }
       ],
       "author": "@MaYIHEI",
