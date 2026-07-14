@@ -1,65 +1,73 @@
 /**
- * 林里 · 每日签到领积分
+ * 林里 · 每日签到与鸭币兑换
  *
- * 抓取:打开「林里」小程序 → 进入签到页,自动抓取 Cookie
- * 签到:cron 定时自动签到
+ * 首次抓取:打开「林里」小程序 → 进入签到页,自动抓取 Cookie
+ * 后续更新:Cookie 到期前后打开小程序首页或鸭币商城,自动保存新 Cookie
+ * 定时任务:每日签到;BoxJS 可分别开启免单券 / 周边兑换
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-11
+ * @Updated: 2026-07-14
  *
  * ===== Loon =====
  * [MITM]
  * hostname = webapi.qmai.cn
  * [Script]
- * http-request ^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar) tag=林里 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
- * cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, tag=林里签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png, enable=true
+ * http-request ^https:\/\/webapi\.qmai\.cn\/web\/(cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar)|catering\/common\/common-info|mall-apiserver\/integral\/(home\/index|item\/goods(\/detail)?)) tag=林里 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
+ * cron "0 10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, tag=林里签到兑换, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png, enable=true
  *
  * ===== Surge =====
  * [MITM]
  * hostname = webapi.qmai.cn
  * [Script]
- * 林里 Cookie = type=http-request,pattern=^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
- * 林里签到 = type=cron,cronexp=15 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
+ * 林里 Cookie = type=http-request,pattern=^https:\/\/webapi\.qmai\.cn\/web\/(cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar)|catering\/common\/common-info|mall-apiserver\/integral\/(home\/index|item\/goods(\/detail)?)),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
+ * 林里签到兑换 = type=cron,cronexp=0 10 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
  *
  * ===== Quantumult X =====
  * [MITM]
  * hostname = webapi.qmai.cn
  * [rewrite_local]
- * ^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js
+ * ^https:\/\/webapi\.qmai\.cn\/web\/(cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar)|catering\/common\/common-info|mall-apiserver\/integral\/(home\/index|item\/goods(\/detail)?)) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js
  * [task_local]
- * 15 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, tag=林里签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png, enabled=true
+ * 0 10 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js, tag=林里签到兑换, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png, enabled=true
  *
  * ===== Stash =====
  * cron:
  *   script:
- *     - name: 林里签到
- *       cron: '15 8 * * *'
+ *     - name: 林里签到兑换
+ *       cron: '0 10 * * *'
  *       timeout: 60
  * http:
  *   mitm:
  *     - "webapi.qmai.cn"
  *   script:
- *     - match: ^https:\/\/webapi\.qmai\.cn\/web\/cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar)
+ *     - match: ^https:\/\/webapi\.qmai\.cn\/web\/(cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar)|catering\/common\/common-info|mall-apiserver\/integral\/(home\/index|item\/goods(\/detail)?))
  *       name: 林里 Cookie
  *       type: request
  *       require-body: true
  * script-providers:
- *   林里签到:
+ *   林里签到兑换:
  *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js
  *     interval: 86400
  */
 
 const $ = new Env("林里");
 
-const SCRIPT_VERSION = "2026-07-11.r4"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-14.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "linli_data";
 const CK_CLEAR = "linli_clear";
 const CK_DEBUG = "linli_debug";
-const BASE = "https://webapi.qmai.cn/web/cmk-center/sign";
+const TASK_COUPON = "linli_task_exchange_coupon";
+const TASK_TOY = "linli_task_exchange_toy";
+const SIGN_BASE = "https://webapi.qmai.cn/web/cmk-center/sign";
+const MALL_BASE = "https://webapi.qmai.cn/web/mall-apiserver/integral";
 const DROP_HEADERS = ["content-length", "host", "connection", "accept-encoding"];
+const EXCHANGE_TARGETS = [
+    { key: TASK_COUPON, id: "1281777364363137025", name: "单杯免单券" },
+    { key: TASK_TOY, id: "1283198338438545409", name: "林里鸭游乐园周边" },
+];
 
 $.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata(CK_DEBUG)) || "false";
 $.messages = [];
@@ -70,23 +78,39 @@ function captureCookie() {
         const lower = lowerKeys(headers);
         const token = lower["qm-user-token"] || "";
         const body = parseJSON($request.body, {});
-        const activityId = body.activityId || "";
-        const appid = body.appid || "";
-        const storeId = lower["store-id"] || body.storeId || "";
+        const old = parseJSON($.getdata(CK_KEY), {});
+        const activityId = body.activityId || old.activityId || "";
+        const appid = body.appid || old.appid || "wx26c7aaacfa017719";
+        const storeId = lower["store-id"] || body.storeId || old.storeId || "";
 
         $.log(`[capture] token=${token ? "有" : "无"} activityId=${activityId || "无"} storeId=${storeId || "无"}`);
-        if (!token || !activityId || !storeId || !appid) {
-            $.log("[capture] 字段不完整,请重新进入签到页");
+        if (!token || !storeId || !appid) {
+            $.log("[capture] Cookie 字段不完整,已忽略本次请求");
+            return;
+        }
+        if (!activityId) {
+            $.log("[capture] 首次配置仍需进入签到页获取活动信息");
             return;
         }
 
-        const data = { headers, activityId: String(activityId), storeId: String(storeId), appid: String(appid) };
+        const oldToken = lowerKeys(old.headers || {})["qm-user-token"] || "";
+        const data = {
+            headers,
+            activityId: String(activityId),
+            storeId: String(storeId),
+            appid: String(appid),
+            capturedAt: Date.now(),
+        };
         const saved = $.setdata(JSON.stringify(data), CK_KEY);
         const checked = parseJSON($.getdata(CK_KEY), {});
         if (!saved || checked.activityId !== data.activityId) {
             throw new Error("Cookie 写入失败");
         }
-        $.msg($.name, "✅ 林里 Cookie 获取成功", "可关闭抓包,cron 自动签到");
+        if (!oldToken) {
+            $.msg($.name, "✅ 林里 Cookie 获取成功", "可关闭抓包,定时自动签到");
+        } else if (oldToken !== token) {
+            $.msg($.name, "♻️ 林里 Cookie 已自动更新", "以后打开小程序首页即可更新,无需再进签到页");
+        }
     } catch (e) {
         $.log(`[ERROR] Cookie 抓取异常: ${e.message || e}`);
     }
@@ -100,16 +124,19 @@ function maybeClear() {
     return true;
 }
 
-async function checkin() {
+function loadAuth() {
     const raw = $.isNode() ? process.env.LINLI_DATA : $.getdata(CK_KEY);
     const auth = parseJSON(raw, null);
     if (!auth || !auth.headers || !auth.activityId || !auth.storeId || !auth.appid) {
         throw new Error("未配置 Cookie,请进入林里小程序签到页抓取");
     }
+    return auth;
+}
 
+async function checkin(auth) {
     const headers = cleanHeaders(auth.headers);
     const common = { activityId: auth.activityId, appid: auth.appid };
-    const before = await api("/userSignStatistics", headers, common);
+    const before = await api(SIGN_BASE + "/userSignStatistics", headers, common);
     debug(before, "userSignStatistics(before)");
     assertAuth(before);
 
@@ -118,7 +145,7 @@ async function checkin() {
         return;
     }
 
-    const sign = await api("/takePartInSign", headers, {
+    const sign = await api(SIGN_BASE + "/takePartInSign", headers, {
         activityId: auth.activityId,
         storeId: auth.storeId,
         appid: auth.appid,
@@ -128,7 +155,7 @@ async function checkin() {
 
     if (sign && sign.status === true) {
         const rewards = rewardText(sign.data && sign.data.rewardDetailList);
-        const after = await api("/userSignStatistics", headers, common);
+        const after = await api(SIGN_BASE + "/userSignStatistics", headers, common);
         debug(after, "userSignStatistics(after)");
         $.messages.push(formatStatus(`✅ 签到成功${rewards ? `: ${rewards}` : ""}`, after));
         return;
@@ -142,9 +169,67 @@ async function checkin() {
     throw new Error(`签到失败: ${message || short(sign)}`);
 }
 
-function api(path, headers, body) {
+async function exchange(auth) {
+    const targets = EXCHANGE_TARGETS.filter((item) => taskOn(item.key));
+    if (!targets.length) return;
+
+    const headers = cleanHeaders(auth.headers);
+    for (const target of targets) {
+        const detail = await api(MALL_BASE + "/item/goods/detail", headers, {
+            goodsId: target.id,
+            appid: auth.appid,
+        });
+        debug(detail, `exchange detail: ${target.name}`);
+        assertAuth(detail);
+        if (!detail || detail.status !== true || !detail.data) {
+            $.messages.push(`❌ ${target.name}: 商品信息获取失败`);
+            continue;
+        }
+
+        const goods = detail.data;
+        const period = goods.timeCycleExtraVo || {};
+        if (period.saleIng !== true) {
+            $.log(`[exchange] ${target.name} 当前不在售卖时间,跳过`);
+            continue;
+        }
+        if (Number(goods.userOrderLimit) > 0 && Number(goods.userOrderTimes) >= Number(goods.userOrderLimit)) {
+            $.messages.push(`✨ ${target.name}: 已兑换`);
+            continue;
+        }
+        if (Number(goods.remainStocks) <= 0) {
+            $.messages.push(`⛔ ${target.name}: 已售罄`);
+            continue;
+        }
+        if (Number(goods.userPoints) < Number(goods.pointsPrice)) {
+            $.messages.push(`❌ ${target.name}: 鸭币不足`);
+            continue;
+        }
+
+        const order = await api(MALL_BASE + "/order/create", headers, {
+            goodsId: target.id,
+            appid: auth.appid,
+        });
+        debug(order, `exchange order: ${target.name}`);
+        assertAuth(order);
+        if (order && order.status === true && order.data) {
+            $.messages.push(`✅ ${target.name}: 兑换成功`);
+            continue;
+        }
+        const message = String((order && order.message) || "未知错误");
+        if (/已兑换|已购买|超过.*限制|限购/.test(message)) {
+            $.messages.push(`✨ ${target.name}: 已兑换`);
+        } else if (/售罄|库存|抢光/.test(message)) {
+            $.messages.push(`⛔ ${target.name}: 已售罄`);
+        } else {
+            $.messages.push(`❌ ${target.name}: ${message}`);
+        }
+    }
+}
+
+function api(url, headers, body) {
     return new Promise((resolve) => {
-        const opts = { url: BASE + path, headers, body: JSON.stringify(body) };
+        const path = url.replace("https://webapi.qmai.cn/web", "");
+        const opts = { url, headers, body: JSON.stringify(body) };
         $.post(opts, (err, resp, data) => {
             if (err) {
                 $.log(`[ERROR] POST ${path}: ${short(err)}`);
@@ -156,6 +241,11 @@ function api(path, headers, body) {
             resolve(result);
         });
     });
+}
+
+function taskOn(key) {
+    const value = $.isNode() ? process.env[key.toUpperCase()] : $.getdata(key);
+    return value === true || value === 1 || value === "true" || value === "1";
 }
 
 function assertAuth(res) {
@@ -220,7 +310,9 @@ if (typeof $request !== "undefined") {
 } else {
     (async () => {
         if (maybeClear()) return;
-        await checkin();
+        const auth = loadAuth();
+        await exchange(auth);
+        await checkin(auth);
     })().catch((e) => {
         $.messages.push(`❌ ${e.message || e}`);
         $.logErr(e);
