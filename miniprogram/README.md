@@ -19,7 +19,7 @@
 | [`songshan/`](./songshan/) | 松山棉店 - 每日签到(微盟 SaaS) | ✅ 维护中 |
 | [`wedome/`](./wedome/) | 味多美 - 每日签到(卓健/大咖 SaaS) | ✅ 维护中 |
 | [`bhg/`](./bhg/) | 北京华联(BHG Mall) - 每日签到(与龙德广场同会员体系,二选一) | ✅ 维护中 |
-| [`linli/`](./linli/) | 林里 - 每日签到、鸭币限时兑换 | 🧪 待验证 |
+| [`linli/`](./linli/) | 林里 - 每日签到、鸭币限时兑换 | ✅ 维护中 |
 | [`bibisheng/`](./bibisheng/) | 微信支付笔笔省 - 提现领券 | 📦 已归档 |
 | [`casetify/`](./casetify/) | CASETiFY - 每日签到 | 📦 已归档 |
 | [`topsports/`](./topsports/) | 滔搏运动 - 每日签到 | 📦 已归档 |
