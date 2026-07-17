@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-14
+ * @Updated: 2026-07-17
  *
  * ===== Loon =====
  * [MITM]
@@ -60,7 +60,7 @@
 
 const $ = new Env("123社区");
 
-const SCRIPT_VERSION = "2026-07-14.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-17.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "pan1_data";
@@ -129,9 +129,9 @@ async function run() {
         return;
     }
 
-    const result = await sign(auth);
-    if (!result) {
-        $.msg($.name, "❌ 签到失败", "网络无响应，请稍后重试");
+    const result = await signWithRetry(auth);
+    if (result.error) {
+        $.msg($.name, "❌ 签到失败", `网络错误，已重试 3 次\n${result.error.slice(0, 100)}`);
         return;
     }
     debug(`status=${result.status} body=${String(result.body).slice(0, 500)}`);
@@ -165,7 +165,20 @@ async function run() {
     }
 }
 
-function sign(auth) {
+async function signWithRetry(auth) {
+    const delays = [0, 3000, 6000];
+    let last = { status: 0, body: "", error: "网络无响应" };
+    for (let i = 0; i < delays.length; i++) {
+        if (delays[i]) await sleep(delays[i]);
+        last = await signOnce(auth);
+        const retryable = !!last.error || last.status === 0 || last.status >= 500;
+        if (!retryable) return last;
+        $.log(`[WARN] 签到网络错误(${i + 1}/${delays.length}): ${last.error || `HTTP ${last.status}`}`);
+    }
+    return last;
+}
+
+function signOnce(auth) {
     return new Promise((resolve) => {
         $.post({
             url: SIGN_URL,
@@ -180,16 +193,29 @@ function sign(auth) {
             body: "",
         }, (err, resp, body) => {
             if (err) {
-                debug(`request error=${String(err)}`);
-                resolve(null);
+                resolve({ status: 0, body: body || "", error: errorText(err) });
                 return;
             }
             resolve({
                 status: Number((resp && (resp.status || resp.statusCode)) || 0),
                 body: body || "",
+                error: "",
             });
         });
     });
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function errorText(error) {
+    if (typeof error === "string") return error;
+    try {
+        return JSON.stringify(error);
+    } catch (_) {
+        return String(error);
+    }
 }
 
 function header(headers, name) {
