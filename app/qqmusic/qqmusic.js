@@ -60,7 +60,7 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-07-17.r12"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-17.r13"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -79,6 +79,7 @@ const COIN_LOTTERY_PLAY_ID = "PR-Lottery-20240408-33489273491";
 const LOTTERY_AD_ACT_ID = "1DNTy6";
 const LOTTERY_AD_TASK_ID = "Z7zTYm";
 const FIXED_VIDEO_TASK_ID = "Z17TDyX";
+const HIGH_VIDEO_TASK_ID = "K4qAp";
 const RED_PACKET_RAIN_KEY = "1joIuy";
 const AUDIOBOOK_CATEGORY_ID = "42800344";
 const AUDIOBOOK_CANDIDATES = [93654004];
@@ -87,6 +88,7 @@ const SINGER_CANDIDATES = ["0039zms40xSD5K"];
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) MicroMessenger/8.0 miniProgram";
 const AD_SOURCE_BY_CHANNEL = {
     302004: 10010,
+    302035: 10011,
     302017: 4001101,
     300507: 5001101,
     302033: 7001101,
@@ -94,7 +96,7 @@ const AD_SOURCE_BY_CHANNEL = {
 const AD_PURCHASE_INFO_BY_CHANNEL = {
     300506: JSON.stringify({ user_type: 3, channel: 12, tme_material_type: 5 }),
 };
-const DIRECT_REWARD_AD_CHANNELS = [302004, 302017, 300507, 302033];
+const DIRECT_REWARD_AD_CHANNELS = [302004, 302035, 302017, 300507, 302033];
 
 $.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("qqmusic_debug")) || "false";
 $.messages = [];
@@ -668,10 +670,11 @@ async function runReturnedAdTasks(taskList, snap, uin, context) {
             ...context,
             taskList: currentTasks,
         });
-        if (!result.success) return;
+        if (!result.success) return false;
         currentTasks = result.data && result.data.adTaskList;
         task = chooseScriptableAdTask(currentTasks);
     }
+    return true;
 }
 
 async function runFixedVideoAds(tasks, snap, uin) {
@@ -694,13 +697,24 @@ async function runFixedVideoAds(tasks, snap, uin) {
         parentName: task.Name || "看视频领金币",
         taskList: tasks,
     };
-    const result = await executeRewardAdTask(task, snap, uin, context);
-    if (!result.success) return;
-    await runReturnedAdTasks(result.data && result.data.adTaskList, snap, uin, {
-        actID: context.actID,
-        fromID: context.fromID,
-        parentName: "看视频领金币",
-    });
+    const maxTimes = Math.max(1, Number(task.TaskMaxTimes || 1));
+    let finished = Math.max(0, Number(task.TaskFinishTime || 0));
+    while (finished < maxTimes && $.adState.count < $.adState.max) {
+        const result = await executeRewardAdTask(task, snap, uin, context);
+        if (!result.success) break;
+        finished++;
+        const chainSucceeded = await runReturnedAdTasks(
+            result.data && result.data.adTaskList,
+            snap,
+            uin,
+            {
+                actID: context.actID,
+                fromID: context.fromID,
+                parentName: "看视频领金币",
+            }
+        );
+        if (!chainSucceeded) break;
+    }
 }
 
 async function runLotteryTicketAds(snap, uin) {
@@ -966,7 +980,7 @@ function chooseScriptableAdTask(taskList) {
 }
 
 function chooseFixedRewardVideoTask(taskList) {
-    return findTaskObject(taskList, (task) =>
+    const tasks = findTaskObjects(taskList, (task) =>
         task &&
         Number(task.State) === 1 &&
         Number(task.Type) === 1003 &&
@@ -976,6 +990,14 @@ function chooseFixedRewardVideoTask(taskList) {
             DIRECT_REWARD_AD_CHANNELS.includes(getTaskAdConfig(task).channel)
         )
     );
+    return tasks.sort((a, b) => fixedRewardVideoPriority(b) - fixedRewardVideoPriority(a))[0] || null;
+}
+
+function fixedRewardVideoPriority(task) {
+    const channel = getTaskAdConfig(task).channel;
+    if (task.ID === HIGH_VIDEO_TASK_ID || channel === 302035) return 100;
+    if (task.ID === FIXED_VIDEO_TASK_ID || channel === 302004) return 90;
+    return 10;
 }
 
 function chooseRewardTaskForAd(taskList, fallback, ad) {
@@ -1000,11 +1022,15 @@ function isEcpmTask(task) {
 }
 
 function findTaskObject(root, predicate) {
-    let found = null;
+    return findTaskObjects(root, predicate)[0] || null;
+}
+
+function findTaskObjects(root, predicate) {
+    const found = [];
     const walk = (value) => {
-        if (found || !value || typeof value !== "object") return;
+        if (!value || typeof value !== "object") return;
         if (!Array.isArray(value) && value.ID && predicate(value)) {
-            found = value;
+            found.push(value);
             return;
         }
         for (const item of Array.isArray(value) ? value : Object.values(value)) walk(item);
@@ -1716,7 +1742,7 @@ function debug(content, title = "debug") {
 
 function redactSensitive(text) {
     return String(text || "")
-        .replace(/("(?:authst|musickey|refresh_key|uin|musicid|str_musicid|cookie|verify_str|EcpmToken|AdToken)"\s*:\s*")[^"]*/gi, "$1<redacted>")
+        .replace(/("(?:authst|musickey|refresh_key|uin|musicid|str_musicid|cookie|verify_str|EcpmToken|AdToken|openid|unionid|encryptUin|userip|phoneNo|encryptedPhoneNo)"\s*:\s*")[^"]*/gi, "$1<redacted>")
         .replace(/("(?:uin|musicid)"\s*:\s*)\d+/gi, "$1<redacted>")
         .replace(/(qm_keyst=)[^;\s]+/gi, "$1<redacted>")
         .replace(/(refresh_key=)[^;\s]+/gi, "$1<redacted>")
