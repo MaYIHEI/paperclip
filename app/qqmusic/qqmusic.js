@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-12
+ * @Updated: 2026-07-17
  *
  * ===== Loon =====
  * [MITM]
@@ -22,7 +22,7 @@
  * [Script]
  * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  * QQ音乐广告模板 = type=http-request,pattern=^https:\/\/music\.y\.qq\.com\/maproxy\/getInfo,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * QQ音乐签到 = type=cron,cronexp=20 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐签到 = type=cron,cronexp=20 9 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  *
  * ===== Quantumult X =====
  * [MITM]
@@ -38,7 +38,7 @@
  *   script:
  *     - name: QQ音乐签到
  *       cron: '20 9 * * *'
- *       timeout: 60
+ *       timeout: 1200
  * http:
  *   mitm:
  *     - "u6.y.qq.com"
@@ -60,7 +60,7 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-07-12.r9"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-17.r11"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -73,15 +73,40 @@ const APP_API_URL = "https://u6.y.qq.com/cgi-bin/musics.fcg";
 const MINA_APPID = "wxada7aab80ba27074"; // QQ 音乐微信小程序 appid(comm.appid)
 const COIN_SIGN_ACT_ID = "Z25hHGi"; // 金币签到活动,抓到新值时自动覆盖
 const COIN_SIGN_SCENE_ID = "2";
-const AUDIOBOOK_CANDIDATES = [
-    667539578, 667540691, 667541703, 667540570, 667540307,
-    667541417, 667541717, 667539836, 667540347, 667539821,
-    667539680, 667540587, 667542373, 667540939,
-];
+const DAILY_TASK_ACT_ID = "Z1NRf2o";
+const LOTTERY_SIGN_ACT_ID = "Z156KEu";
+const COIN_LOTTERY_PLAY_ID = "PR-Lottery-20240408-33489273491";
+const LOTTERY_AD_ACT_ID = "1DNTy6";
+const LOTTERY_AD_TASK_ID = "Z7zTYm";
+const RED_PACKET_RAIN_KEY = "1joIuy";
+const AUDIOBOOK_CATEGORY_ID = "42800344";
+const AUDIOBOOK_CANDIDATES = [93654004];
+const PLAYLIST_CANDIDATES = [9611383852];
+const SINGER_CANDIDATES = ["0039zms40xSD5K"];
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) MicroMessenger/8.0 miniProgram";
+const AD_SOURCE_BY_CHANNEL = {
+    302004: 10010,
+    302017: 4001101,
+    300507: 5001101,
+    302033: 7001101,
+};
+const AD_PURCHASE_INFO_BY_CHANNEL = {
+    300506: JSON.stringify({ user_type: 3, channel: 12, tme_material_type: 5 }),
+};
 
 $.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("qqmusic_debug")) || "false";
 $.messages = [];
+$.adState = {
+    count: 0,
+    completed: 0,
+    max: Math.max(1, Math.min(Number($.getdata("qqmusic_ad_max") || 20) || 20, 30)),
+    coins: 0,
+    tickets: 0,
+    landingCoins: 0,
+    templateWarned: false,
+    nativeWarned: false,
+    externalWarned: false,
+};
 
 // ============ 抓取 ============
 
@@ -128,18 +153,24 @@ function getCookie() {
 
 function captureAdTemplate() {
     try {
+        const headers = lowerKeys($request.headers);
+        if (headers["x-qqmusic-script"] === "1") return;
         const body = JSON.parse($request.body || "{}");
         const reqInfo = body.msg_ad_req_info || {};
-        if (Number(reqInfo.ad_channel_id) !== 300507 || !/"source_id"\s*:\s*5001103/.test(reqInfo.custom_param || "")) return;
+        const channel = Number(reqInfo.ad_channel_id);
+        if (!channel) return;
 
-        const headers = lowerKeys($request.headers);
-        $.setjson({
+        const current = normalizeAdTemplateStore($.getjson(AD_TEMPLATE_KEY, null));
+        const template = {
             body,
             cookie: normalizeCookie(headers.cookie),
             userAgent: headers["user-agent"] || UA,
             ts: Date.now(),
-        }, AD_TEMPLATE_KEY);
-        $.log("[INFO] 定时金币广告请求模板已更新");
+        };
+        current.templates[String(channel)] = template;
+        current.latest = template;
+        $.setjson(current, AD_TEMPLATE_KEY);
+        $.log(`[INFO] 广告请求模板已更新 (channel=${channel})`);
     } catch (e) {
         $.log(`[WARN] 广告请求模板解析失败: ${e.message || e}`);
     }
@@ -167,8 +198,15 @@ async function checkin() {
     await checkLvzScore(snap, uin);
     await checkCoinSignIn(snap, uin);
 
-    // 3) App 每日任务需 zzc 动态签名;领取所有已达到完成条件的金币奖励。
+    // 3) App 每日任务:完成可安全回滚的收藏/关注任务,并领取到点或已完成的奖励。
     await claimDailyTaskRewards(snap, uin);
+
+    // 4) 金币中心附属活动。活动配置失效时只跳过,不影响两套主签到。
+    if (!taskOff("qqmusic_task_activity")) {
+        await checkLotterySignIn(snap, uin);
+        await drawCoinLottery(snap, uin);
+        await runRedPacketRain(snap, uin);
+    }
 }
 
 async function checkLvzScore(snap, uin) {
@@ -325,97 +363,439 @@ function formatCoinReward(task) {
     return "";
 }
 
+async function checkLotterySignIn(snap, uin) {
+    let state = await getLotterySignState(snap, uin);
+    if (!state) return;
+
+    let signedNow = false;
+    if (!state.info.IsSignIn) {
+        const signRes = await appPost(snap, uin, "SignIn", {
+            comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+            req_0: {
+                module: "music.actCenter.ActCenterSignNewSvr",
+                method: "SignIn",
+                param: { ActID: LOTTERY_SIGN_ACT_ID },
+            },
+        });
+        debug(signRes, "Lottery SignIn");
+        if (!appRequestSucceeded(signRes)) {
+            $.log("[WARN] 金币抽奖签到失败,跳过附属签到");
+            return;
+        }
+        signedNow = true;
+        state = await getLotterySignState(snap, uin);
+        if (!state) return;
+    }
+
+    const task = Object.values(state.taskList || {}).find((item) => item && item.State === 2);
+    if (task) {
+        const awardRes = await appPost(snap, uin, "AwardPrize", {
+            comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+            req_0: {
+                module: "music.actCenter.ActCenterSignNewSvr",
+                method: "AwardPrize",
+                param: { ActID: LOTTERY_SIGN_ACT_ID, TaskID: task.ID },
+            },
+        });
+        debug(awardRes, "Lottery Sign Award");
+        if (appRequestSucceeded(awardRes)) {
+            $.messages.push(`✅ 金币抽奖签到${formatCoinReward(task)}`);
+        } else {
+            $.log("[WARN] 金币抽奖签到已完成,领奖失败");
+        }
+    } else if (signedNow) {
+        $.messages.push("✅ 金币抽奖签到已完成");
+    }
+}
+
+async function getLotterySignState(snap, uin) {
+    const res = await appPost(snap, uin, "GetSignInSummary", {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+        req_0: {
+            module: "music.actCenter.ActCenterSignNewSvr",
+            method: "GetSignInSummary",
+            param: { ActID: LOTTERY_SIGN_ACT_ID },
+        },
+        req_1: {
+            module: "music.actCenter.ActCenterSignNewSvr",
+            method: "GetSignInTaskList",
+            param: { ActID: LOTTERY_SIGN_ACT_ID },
+        },
+    });
+    debug(res, "Lottery Sign State");
+    if (!appRequestSucceeded(res, "req_0") || !appRequestSucceeded(res, "req_1")) return null;
+    const summaryData = res.req_0.data || {};
+    const taskData = res.req_1.data || {};
+    return {
+        info: taskData.Info || summaryData.Info || {},
+        taskList: (((taskData.TaskListInfo || {}).TaskList || {}).ContinueTaskList) || {},
+    };
+}
+
+async function drawCoinLottery(snap, uin) {
+    const query = () => appPost(snap, uin, "GetCoinUserInfo", {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+        req_0: {
+            module: "music.actCenter.CoinLotterySvr",
+            method: "GetCoinUserInfo",
+            param: { Param: 1, Playid: COIN_LOTTERY_PLAY_ID },
+        },
+    });
+    const infoRes = await query();
+    debug(infoRes, "Coin Lottery Info");
+    if (!appRequestSucceeded(infoRes)) return;
+
+    const remain = Number(findFirstValue(infoRes.req_0.data, ["lotteryRemain"]) || 0);
+    if (remain <= 0) return;
+
+    const gifts = [];
+    for (let i = 0; i < Math.min(remain, 10); i++) {
+        const drawRes = await appPost(snap, uin, "UserCoinLottery", {
+            comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+            req_0: {
+                module: "music.actCenter.CoinLotterySvr",
+                method: "UserCoinLottery",
+                param: { Param: 1, Playid: COIN_LOTTERY_PLAY_ID },
+            },
+        });
+        debug(drawRes, `Coin Lottery ${i + 1}`);
+        if (!appRequestSucceeded(drawRes)) break;
+        gifts.push(formatLotteryGift(drawRes.req_0.data));
+        await $.wait(350);
+    }
+    if (gifts.length) $.messages.push(`✅ 金币抽奖 ${gifts.length} 次: ${gifts.join("、")}`);
+}
+
+async function runRedPacketRain(snap, uin) {
+    const stateRes = await appPost(snap, uin, "Raining", {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+        req_0: {
+            module: "music.actCenter.RedPacketRainSvr",
+            method: "Raining",
+            param: { RainKey: RED_PACKET_RAIN_KEY },
+        },
+    });
+    debug(stateRes, "Red Packet Rain State");
+    if (!appRequestSucceeded(stateRes)) return;
+    const restChance = Number(findFirstValue(stateRes.req_0.data, ["restChance"]) || 0);
+    if (restChance <= 0) return;
+
+    let completed = 0;
+    let coins = 0;
+    for (let i = 0; i < Math.min(restChance, 6); i++) {
+        const chanceRes = await appPost(snap, uin, "IncrChance", {
+            comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+            req_0: {
+                module: "music.actCenter.RedPacketRainSvr",
+                method: "IncrChance",
+                param: { RainKey: RED_PACKET_RAIN_KEY, IncrType: 2 },
+            },
+        });
+        debug(chanceRes, `Red Packet Chance ${i + 1}`);
+        if (!appRequestSucceeded(chanceRes)) break;
+        await $.wait(800);
+
+        const drawRes = await appPost(snap, uin, "DrawPrizes", {
+            comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+            req_0: {
+                module: "music.actCenter.RedPacketRainSvr",
+                method: "DrawPrizes",
+                param: { RainKey: RED_PACKET_RAIN_KEY, HitNum: 10, HitStreakNum: 0 },
+            },
+        });
+        debug(drawRes, `Red Packet Draw ${i + 1}`);
+        if (!appRequestSucceeded(drawRes)) break;
+        completed++;
+        coins += Number(findFirstValue(drawRes.req_0.data, ["awardValue", "RewardGold", "rewardGold", "coinNum", "coin"]) || 0);
+    }
+    if (completed) $.messages.push(`✅ 红包雨 ${completed} 次${coins ? `: +${coins} 金币` : ""}`);
+}
+
 async function claimDailyTaskRewards(snap, uin) {
     let tasks = await getDailyTasks(snap, uin, true);
     if (!tasks) return;
 
-    let temporarySong = null;
-    let temporaryAudiobook = null;
+    const cleanups = [];
     try {
-        const favoriteSongTask = tasks.find((task) => task.ID === "Z1mKlEI" || task.TaskActTypID === "2tuNRp" || task.Type === 8);
-        if (favoriteSongTask && favoriteSongTask.State === 1 && !taskOff("qqmusic_task_favorite")) {
-            temporarySong = await addTemporarySongFavorite(snap, uin);
-            if (temporarySong) {
-                tasks = await refreshTasksAfterAction(tasks, favoriteSongTask, snap, uin);
+        const quizTask = findDailyTask(tasks, (task) => task.ID === "Zff1WO" || /皇宫身份/.test(task.Name || ""));
+        if (quizTask && quizTask.State === 1 && !taskOff("qqmusic_task_activity")) {
+            if (await reportDailyTaskAction(snap, uin, quizTask)) {
+                tasks = await refreshTasksAfterAction(tasks, quizTask, snap, uin);
             }
         }
 
-        const favoriteAudiobookTask = tasks.find((task) => task.ID === "Z5bnvq" || task.TaskActTypID === "CeYSX" || task.Type === 36);
-        if (favoriteAudiobookTask && favoriteAudiobookTask.State === 1 && !taskOff("qqmusic_task_favorite")) {
-            temporaryAudiobook = await addTemporaryAudiobookFavorite(snap, uin);
-            if (temporaryAudiobook) {
-                tasks = await refreshTasksAfterAction(tasks, favoriteAudiobookTask, snap, uin);
+        if (!taskOff("qqmusic_task_favorite")) {
+            const favoriteSongTask = findDailyTask(tasks, (task) => task.ID === "Z1mKlEI" || task.TaskActTypID === "2tuNRp" || Number(task.Type) === 8);
+            if (favoriteSongTask && favoriteSongTask.State === 1) {
+                const song = await addTemporarySongFavorite(snap, uin);
+                if (song) {
+                    tasks = await refreshTasksAfterAction(tasks, favoriteSongTask, snap, uin);
+                    const advanced = taskReachedReady(tasks, favoriteSongTask);
+                    if (advanced) {
+                        cleanups.push({
+                            name: "临时收藏歌曲",
+                            run: () => updateFavoriteSong(snap, uin, "DelSonglist", song),
+                            warning: "请到“我喜欢”检查最新一首",
+                        });
+                    } else {
+                        $.messages.push("⚠️ 收藏歌曲任务状态未更新;为避免误删原收藏,本次未自动取消候选歌曲");
+                    }
+                }
+            }
+
+            const favoritePlaylistTask = findDailyTask(tasks, (task) => task.ID === "ZBiJs9" || Number(task.Type) === 9);
+            if (favoritePlaylistTask && favoritePlaylistTask.State === 1) {
+                const playlist = await addTemporaryPlaylistFavorite(snap, uin);
+                if (playlist) {
+                    cleanups.push({
+                        name: "临时收藏歌单",
+                        run: () => updateFavoritePlaylist(snap, uin, false, playlist),
+                        warning: "请到收藏歌单中检查",
+                    });
+                    tasks = await refreshTasksAfterAction(tasks, favoritePlaylistTask, snap, uin);
+                }
+            }
+
+            const favoriteAudiobookTask = findDailyTask(tasks, (task) => task.ID === "Z5bnvq" || task.TaskActTypID === "CeYSX" || Number(task.Type) === 36);
+            if (favoriteAudiobookTask && favoriteAudiobookTask.State === 1) {
+                const audiobook = await addTemporaryAudiobookFavorite(snap, uin);
+                if (audiobook) {
+                    cleanups.push({
+                        name: "临时收藏有声书",
+                        run: () => updateFavoriteAudiobook(snap, uin, false, audiobook),
+                        warning: "请到收藏的有声书中检查",
+                    });
+                    tasks = await refreshTasksAfterAction(tasks, favoriteAudiobookTask, snap, uin);
+                }
+            }
+
+            const followSingerTask = findDailyTask(tasks, (task) => task.ID === "2wgcMV" || Number(task.Type) === 13);
+            if (followSingerTask && followSingerTask.State === 1) {
+                const singer = await addTemporarySingerFollow(snap, uin);
+                if (singer) {
+                    cleanups.push({
+                        name: "临时关注歌手",
+                        run: () => updateSingerFollow(snap, uin, false, singer),
+                        warning: "请到关注歌手中检查",
+                    });
+                    tasks = await refreshTasksAfterAction(tasks, followSingerTask, snap, uin);
+                }
             }
         }
 
-        const ready = tasks.filter((task) =>
-            task &&
-            task.State === 2 &&
-            Array.isArray(task.PrizeList) &&
-            task.PrizeList.some((prize) => prize && prize.Type === 12 && Number(prize.Value || 0) > 0)
-        );
-        const claimed = [];
-        const doubleCandidates = [];
-        for (const task of ready) {
-            const awardBody = {
-                comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
-                req_0: {
-                    module: "music.activeCenter.ActTaskNewSvr",
-                    method: "AwardTaskPrize",
-                    param: { actID: task._actID, TaskID: task.ID },
-                },
-            };
-            const awardRes = await appPost(snap, uin, "AwardTaskPrize", awardBody);
-            debug(awardRes, `Award ${task.ID}`);
-            const awardReq = awardRes && awardRes.req_0;
-            const awardData = awardReq && awardReq.data;
-            if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && awardData.retCode === 0) {
-                const value = Number(awardData.awardValue || 0);
-                claimed.push(`${task.Name || task.ID}${value ? ` +${value}` : ""}`);
-                if (/定时.*(?:金币|积分)/.test(task.Name || "")) doubleCandidates.push(task);
-            } else {
-                $.log(`[WARN] 每日任务领奖失败 (${task.Name || task.ID}, code=${awardReq ? awardReq.code : "?"}, ret=${awardData ? awardData.retCode : "?"})`);
-            }
-        }
-        if (claimed.length) $.messages.push(`✅ 每日任务领奖: ${claimed.join("、")}`);
-        if (taskOn("qqmusic_task_ad")) {
-            for (const task of doubleCandidates) await tryDoubleTimedReward(snap, uin, task);
+        await claimReadyTaskRewards(tasks, snap, uin);
+        if (adTasksEnabled()) {
+            noteUnsupportedNativeAdTasks(tasks);
+            await runLotteryTicketAds(snap, uin);
+            appendAdSummary();
         }
     } finally {
-        if (temporarySong) {
-            const removed = await updateFavoriteSong(snap, uin, "DelSonglist", temporarySong);
-            if (!removed) $.messages.push("⚠️ 临时收藏歌曲清理失败,请到“我喜欢”检查最新一首");
-        }
-        if (temporaryAudiobook) {
-            const removed = await updateFavoriteAudiobook(snap, uin, 2, temporaryAudiobook);
-            if (!removed) $.messages.push("⚠️ 临时收藏有声书清理失败,请到收藏的播客中检查");
+        for (const cleanup of cleanups.reverse()) {
+            const removed = await cleanup.run();
+            if (!removed) $.messages.push(`⚠️ ${cleanup.name}清理失败,${cleanup.warning}`);
         }
     }
 }
 
-async function tryDoubleTimedReward(snap, uin, sourceTask) {
-    const template = $.getjson(AD_TEMPLATE_KEY, null);
-    if (!template || !template.body) {
-        $.messages.push("⚠️ 广告翻倍未运行: 请开启广告抓取后进一次金币中心");
-        return;
+async function claimReadyTaskRewards(tasks, snap, uin) {
+    const ready = tasks.filter((task) =>
+        task &&
+        task.State === 2 &&
+        Array.isArray(task.PrizeList) &&
+        task.PrizeList.some((prize) => prize && Number(prize.Type) === 12 && Number(prize.Value || 0) > 0)
+    );
+    const claimed = [];
+    for (const task of ready) {
+        const awardBody = {
+            comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+            req_0: {
+                module: "music.activeCenter.ActTaskNewSvr",
+                method: "AwardTaskPrize",
+                param: { actID: task._actID, TaskID: task.ID },
+            },
+        };
+        const awardRes = await appPost(snap, uin, "AwardTaskPrize", awardBody);
+        debug(awardRes, `Award ${task.ID}`);
+        const awardReq = awardRes && awardRes.req_0;
+        const awardData = awardReq && awardReq.data;
+        if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && awardData.retCode === 0) {
+            const value = Number(awardData.awardValue || 0);
+            claimed.push(`${task.Name || task.ID}${value ? ` +${value}` : ""}`);
+            if (adTasksEnabled()) {
+                await runReturnedAdTasks(awardData.adTaskList, snap, uin, {
+                    actID: task._actID || DAILY_TASK_ACT_ID,
+                    fromID: /定时.*(?:金币|积分)/.test(task.Name || "") ? "" : "points",
+                    parentName: task.Name || task.ID,
+                });
+            }
+        } else {
+            $.log(`[WARN] 每日任务领奖失败 (${task.Name || task.ID}, code=${awardReq ? awardReq.code : "?"}, ret=${awardData ? awardData.retCode : "?"})`);
+        }
     }
+    if (claimed.length) $.messages.push(`✅ 每日任务领奖: ${claimed.join("、")}`);
+}
 
-    const doubleBody = {
+async function reportDailyTaskAction(snap, uin, task) {
+    const body = {
         comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
         req_0: {
             module: "music.activeCenter.ActTaskNewSvr",
-            method: "GetTaskDoubleTasks",
-            param: { actID: sourceTask._actID, taskIDs: [sourceTask.ID] },
+            method: "TaskActDataReport",
+            param: { actID: task._actID || DAILY_TASK_ACT_ID, taskID: task.ID, actData: 1 },
         },
     };
-    const doubleRes = await appPost(snap, uin, "GetTaskDoubleTasks", doubleBody);
-    debug(doubleRes, `Double Tasks ${sourceTask.ID}`);
-    const taskInfos = doubleRes && doubleRes.req_0 && doubleRes.req_0.data && doubleRes.req_0.data.taskInfos;
-    const candidates = taskInfos && taskInfos[sourceTask.ID];
-    const doubleTask = Array.isArray(candidates) && candidates.find((task) => task && task.Ext && String(task.Ext.Ecpm) === "1");
-    if (!doubleTask) {
-        $.log(`[INFO] ${sourceTask.Name || sourceTask.ID} 当前无 ECPM 翻倍任务`);
-        return;
+    const res = await appPost(snap, uin, "TaskActDataReport", body);
+    debug(res, `Task Action ${task.ID}`);
+    return appRequestSucceeded(res);
+}
+
+async function runReturnedAdTasks(taskList, snap, uin, context) {
+    let task = chooseScriptableAdTask(taskList);
+    if (!task) noteUnsupportedNativeAdTasks(taskList);
+    while (task && $.adState.count < $.adState.max) {
+        const result = await executeRewardAdTask(task, snap, uin, context);
+        if (!result.success) return;
+        task = chooseScriptableAdTask(result.data && result.data.adTaskList);
+    }
+}
+
+async function runLotteryTicketAds(snap, uin) {
+    if ($.adState.count >= $.adState.max) return;
+    const body = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.activeCenter.ActTaskNewSvr",
+            method: "GetTaskInfos",
+            param: { ActID: LOTTERY_AD_ACT_ID, TaskIDs: [LOTTERY_AD_TASK_ID] },
+        },
+    };
+    const res = await appPost(snap, uin, "GetTaskInfos", body);
+    debug(res, "Lottery Ad Task");
+    const task = findTaskObject(res && res.req_0 && res.req_0.data, (item) => item.ID === LOTTERY_AD_TASK_ID);
+    if (!task || Number(task.State) !== 1) return;
+
+    task._actID = LOTTERY_AD_ACT_ID;
+    const maxTimes = Math.max(1, Number(task.TaskMaxTimes || 1));
+    let finished = Math.max(0, Number(task.TaskFinishTime || 0));
+    while (finished < maxTimes && $.adState.count < $.adState.max) {
+        const result = await executeRewardAdTask(task, snap, uin, {
+            actID: LOTTERY_AD_ACT_ID,
+            fromID: "",
+            parentName: "金币抽奖次数",
+        });
+        if (!result.success) break;
+        finished++;
+    }
+}
+
+async function executeRewardAdTask(task, snap, uin, context = {}) {
+    const config = getTaskAdConfig(task);
+    if (!config.channel) {
+        $.log(`[WARN] 广告任务缺少动态广告位 (${task.Name || task.ID})`);
+        return { success: false };
+    }
+
+    const ad = await fetchRewardAd(config, snap, uin);
+    if (!ad) return { success: false };
+    $.adState.count++;
+    const adUI = ad.ui || {};
+
+    const isEcpm = String((task.Ext || {}).Ecpm || "") === "1";
+    const prizeType = Number((((task.PrizeList || [])[0]) || {}).Type || 0);
+    const isTicketTask = prizeType === 21 || task.ID === LOTTERY_AD_TASK_ID;
+    const directVerifyTask = isTicketTask;
+    if (!isEcpm && !directVerifyTask) {
+        if (!$.adState.nativeWarned) {
+            $.adState.nativeWarned = true;
+            $.log("[INFO] 固定金币视频使用广告 SDK 完成态票据,本轮不提交初始 verify_str");
+        }
+        return { success: false };
+    }
+
+    const rewardTime = Math.max(5000, Math.min(Number(adUI.reward_time || 30000), 60000));
+    await $.wait(rewardTime + 1200);
+
+    const actDataExt = isEcpm
+        ? {
+            EcpmToken: ad.base.verify_str,
+            RewardGold: String(Number(adUI.reward_gold || 0)),
+        }
+        : {
+            AdToken: ad.base.verify_str,
+        };
+
+    // 落地页/外部 App 奖励与视频奖励是两条链。存在明确的二次金币配置时,
+    // 按服务端要求再等待停留时间并附加回传字段;无二次奖励时不伪造。
+    const extraGold = Number(adUI.second_reward_gold || 0);
+    const landingPage = ad.landing_page || ad.landingPage || {};
+    const landingRewardType = Number(
+        landingPage.landing_page_reward_type ||
+        ad.landing_page_reward_type ||
+        0
+    );
+    const landingWait = Number(
+        adUI.landing_page_reward_time ||
+        adUI.clicklp_reward_time ||
+        adUI.reward_landing_page_expose_time ||
+        0
+    );
+    if (extraGold > 0 && landingRewardType > 0 && landingWait > 0) {
+        await $.wait(Math.max(landingWait, 5000) + 800);
+        actDataExt.AdLandPage = "1";
+        actDataExt.AdLandPageRewardGold = String(extraGold);
+    }
+
+    const param = {
+        actID: context.actID || task._actID || DAILY_TASK_ACT_ID,
+        taskID: task.ID,
+        actData: 1,
+        actDataExt,
+    };
+    if (context.fromID) param.fromID = context.fromID;
+
+    const reportBody = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.activeCenter.ActTaskNewSvr",
+            method: "TaskActDataReport",
+            param,
+        },
+    };
+    const reportRes = await appPost(snap, uin, "TaskActDataReport", reportBody);
+    debug(reportRes, `Ad Reward ${task.ID}`);
+    const req = reportRes && reportRes.req_0;
+    const data = req && req.data;
+    const success = Boolean(
+        reportRes &&
+        reportRes.code === 0 &&
+        req &&
+        req.code === 0 &&
+        data &&
+        Number(data.retCode) === 0
+    );
+    if (!success) {
+        $.log(`[WARN] 广告任务未通过 (${task.Name || task.ID}, ret=${data ? data.retCode : "?"})`);
+        return { success: false, data };
+    }
+
+    const awardValue = Number(data.awardValue || (isEcpm ? adUI.reward_gold : 1) || 0);
+    $.adState.completed++;
+    if (isTicketTask) $.adState.tickets += awardValue || 1;
+    else $.adState.coins += awardValue;
+    if (actDataExt.AdLandPage === "1") $.adState.landingCoins += extraGold;
+    $.log(`[INFO] 广告任务完成: ${context.parentName || task.Name || task.ID}${awardValue ? ` +${awardValue}` : ""}`);
+    return { success: true, data };
+}
+
+async function fetchRewardAd(config, snap, uin) {
+    const store = normalizeAdTemplateStore($.getjson(AD_TEMPLATE_KEY, null));
+    const template = store.templates[String(config.channel)] || store.latest;
+    if (!template || !template.body) {
+        if (!$.adState.templateWarned) {
+            $.adState.templateWarned = true;
+            $.messages.push("⚠️ 广告任务未运行: 请开启广告抓取后在金币中心加载一次广告");
+        }
+        return null;
     }
 
     const adRequest = JSON.parse(JSON.stringify(template.body));
@@ -425,86 +805,185 @@ async function tryDoubleTimedReward(snap, uin, sourceTask) {
     adRequest.cid = randomHex32();
     adRequest.seq = randomHex32();
     if (adRequest.user_info) adRequest.user_info.id = String(uin);
-    if (adRequest.msg_ad_req_info) adRequest.msg_ad_req_info.ad_channel_id = 300507;
+
+    const reqInfo = adRequest.msg_ad_req_info || (adRequest.msg_ad_req_info = {});
+    reqInfo.ad_channel_id = config.channel;
+    let custom = {};
+    try {
+        custom = typeof reqInfo.custom_param === "string"
+            ? JSON.parse(reqInfo.custom_param || "{}")
+            : { ...(reqInfo.custom_param || {}) };
+    } catch (_) {}
+    delete custom.source_id;
+    if (config.sourceID) custom.source_id = config.sourceID;
+    if ([302004, 300506, 302029].includes(config.channel)) {
+        if (!Object.prototype.hasOwnProperty.call(custom, "pkg_name_resources")) custom.pkg_name_resources = "";
+        if (!Object.prototype.hasOwnProperty.call(custom, "ad_purchase_info")) {
+            custom.ad_purchase_info = AD_PURCHASE_INFO_BY_CHANNEL[config.channel] || "";
+        }
+    } else {
+        delete custom.pkg_name_resources;
+        delete custom.ad_purchase_info;
+    }
+    reqInfo.custom_param = JSON.stringify(custom);
 
     const adRes = await post("https://music.y.qq.com/maproxy/getInfo", JSON.stringify(adRequest), {
         "content-type": "application/json;charset=UTF-8",
         Cookie: template.cookie || "",
         "User-Agent": template.userAgent || UA,
+        "X-QQMusic-Script": "1",
     }, false);
+    const ads = ((adRes && adRes.rpt_msg_pos_ad_info) || [])
+        .flatMap((position) => position.rpt_msg_ad_info || [])
+        .filter((item) => item && item.base && item.base.verify_str);
+    const ad = ads.find((item) =>
+        !config.nativeID || String(item.base.pos_id || "") === String(config.nativeID)
+    ) || ads[0];
     debug({
         ret: adRes && adRes.ret,
-        positions: ((adRes && adRes.rpt_msg_pos_ad_info) || []).map((pos) => ({
-            posID: pos.pos_id,
-            adCount: (pos.rpt_msg_ad_info || []).length,
-        })),
+        channel: config.channel,
+        adCount: ads.length,
+        selected: ad && {
+            posID: ad.base.pos_id,
+            productType: ad.base.product_type,
+            rewardTime: ad.ui && ad.ui.reward_time,
+            rewardGold: ad.ui && ad.ui.reward_gold,
+            secondRewardGold: ad.ui && ad.ui.second_reward_gold,
+        },
     }, "Reward Ad getInfo");
+    if (!ad) {
+        $.log(`[WARN] 广告位 ${config.channel} 当前无广告(可能已达频控)`);
+        return null;
+    }
+
     if (adRes && adRes.cookie) {
         template.body.cookie = adRes.cookie;
         template.ts = Date.now();
-        $.setjson(template, AD_TEMPLATE_KEY);
+        store.templates[String(config.channel)] = template;
+        store.latest = template;
+        $.setjson(store, AD_TEMPLATE_KEY);
     }
+    return ad;
+}
 
-    const positions = (adRes && adRes.rpt_msg_pos_ad_info) || [];
-    const ad = positions
-        .filter((pos) => Number(pos.pos_id) === 30050701)
-        .flatMap((pos) => pos.rpt_msg_ad_info || [])
-        .find((item) => item && item.base && item.base.verify_str && item.ui && Number(item.ui.reward_gold) > 0);
-    if (!ad) {
-        $.messages.push("⚠️ 定时金币翻倍: 当前未下发广告(可能已达频控)");
-        return;
-    }
+function getTaskAdConfig(task) {
+    let actExt = {};
+    try {
+        actExt = JSON.parse(((task.Ext || {}).ActExt) || "{}");
+    } catch (_) {}
+    const adPos = actExt.adPos || {};
+    const ios = adPos.ios;
+    const dynamicID = typeof ios === "object"
+        ? ios.dynamicAdId || ios.dynamic_ad_id || ios.id
+        : ios;
+    const nativeID = typeof ios === "object" ? ios.id : "";
+    const channel = Math.floor(Number(dynamicID || 0) / 100);
+    const sourceID = Number(
+        adPos.source_id ||
+        actExt.source_id ||
+        AD_SOURCE_BY_CHANNEL[channel] ||
+        0
+    );
+    return { channel, sourceID, nativeID, dynamicID };
+}
 
-    // 留足活动要求的停留时间再提交奖励。
-    await $.wait(18000);
-    const reportBody = {
-        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
-        req_0: {
-            module: "music.activeCenter.ActTaskNewSvr",
-            method: "TaskActDataReport",
-            param: {
-                actID: sourceTask._actID,
-                taskID: doubleTask.ID,
-                actData: 1,
-                actDataExt: {
-                    EcpmToken: ad.base.verify_str,
-                    RewardGold: String(ad.ui.reward_gold),
-                },
-            },
-        },
+function chooseScriptableAdTask(taskList) {
+    return findTaskObject(taskList, (task) =>
+        task &&
+        Number(task.State) === 1 &&
+        Number(task.Type) === 1003 &&
+        String((task.Ext || {}).Ecpm || "") === "1"
+    );
+}
+
+function findTaskObject(root, predicate) {
+    let found = null;
+    const walk = (value) => {
+        if (found || !value || typeof value !== "object") return;
+        if (!Array.isArray(value) && value.ID && predicate(value)) {
+            found = value;
+            return;
+        }
+        for (const item of Array.isArray(value) ? value : Object.values(value)) walk(item);
     };
-    const reportRes = await appPost(snap, uin, "TaskActDataReport", reportBody);
-    debug(reportRes, `Ad Reward ${doubleTask.ID}`);
-    const data = reportRes && reportRes.req_0 && reportRes.req_0.data;
-    if (reportRes && reportRes.code === 0 && reportRes.req_0 && reportRes.req_0.code === 0 && data && data.retCode === 0) {
-        $.messages.push(`✅ 定时金币广告翻倍 +${Number(data.awardValue || ad.ui.reward_gold)}`);
-    } else {
-        $.messages.push(`⚠️ 定时金币广告翻倍未通过 (ret=${data ? data.retCode : "?"})`);
+    walk(root);
+    return found;
+}
+
+function normalizeAdTemplateStore(value) {
+    if (value && value.templates && typeof value.templates === "object") {
+        return { templates: value.templates, latest: value.latest || null };
+    }
+    if (value && value.body) {
+        const channel = Number((((value || {}).body || {}).msg_ad_req_info || {}).ad_channel_id || 0);
+        return {
+            templates: channel ? { [String(channel)]: value } : {},
+            latest: value,
+        };
+    }
+    return { templates: {}, latest: null };
+}
+
+function noteUnsupportedNativeAdTasks(tasks) {
+    const task = findTaskObject(tasks, (item) =>
+        item &&
+        Number(item.State) === 1 &&
+        (
+            (
+                Number(item.Type) === 1003 &&
+                String((item.Ext || {}).Ecpm || "") !== "1"
+            ) ||
+            [8003, 8005, 8012].includes(Number(item.Type))
+        )
+    );
+    if (!task) return;
+    if ([8003, 8005, 8012].includes(Number(task.Type))) {
+        if (!$.adState.externalWarned) {
+            $.adState.externalWarned = true;
+            $.log(`[INFO] ${task.Name || task.ID}: 外跳任务等待原生打开/返回回调突破`);
+        }
+    } else if (!$.adState.nativeWarned) {
+        $.adState.nativeWarned = true;
+        $.log(`[INFO] ${task.Name || task.ID}: 等待原生广告完成态票据突破`);
     }
 }
 
+function appendAdSummary() {
+    if (!$.adState.completed) return;
+    const parts = [`完成 ${$.adState.completed} 个`];
+    if ($.adState.coins) parts.push(`金币 +${$.adState.coins}`);
+    if ($.adState.tickets) parts.push(`抽奖次数 +${$.adState.tickets}`);
+    if ($.adState.landingCoins) parts.push(`含跳转奖励 +${$.adState.landingCoins}`);
+    $.messages.push(`✅ 广告任务: ${parts.join("，")}`);
+}
+
 async function refreshTasksAfterAction(tasks, target, snap, uin) {
-    await $.wait(800);
-    let refreshed = await getDailyTasks(snap, uin, false) || tasks;
-    const current = refreshed.find((task) => task.ID === target.ID);
-    if (current && current.State === 1) {
-        await $.wait(1200);
+    let refreshed = tasks;
+    for (let attempt = 0; attempt < 4; attempt++) {
+        await $.wait(1500);
         refreshed = await getDailyTasks(snap, uin, false) || refreshed;
+        if (taskReachedReady(refreshed, target)) break;
     }
     return refreshed;
 }
 
 async function getDailyTasks(snap, uin, notifyError) {
+    let tasks = await queryDailyTasks(snap, uin, "18NtBy", [193], false);
+    if (!tasks || !tasks.length) tasks = await queryDailyTasks(snap, uin, "songpopup", [85], notifyError);
+    return tasks;
+}
+
+async function queryDailyTasks(snap, uin, pageID, floorIDs, notifyError) {
     const queryBody = {
-        comm: makeAppComm(snap, uin, 1, 200600, "DevopsCoinCenter3"),
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
         req_0: {
             module: "music.activeCenter.FloorManagerSvr",
             method: "GetFloors",
-            param: { Release: 1, PageID: "songpopup", PersonalityMode: 1, FloorIDs: [85] },
+            param: { Release: 1, PageID: pageID, PersonalityMode: 1, FloorIDs: floorIDs },
         },
     };
     const res = await appPost(snap, uin, "GetFloors", queryBody);
-    debug(res, "Daily Tasks");
+    debug(res, `Daily Tasks ${pageID}`);
     const req = res && res.req_0;
     const data = req && req.data;
     if (!res || res.code !== 0 || !req || req.code !== 0 || !data || data.RetCode !== 0) {
@@ -519,7 +998,7 @@ async function getDailyTasks(snap, uin, notifyError) {
             try {
                 const conf = typeof item.ResourceConf === "string" ? JSON.parse(item.ResourceConf) : item.ResourceConf;
                 for (const task of ((((conf || {}).ActTaskModule || {}).TaskList) || [])) {
-                    tasks.push({ ...task, _actID: (conf || {}).ActID || "Z1NRf2o" });
+                    tasks.push({ ...task, _actID: (conf || {}).ActID || DAILY_TASK_ACT_ID });
                 }
             } catch (e) {
                 $.log(`[WARN] 每日任务配置解析失败: ${e.message || e}`);
@@ -543,7 +1022,8 @@ async function addTemporarySongFavorite(snap, uin) {
     const songs = topRes && topRes.req_0 && topRes.req_0.data && topRes.req_0.data.data
         ? topRes.req_0.data.data.song || []
         : [];
-    for (const song of songs) {
+    const shuffled = songs.slice().sort(() => Math.random() - 0.5);
+    for (const song of shuffled) {
         const candidate = { songId: Number(song.songId), songType: Number(song.songType || 0) };
         if (!candidate.songId) continue;
         if (await updateFavoriteSong(snap, uin, "AddSonglist", candidate)) return candidate;
@@ -553,53 +1033,177 @@ async function addTemporarySongFavorite(snap, uin) {
 }
 
 async function addTemporaryAudiobookFavorite(snap, uin) {
-    const queryBody = {
-        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+    const listBody = {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsBase"),
         req_0: {
-            module: "music.favorSystemRead.FavorSystem",
-            method: "get_long_audio_songinfo",
-            param: { userid: String(uin), page_num: 0, page_size: 100, fav_type: 1 },
+            module: "music.longRadio.LongRadioContent",
+            method: "GetChannelPageV2",
+            param: { tabIndex: -1, abt: "39445_39445003", splashEndInterval: -1, categoryId: AUDIOBOOK_CATEGORY_ID, page: 1 },
         },
     };
-    const queryRes = await appPost(snap, uin, "get_long_audio_songinfo", queryBody);
-    debug(queryRes, "Favorite Audiobooks");
-    const queryReq = queryRes && queryRes.req_0;
-    const queryData = queryReq && queryReq.data;
-    if (!queryRes || queryRes.code !== 0 || !queryReq || queryReq.code !== 0 || !queryData || queryData.ret !== 0) {
-        $.log("[WARN] 收藏的有声书查询失败,为避免误删用户收藏,跳过任务");
-        return null;
-    }
-
-    const favoriteIDs = new Set((queryData.songlist || []).map((item) => Number(item.id || item.songid || 0)));
-    for (const songID of AUDIOBOOK_CANDIDATES) {
-        if (favoriteIDs.has(songID)) continue;
-        const candidate = { songID, version: 7, favType: 1 };
-        if (await updateFavoriteAudiobook(snap, uin, 1, candidate)) return candidate;
+    const listRes = await appPost(snap, uin, "GetChannelPageV2", listBody);
+    debug(listRes, "Audiobook Candidates");
+    const dynamicIDs = collectValuesByKeys(listRes, ["albumID", "albumId", "album_id", "radioID", "radioId", "radio_id"], (value) => /^\d{6,12}$/.test(String(value)), 20);
+    const candidates = uniqueValues([...AUDIOBOOK_CANDIDATES, ...dynamicIDs]).map((id) => ({ bookID: String(id) }));
+    for (const candidate of candidates) {
+        const status = await queryFollowStatus(snap, uin, 400, candidate.bookID);
+        if (status === true) continue;
+        if (status !== false) {
+            $.log(`[WARN] 有声书 ${candidate.bookID} 原收藏状态未知,跳过`);
+            continue;
+        }
+        if (await updateFavoriteAudiobook(snap, uin, true, candidate)) return candidate;
     }
 
     $.log("[WARN] 未找到可临时收藏的有声书,跳过任务");
     return null;
 }
 
-async function updateFavoriteAudiobook(snap, uin, requestType, audiobook) {
+async function updateFavoriteAudiobook(snap, uin, add, audiobook) {
     const body = {
         comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
         req_0: {
             module: "music.favorSystemWrite.FavorSystem",
-            method: "fav_long_audio_songid",
+            method: "do_favor",
             param: {
-                vec_songid: [audiobook.songID],
-                reqtype: requestType,
-                vec_version: [audiobook.version],
-                fav_type: audiobook.favType,
+                reqtype: add ? 1 : 2,
+                fav_type: 1,
+                vec_id: [String(audiobook.bookID)],
             },
         },
     };
-    const res = await appPost(snap, uin, "fav_long_audio_songid", body);
-    debug(res, requestType === 1 ? "Add Audiobook Favorite" : "Remove Audiobook Favorite");
-    const req = res && res.req_0;
-    const data = req && req.data;
-    return Boolean(res && res.code === 0 && req && req.code === 0 && data && data.ret === 0);
+    const res = await appPost(snap, uin, "do_favor", body);
+    debug(res, add ? "Add Audiobook Favorite" : "Remove Audiobook Favorite");
+    return appRequestSucceeded(res);
+}
+
+async function addTemporaryPlaylistFavorite(snap, uin) {
+    const dynamicIDs = await searchContentCandidates(snap, uin, 4, ["dissid"]);
+    const candidates = uniqueValues([...PLAYLIST_CANDIDATES, ...dynamicIDs]).map((id) => ({ playlistID: Number(id) })).filter((item) => item.playlistID > 0);
+    for (const candidate of candidates) {
+        const status = await queryFollowStatus(snap, uin, 500, String(candidate.playlistID));
+        if (status === true) continue;
+        if (status !== false) {
+            $.log(`[WARN] 歌单 ${candidate.playlistID} 原收藏状态未知,跳过`);
+            continue;
+        }
+        if (await updateFavoritePlaylist(snap, uin, true, candidate)) return candidate;
+    }
+    $.log("[WARN] 未找到可临时收藏的歌单,跳过任务");
+    return null;
+}
+
+async function updateFavoritePlaylist(snap, uin, add, playlist) {
+    const method = add ? "FavPlaylist" : "CancelFavPlaylist";
+    const body = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.musicasset.PlaylistFavWrite",
+            method,
+            param: { v_playlistId: [Number(playlist.playlistID)] },
+        },
+    };
+    const res = await appPost(snap, uin, method, body);
+    debug(res, add ? "Add Playlist Favorite" : "Remove Playlist Favorite");
+    return appRequestSucceeded(res);
+}
+
+async function addTemporarySingerFollow(snap, uin) {
+    const dynamicMIDs = await searchContentCandidates(snap, uin, 7, ["singerMID", "singer_mid", "mid"]);
+    const candidates = uniqueValues([...SINGER_CANDIDATES, ...dynamicMIDs]).map((mid) => ({ mid: String(mid) })).filter((item) => /^[A-Za-z0-9]{10,20}$/.test(item.mid));
+    for (const candidate of candidates) {
+        const status = await querySingerFollowStatus(snap, uin, candidate.mid);
+        if (status === true) continue;
+        if (status !== false) {
+            $.log(`[WARN] 歌手 ${candidate.mid} 原关注状态未知,跳过`);
+            continue;
+        }
+        if (await updateSingerFollow(snap, uin, true, candidate)) return candidate;
+    }
+    $.log("[WARN] 未找到可临时关注的歌手,跳过任务");
+    return null;
+}
+
+async function updateSingerFollow(snap, uin, add, singer) {
+    const body = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.concern.ConcernSystem",
+            method: "cgi_concern_user_v2",
+            param: {
+                bussinesstype: "",
+                source: 137,
+                opertype: add ? 0 : 1,
+                bussinessid: "",
+                userinfo: { userid: singer.mid, usertype: 1 },
+            },
+        },
+    };
+    const res = await appPost(snap, uin, "cgi_concern_user_v2", body);
+    debug(res, add ? "Follow Singer" : "Unfollow Singer");
+    return appRequestSucceeded(res);
+}
+
+async function queryFollowStatus(snap, uin, type, id) {
+    const body = {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsBase"),
+        req_0: {
+            module: "music.follow.FollowStatus",
+            method: "QueryFollowStatus",
+            param: { type, id: String(id) },
+        },
+    };
+    const res = await appPost(snap, uin, "QueryFollowStatus", body);
+    debug(res, `Follow Status ${type}`);
+    if (!appRequestSucceeded(res)) return null;
+    return readTargetStatus(res.req_0 && res.req_0.data, String(id));
+}
+
+async function querySingerFollowStatus(snap, uin, mid) {
+    const body = {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsBase"),
+        req_0: {
+            module: "music.concern.ConcernSystem",
+            method: "cgi_qry_concern_status",
+            param: { vec_userinfo: [{ usertype: 1, userid: mid }] },
+        },
+    };
+    const res = await appPost(snap, uin, "cgi_qry_concern_status", body);
+    debug(res, "Singer Follow Status");
+    if (!appRequestSucceeded(res)) return null;
+    const data = res.req_0 && res.req_0.data;
+    const map = data && data.map_singer_status;
+    if (map && Object.prototype.hasOwnProperty.call(map, mid)) return normalizeStatus(map[mid]);
+    return readTargetStatus(data, mid);
+}
+
+async function searchContentCandidates(snap, uin, searchType, keys) {
+    const body = {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsBase"),
+        req_0: {
+            module: "music.search.SearchCgiService",
+            method: "DoSearchForQQMusicMobile",
+            param: {
+                query: "音乐",
+                highlight: 1,
+                searchid: "",
+                sub_searchid: 0,
+                search_type: searchType,
+                sin: 0,
+                ein: 29,
+                page_num: 1,
+                num_per_page: 15,
+                cat: 2,
+                grp: 1,
+                remoteplace: "txt.mqq.all",
+                multi_zhida: 1,
+            },
+        },
+    };
+    const res = await appPost(snap, uin, "DoSearchForQQMusicMobile", body);
+    debug(res, `Search Candidates ${searchType}`);
+    if (!appRequestSucceeded(res)) return [];
+    return collectValuesByKeys(res.req_0 && res.req_0.data, keys, (value) => value !== "" && value !== 0, 20);
 }
 
 async function updateFavoriteSong(snap, uin, method, song) {
@@ -718,14 +1322,149 @@ function lowerKeys(obj) {
     return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v]));
 }
 
+function findDailyTask(tasks, predicate) {
+    return (tasks || []).find((task) => task && predicate(task));
+}
+
+function taskReachedReady(tasks, target) {
+    const current = findDailyTask(tasks, (task) => task.ID === target.ID);
+    return Boolean(current && Number(current.State) >= 2);
+}
+
+function appRequestSucceeded(res, reqKey = "req_0") {
+    const req = res && res[reqKey];
+    if (!res || res.code !== 0 || !req || req.code !== 0) return false;
+    const data = req.data;
+    if (!data || typeof data !== "object") return true;
+    for (const key of ["retCode", "RetCode", "ret", "Ret", "code"]) {
+        if (Object.prototype.hasOwnProperty.call(data, key) && Number(data[key]) !== 0) return false;
+    }
+    return true;
+}
+
+function collectValuesByKeys(root, keys, predicate = () => true, limit = 50) {
+    const wanted = new Set(keys.map(String));
+    const result = [];
+    const walk = (value) => {
+        if (result.length >= limit || value === null || value === undefined) return;
+        if (Array.isArray(value)) {
+            for (const item of value) walk(item);
+            return;
+        }
+        if (typeof value !== "object") return;
+        for (const [key, item] of Object.entries(value)) {
+            if (wanted.has(key) && predicate(item)) result.push(item);
+            walk(item);
+            if (result.length >= limit) return;
+        }
+    };
+    walk(root);
+    return uniqueValues(result);
+}
+
+function uniqueValues(values) {
+    const seen = new Set();
+    return (values || []).filter((value) => {
+        const key = String(value);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function findFirstValue(root, keys) {
+    const wanted = new Set(keys.map(String));
+    let found;
+    const walk = (value) => {
+        if (found !== undefined || value === null || value === undefined) return;
+        if (Array.isArray(value)) {
+            for (const item of value) walk(item);
+            return;
+        }
+        if (typeof value !== "object") return;
+        for (const [key, item] of Object.entries(value)) {
+            if (wanted.has(key)) {
+                found = item;
+                return;
+            }
+            walk(item);
+            if (found !== undefined) return;
+        }
+    };
+    walk(root);
+    return found;
+}
+
+function normalizeStatus(value) {
+    if (value === true || value === 1 || value === "1" || value === "true") return true;
+    if (value === false || value === 0 || value === "0" || value === "false") return false;
+    return null;
+}
+
+function readTargetStatus(root, target) {
+    let found = null;
+    const walk = (value) => {
+        if (found !== null || value === null || value === undefined) return;
+        if (Array.isArray(value)) {
+            for (const item of value) walk(item);
+            return;
+        }
+        if (typeof value !== "object") return;
+
+        if (Object.prototype.hasOwnProperty.call(value, target)) {
+            const direct = normalizeStatus(value[target]);
+            if (direct !== null) {
+                found = direct;
+                return;
+            }
+        }
+
+        const objectID = value.id || value.userid || value.userId || value.mid || value.singerMID;
+        if (String(objectID || "") === target) {
+            for (const key of ["status", "follow", "followed", "isFollow", "fav", "isFav", "operation", "oper"]) {
+                if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+                const status = normalizeStatus(value[key]);
+                if (status !== null) {
+                    found = status;
+                    return;
+                }
+            }
+        }
+
+        for (const item of Object.values(value)) {
+            walk(item);
+            if (found !== null) return;
+        }
+    };
+    walk(root);
+    return found;
+}
+
+function formatLotteryGift(data) {
+    let gift = findFirstValue(data, ["lotteryGift"]);
+    if (typeof gift === "string") {
+        try {
+            gift = JSON.parse(gift);
+        } catch (_) {
+            if (gift.trim()) return gift.trim();
+        }
+    }
+    const source = gift && typeof gift === "object" ? gift : data;
+    const name = findFirstValue(source, ["giftName", "prizeName", "PrizeName", "name"]);
+    const value = Number(findFirstValue(source, ["awardValue", "RewardGold", "rewardGold", "coinNum", "coin"]) || 0);
+    if (name && value) return `${name} +${value}`;
+    if (name) return String(name);
+    if (value) return `金币 +${value}`;
+    return "已领取";
+}
+
 function taskOff(key) {
     const value = $.getdata(key);
     return value === false || value === 0 || value === "false" || value === "0";
 }
 
-function taskOn(key) {
-    const value = $.getdata(key);
-    return value === true || value === 1 || value === "true" || value === "1";
+function adTasksEnabled() {
+    return !taskOff("qqmusic_task_ad");
 }
 
 function randomHex32() {

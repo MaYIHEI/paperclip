@@ -654,7 +654,9 @@
         "qqmusic_data",
         "qqmusic_clear",
         "qqmusic_task_favorite",
+        "qqmusic_task_activity",
         "qqmusic_task_ad",
+        "qqmusic_ad_max",
         "qqmusic_debug"
       ],
       "settings": [
@@ -680,24 +682,48 @@
               "label": "关闭"
             }
           ],
-          "desc": "临时收藏歌曲和有声书，领取任务金币后自动恢复收藏状态"
+          "desc": "临时收藏歌曲、歌单、有声书并关注歌手，领取任务金币后自动恢复原状态"
         },
         {
-          "id": "qqmusic_task_ad",
-          "name": "广告翻倍实验",
-          "val": "false",
+          "id": "qqmusic_task_activity",
+          "name": "附属活动任务",
+          "val": "true",
           "type": "selects",
           "items": [
             {
+              "key": "true",
+              "label": "开启"
+            },
+            {
               "key": "false",
               "label": "关闭"
-            },
+            }
+          ],
+          "desc": "执行金币抽奖签到、使用剩余抽奖次数、红包雨和可直接上报的活动任务"
+        },
+        {
+          "id": "qqmusic_task_ad",
+          "name": "广告任务",
+          "val": "true",
+          "type": "selects",
+          "items": [
             {
               "key": "true",
               "label": "开启"
+            },
+            {
+              "key": "false",
+              "label": "关闭"
             }
           ],
-          "desc": "实验性完成定时金币的广告翻倍；需配置广告请求抓取并进入一次金币中心"
+          "desc": "执行任务领奖后的 ECPM 广告翻倍和看广告领抽奖次数；首次需在金币中心加载一次广告"
+        },
+        {
+          "id": "qqmusic_ad_max",
+          "name": "单次广告上限",
+          "val": "20",
+          "type": "text",
+          "desc": "单次 cron 最多尝试的广告数，范围 1–30；每个广告会按服务端要求等待约 30 秒"
         },
         {
           "id": "qqmusic_debug",
