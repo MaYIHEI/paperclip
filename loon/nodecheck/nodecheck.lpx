@@ -1,0 +1,8 @@
+#!name=节点阻断检测
+#!desc=在节点或策略组页面手动检测节点出口、本机网络与节点服务器的远端 TCP 可达性，辅助判断节点离线或疑似被阻断。
+#!author=RavelloH, MaYIHEI
+#!homepage=https://github.com/MaYIHEI/paperclip
+#!tag=节点, 检测
+
+[Script]
+generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/nodecheck/nodecheck.js, tag=节点阻断检测, timeout=20, img-url=bolt.horizontal.icloud.fill.system, enable=true
