@@ -60,7 +60,7 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-07-17.r11"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-17.r12"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -78,6 +78,7 @@ const LOTTERY_SIGN_ACT_ID = "Z156KEu";
 const COIN_LOTTERY_PLAY_ID = "PR-Lottery-20240408-33489273491";
 const LOTTERY_AD_ACT_ID = "1DNTy6";
 const LOTTERY_AD_TASK_ID = "Z7zTYm";
+const FIXED_VIDEO_TASK_ID = "Z17TDyX";
 const RED_PACKET_RAIN_KEY = "1joIuy";
 const AUDIOBOOK_CATEGORY_ID = "42800344";
 const AUDIOBOOK_CANDIDATES = [93654004];
@@ -93,6 +94,7 @@ const AD_SOURCE_BY_CHANNEL = {
 const AD_PURCHASE_INFO_BY_CHANNEL = {
     300506: JSON.stringify({ user_type: 3, channel: 12, tme_material_type: 5 }),
 };
+const DIRECT_REWARD_AD_CHANNELS = [302004, 302017, 300507, 302033];
 
 $.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("qqmusic_debug")) || "false";
 $.messages = [];
@@ -583,10 +585,15 @@ async function claimDailyTaskRewards(snap, uin) {
             }
         }
 
-        await claimReadyTaskRewards(tasks, snap, uin);
+        const returnedAdBatches = await claimReadyTaskRewards(tasks, snap, uin);
         if (adTasksEnabled()) {
-            noteUnsupportedNativeAdTasks(tasks);
+            await runFixedVideoAds(tasks, snap, uin);
             await runLotteryTicketAds(snap, uin);
+            for (const batch of returnedAdBatches) {
+                if ($.adState.count >= $.adState.max) break;
+                await runReturnedAdTasks(batch.taskList, snap, uin, batch.context);
+            }
+            noteUnsupportedNativeAdTasks(tasks);
             appendAdSummary();
         }
     } finally {
@@ -605,6 +612,7 @@ async function claimReadyTaskRewards(tasks, snap, uin) {
         task.PrizeList.some((prize) => prize && Number(prize.Type) === 12 && Number(prize.Value || 0) > 0)
     );
     const claimed = [];
+    const returnedAdBatches = [];
     for (const task of ready) {
         const awardBody = {
             comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
@@ -621,18 +629,20 @@ async function claimReadyTaskRewards(tasks, snap, uin) {
         if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && awardData.retCode === 0) {
             const value = Number(awardData.awardValue || 0);
             claimed.push(`${task.Name || task.ID}${value ? ` +${value}` : ""}`);
-            if (adTasksEnabled()) {
-                await runReturnedAdTasks(awardData.adTaskList, snap, uin, {
+            if (adTasksEnabled() && awardData.adTaskList) returnedAdBatches.push({
+                taskList: awardData.adTaskList,
+                context: {
                     actID: task._actID || DAILY_TASK_ACT_ID,
                     fromID: /定时.*(?:金币|积分)/.test(task.Name || "") ? "" : "points",
                     parentName: task.Name || task.ID,
-                });
-            }
+                },
+            });
         } else {
             $.log(`[WARN] 每日任务领奖失败 (${task.Name || task.ID}, code=${awardReq ? awardReq.code : "?"}, ret=${awardData ? awardData.retCode : "?"})`);
         }
     }
     if (claimed.length) $.messages.push(`✅ 每日任务领奖: ${claimed.join("、")}`);
+    return returnedAdBatches;
 }
 
 async function reportDailyTaskAction(snap, uin, task) {
@@ -650,31 +660,60 @@ async function reportDailyTaskAction(snap, uin, task) {
 }
 
 async function runReturnedAdTasks(taskList, snap, uin, context) {
-    let task = chooseScriptableAdTask(taskList);
+    let currentTasks = taskList;
+    let task = chooseScriptableAdTask(currentTasks);
     if (!task) noteUnsupportedNativeAdTasks(taskList);
     while (task && $.adState.count < $.adState.max) {
-        const result = await executeRewardAdTask(task, snap, uin, context);
+        const result = await executeRewardAdTask(task, snap, uin, {
+            ...context,
+            taskList: currentTasks,
+        });
         if (!result.success) return;
-        task = chooseScriptableAdTask(result.data && result.data.adTaskList);
+        currentTasks = result.data && result.data.adTaskList;
+        task = chooseScriptableAdTask(currentTasks);
     }
+}
+
+async function runFixedVideoAds(tasks, snap, uin) {
+    if ($.adState.count >= $.adState.max) return;
+    let task = chooseFixedRewardVideoTask(tasks);
+    if (!task) {
+        task = await querySingleAdTask(
+            snap,
+            uin,
+            DAILY_TASK_ACT_ID,
+            FIXED_VIDEO_TASK_ID,
+            "Fixed Video Ad Task"
+        );
+    }
+    if (!task) return;
+
+    const context = {
+        actID: task._actID || DAILY_TASK_ACT_ID,
+        fromID: "points",
+        parentName: task.Name || "看视频领金币",
+        taskList: tasks,
+    };
+    const result = await executeRewardAdTask(task, snap, uin, context);
+    if (!result.success) return;
+    await runReturnedAdTasks(result.data && result.data.adTaskList, snap, uin, {
+        actID: context.actID,
+        fromID: context.fromID,
+        parentName: "看视频领金币",
+    });
 }
 
 async function runLotteryTicketAds(snap, uin) {
     if ($.adState.count >= $.adState.max) return;
-    const body = {
-        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
-        req_0: {
-            module: "music.activeCenter.ActTaskNewSvr",
-            method: "GetTaskInfos",
-            param: { ActID: LOTTERY_AD_ACT_ID, TaskIDs: [LOTTERY_AD_TASK_ID] },
-        },
-    };
-    const res = await appPost(snap, uin, "GetTaskInfos", body);
-    debug(res, "Lottery Ad Task");
-    const task = findTaskObject(res && res.req_0 && res.req_0.data, (item) => item.ID === LOTTERY_AD_TASK_ID);
-    if (!task || Number(task.State) !== 1) return;
+    const task = await querySingleAdTask(
+        snap,
+        uin,
+        LOTTERY_AD_ACT_ID,
+        LOTTERY_AD_TASK_ID,
+        "Lottery Ad Task"
+    );
+    if (!task) return;
 
-    task._actID = LOTTERY_AD_ACT_ID;
     const maxTimes = Math.max(1, Number(task.TaskMaxTimes || 1));
     let finished = Math.max(0, Number(task.TaskFinishTime || 0));
     while (finished < maxTimes && $.adState.count < $.adState.max) {
@@ -688,8 +727,28 @@ async function runLotteryTicketAds(snap, uin) {
     }
 }
 
+async function querySingleAdTask(snap, uin, actID, taskID, debugTitle) {
+    const body = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.activeCenter.ActTaskNewSvr",
+            method: "GetTaskInfos",
+            param: { ActID: actID, TaskIDs: [taskID] },
+        },
+    };
+    const res = await appPost(snap, uin, "GetTaskInfos", body);
+    debug(res, debugTitle);
+    const task = findTaskObject(
+        res && res.req_0 && res.req_0.data,
+        (item) => item.ID === taskID
+    );
+    if (!task || Number(task.State) !== 1) return null;
+    task._actID = actID;
+    return task;
+}
+
 async function executeRewardAdTask(task, snap, uin, context = {}) {
-    const config = getTaskAdConfig(task);
+    let config = getTaskAdConfig(task);
     if (!config.channel) {
         $.log(`[WARN] 广告任务缺少动态广告位 (${task.Name || task.ID})`);
         return { success: false };
@@ -700,14 +759,22 @@ async function executeRewardAdTask(task, snap, uin, context = {}) {
     $.adState.count++;
     const adUI = ad.ui || {};
 
-    const isEcpm = String((task.Ext || {}).Ecpm || "") === "1";
+    const matchedTask = chooseRewardTaskForAd(context.taskList, task, ad);
+    if (matchedTask && matchedTask.ID !== task.ID) {
+        task = matchedTask;
+        config = getTaskAdConfig(task);
+        $.log(`[INFO] 广告素材匹配任务: ${task.ID} (${isEcpmTask(task) ? "ECPM" : "固定金币"})`);
+    }
+
+    const isEcpm = isEcpmTask(task);
     const prizeType = Number((((task.PrizeList || [])[0]) || {}).Type || 0);
     const isTicketTask = prizeType === 21 || task.ID === LOTTERY_AD_TASK_ID;
-    const directVerifyTask = isTicketTask;
+    const isFixedVideo = Number(task.Type) === 1003 && !isEcpm && !isTicketTask;
+    const directVerifyTask = isTicketTask || isFixedVideo;
     if (!isEcpm && !directVerifyTask) {
         if (!$.adState.nativeWarned) {
             $.adState.nativeWarned = true;
-            $.log("[INFO] 固定金币视频使用广告 SDK 完成态票据,本轮不提交初始 verify_str");
+            $.log(`[INFO] 暂不支持该广告任务票据 (${task.Name || task.ID})`);
         }
         return { success: false };
     }
@@ -723,6 +790,7 @@ async function executeRewardAdTask(task, snap, uin, context = {}) {
         : {
             AdToken: ad.base.verify_str,
         };
+    if (isFixedVideo) actDataExt.AdRewardType = "0";
 
     // 落地页/外部 App 奖励与视频奖励是两条链。存在明确的二次金币配置时,
     // 按服务端要求再等待停留时间并附加回传字段;无二次奖励时不伪造。
@@ -888,12 +956,47 @@ function getTaskAdConfig(task) {
 }
 
 function chooseScriptableAdTask(taskList) {
+    const ecpm = findTaskObject(taskList, (task) =>
+        task &&
+        Number(task.State) === 1 &&
+        Number(task.Type) === 1003 &&
+        isEcpmTask(task)
+    );
+    return ecpm || chooseFixedRewardVideoTask(taskList);
+}
+
+function chooseFixedRewardVideoTask(taskList) {
     return findTaskObject(taskList, (task) =>
         task &&
         Number(task.State) === 1 &&
         Number(task.Type) === 1003 &&
-        String((task.Ext || {}).Ecpm || "") === "1"
+        !isEcpmTask(task) &&
+        (
+            task.ID === FIXED_VIDEO_TASK_ID ||
+            DIRECT_REWARD_AD_CHANNELS.includes(getTaskAdConfig(task).channel)
+        )
     );
+}
+
+function chooseRewardTaskForAd(taskList, fallback, ad) {
+    const rewardGold = Number(((ad || {}).ui || {}).reward_gold || 0);
+    const wantEcpm = rewardGold > 0;
+    const fallbackConfig = getTaskAdConfig(fallback);
+    const matched = findTaskObject(taskList, (task) => {
+        if (
+            !task ||
+            Number(task.State) !== 1 ||
+            Number(task.Type) !== 1003 ||
+            isEcpmTask(task) !== wantEcpm
+        ) return false;
+        const config = getTaskAdConfig(task);
+        return !fallbackConfig.channel || !config.channel || config.channel === fallbackConfig.channel;
+    });
+    return matched || fallback;
+}
+
+function isEcpmTask(task) {
+    return String(((task || {}).Ext || {}).Ecpm || "") === "1";
 }
 
 function findTaskObject(root, predicate) {
@@ -931,7 +1034,8 @@ function noteUnsupportedNativeAdTasks(tasks) {
         (
             (
                 Number(item.Type) === 1003 &&
-                String((item.Ext || {}).Ecpm || "") !== "1"
+                !isEcpmTask(item) &&
+                !chooseFixedRewardVideoTask([item])
             ) ||
             [8003, 8005, 8012].includes(Number(item.Type))
         )
