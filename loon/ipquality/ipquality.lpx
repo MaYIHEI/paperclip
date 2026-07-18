@@ -1,5 +1,5 @@
 #!name=节点 IP 质量检测
-#!desc=查询所选节点的出口 IP、ASN、位置、多源风险、代理属性及流媒体与 AI 服务可用性。结果仅供参考，第三方接口可能限流或变更。
+#!desc=按 VPS IPQuality 报告结构查询节点基础信息、类型矩阵、多源原始评分、风险因素矩阵及流媒体与 AI 可用性；缺失数据不参与判断。
 #!openUrl=
 #!author=MaYIHEI[https://github.com/MaYIHEI]
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/loon/ipquality
