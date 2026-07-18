@@ -1,12 +1,12 @@
 #!name=节点 IP 质量检测
-#!desc=按 VPS IPQuality 报告结构查询节点基础信息、类型矩阵、多源原始评分、风险因素矩阵及流媒体与 AI 可用性；缺失数据不参与判断。
+#!desc=多源直连检测节点 IP、网络类型、原始风险、风险标记及流媒体与 AI 可用性；手机单列排版，缺失数据不参与判断。
 #!openUrl=
 #!author=MaYIHEI[https://github.com/MaYIHEI]
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/loon/ipquality
 #!select = MaskIP,false,true
 #!select = MediaTest,true,false
 #!tag=节点,IP,风险,流媒体
-#!date=2026-07-18
+#!date=2026-07-19
 
 [Script]
 generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
