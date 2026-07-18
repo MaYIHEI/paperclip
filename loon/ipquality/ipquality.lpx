@@ -1,0 +1,12 @@
+#!name=节点 IP 质量检测
+#!desc=查询所选节点的出口 IP、ASN、位置、多源风险、代理属性及流媒体与 AI 服务可用性。结果仅供参考，第三方接口可能限流或变更。
+#!openUrl=
+#!author=MaYIHEI[https://github.com/MaYIHEI]
+#!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/loon/ipquality
+#!select = MaskIP,false,true
+#!select = MediaTest,true,false
+#!tag=节点,IP,风险,流媒体
+#!date=2026-07-18
+
+[Script]
+generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
