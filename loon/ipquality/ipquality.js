@@ -463,6 +463,7 @@ function render(ip, data, media) {
     const html = [
         '<div style="font-family:-apple-system,BlinkMacSystemFont;font-size:14px;line-height:1.5;text-align:left;overflow-wrap:anywhere">',
         '<div style="font-size:18px;line-height:18px">&nbsp;</div>',
+        '<div style="font-size:20px;font-weight:700;line-height:1.25;margin-bottom:16px">节点 IP 质量检测</div>',
         `<div style="color:#8e8e93;font-size:11px;margin-bottom:10px">节点 · ${escapeHtml(displayNodeName)}</div>`,
         summaryCard(basic),
         section("基础信息", renderBasic(basic)),
@@ -483,7 +484,7 @@ function render(ip, data, media) {
     ].join("");
 
     $done({
-        title: "节点 IP 质量检测",
+        title: "\u200B",
         htmlMessage: html,
         icon: "shield.lefthalf.filled",
         "title-color": titleColor,
