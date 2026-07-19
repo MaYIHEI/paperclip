@@ -1,6 +1,6 @@
 # 节点 IP 质量检测
 
-> 🧪 r11 紧凑 UI 测试 · 仅支持 Loon
+> ✅ 维护中 · 仅支持 Loon
 
 在 Loon 的节点或策略组页面查看所选节点的出口 IP、IP 类型与风险信息，并检测常见流媒体和 AI 服务可用性。结果按 VPS `IP.Check.Place` / `xykt/IPQuality` 的多源展示口径呈现，不生成自定义综合评分。
 
@@ -21,12 +21,12 @@
 
 ```ini
 [Script]
-generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
+generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
 ```
 
 也可直接导入插件：
 
-`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.lpx`
+`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/ipquality/ipquality.lpx`
 
 ## 插件参数
 
@@ -35,7 +35,6 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 | `MaskIP` | 关闭 | 隐藏报告中 IP 的后半段，适合截图分享 |
 | `MediaTest` | 开启 | 检测 TikTok、Disney+、Netflix、YouTube、Prime Video、Reddit、ChatGPT |
 | `MapNotification` | 关闭 | 完成后发送通知；点按通知可在 Apple 地图查看 IP 数据库估算的位置 |
-| `CompactReport` | 开启 | 使用精简的紧凑报告，保留关键配色和结论；关闭后显示 r8 完整富文本 |
 
 ## 报告内容
 
@@ -55,7 +54,6 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 | 日期 | 变更 |
 |---|---|
-| 2026-07-19 | r11：紧凑 UI 测试，合并重复信息并压缩风险因素与媒体依据 |
 | 2026-07-19 | r8：补充 ASN/组织、IPPure 分流出口识别、Apple 地图通知与多源稳定性修复 |
 | 2026-07-18 | r1：初版进入 testing |
 
