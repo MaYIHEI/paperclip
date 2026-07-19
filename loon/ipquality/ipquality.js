@@ -413,13 +413,19 @@ async function testChatGPT() {
     const tasks = await Promise.all([
         capture(request("GET", "https://api.openai.com/compliance/cookie_requirements", {
             allowHttpErrors: true,
-            headers: browserHeaders(),
+            headers: Object.assign(browserHeaders(), {
+                Accept: "*/*",
+                Authorization: "Bearer null",
+                "Content-Type": "application/json",
+                Origin: "https://platform.openai.com",
+                Referer: "https://platform.openai.com/",
+            }),
         })),
         capture(request("GET", "https://ios.chat.openai.com/", {
             allowHttpErrors: true,
             headers: browserHeaders(),
         })),
-        capture(request("GET", "https://chat.openai.com/cdn-cgi/trace", {
+        capture(request("GET", "https://chatgpt.com/cdn-cgi/trace", {
             allowHttpErrors: true,
             headers: browserHeaders(),
         })),
@@ -428,27 +434,59 @@ async function testChatGPT() {
     const app = tasks[1].ok ? tasks[1].value : null;
     const trace = tasks[2].ok ? tasks[2].value : null;
     const region = trace ? firstMatch(trace.body, [/^loc=([A-Z]{2})$/im]) : "";
-    const webAvailable = !!(web && web.status >= 200 && web.status < 300
-        && !/unsupported_country/i.test(web.body));
-    const appAvailable = !!(app && app.status >= 200 && app.status < 300
-        && !/unsupported_country|VPN/i.test(app.body));
-    const webBlocked = !!(web && (/unsupported_country/i.test(web.body) || web.status === 403));
-    const appBlocked = !!(app && (/unsupported_country|VPN/i.test(app.body) || app.status === 403));
+    const webState = classifyChatGPTWeb(web);
+    const appState = classifyChatGPTApp(app);
 
     if (!web && !app) return mediaResult("ChatGPT", "unknown", region, "请求失败");
-    if (webAvailable && appAvailable) {
+    if (webState === "available" && appState === "available") {
         return mediaResult("ChatGPT", "yes", region, "Web/App 均通过");
     }
-    if (webAvailable && appBlocked) {
+    if (webState === "available" && appState === "blocked") {
         return mediaResult("ChatGPT", "partial", region, `仅 Web；App HTTP ${app.status}`);
     }
-    if (appAvailable && webBlocked) {
+    if (appState === "available" && webState === "blocked") {
         return mediaResult("ChatGPT", "partial", region, `仅 App；Web HTTP ${web.status}`);
     }
-    if (webBlocked && appBlocked) {
+    if (webState === "blocked" && appState === "blocked") {
         return mediaResult("ChatGPT", "no", region, "Web/App 均受限");
     }
-    return mediaResult("ChatGPT", "unknown", region, "响应不足以确认");
+    if (webState === "available") {
+        return mediaResult("ChatGPT", "partial", region, "Web 通过；App 未确认");
+    }
+    if (appState === "available") {
+        return mediaResult("ChatGPT", "partial", region, "App 通过；Web 未确认");
+    }
+    const details = [];
+    if (webState === "blocked") details.push("Web 受限");
+    if (appState === "blocked") details.push("App 受限");
+    return mediaResult("ChatGPT", "unknown", region,
+        details.length ? `${details.join("；")}；另一端未确认` : "响应不足以确认");
+}
+
+function classifyChatGPTWeb(response) {
+    if (!response) return "unknown";
+    const body = String(response.body || "");
+    if (/unsupported_country/i.test(body)
+        || /sorry,\s*you have been blocked|access denied|cf-error/i.test(body)) {
+        return "blocked";
+    }
+    if (/cookie_consent_required/i.test(body)) return "available";
+    if (response.status >= 200 && response.status < 300) return "available";
+    return "unknown";
+}
+
+function classifyChatGPTApp(response) {
+    if (!response) return "unknown";
+    const body = String(response.body || "");
+    if (/request is not allowed\.\s*please try again later\./i.test(body)) {
+        return "available";
+    }
+    if (/you may be connected to a disallowed isp|\bVPN\b|unsupported_country/i.test(body)
+        || /sorry,\s*you have been blocked|access denied|cf-error/i.test(body)) {
+        return "blocked";
+    }
+    if (response.status >= 200 && response.status < 400) return "available";
+    return "unknown";
 }
 
 function render(ip, data, media) {
