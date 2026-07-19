@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-19.r9";
+const SCRIPT_VERSION = "2026-07-19.r10";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -30,6 +30,7 @@ const nodeName = params.node || "";
 const maskIP = readSwitch("MaskIP", false);
 const mediaEnabled = readSwitch("MediaTest", true);
 const mapNotificationEnabled = readSwitch("MapNotification", false);
+const smoothRenderEnabled = readSwitch("SmoothRender", true);
 
 console.log(`[INFO] 节点 IP 质量检测 ${SCRIPT_VERSION}`);
 console.log(`[INFO] 节点: ${nodeName || "未获取"}`);
@@ -578,7 +579,7 @@ function render(ip, data, media) {
     const titleColor = reportColor(risks);
     const displayNodeName = truncateText(nodeName, 30);
 
-    const html = [
+    const fallbackHtml = [
         '<div style="font-family:-apple-system,BlinkMacSystemFont;font-size:14px;line-height:1.5;text-align:left;overflow-wrap:anywhere">',
         '<div style="font-size:18px;line-height:18px">&nbsp;</div>',
         '<div style="font-size:20px;font-weight:700;line-height:1.25;margin-bottom:16px">节点 IP 质量检测</div>',
@@ -599,6 +600,10 @@ function render(ip, data, media) {
         '<div style="font-size:112px;line-height:112px">&nbsp;</div>',
         "</div>",
     ].join("");
+    const smoothHtml = smoothRenderEnabled
+        ? renderSmoothReport(basic, types, risks, factors, media, audit, data._probe)
+        : "";
+    const html = smoothHtml || fallbackHtml;
 
     postMapNotification(basic, displayNodeName);
     $done({
@@ -607,6 +612,447 @@ function render(ip, data, media) {
         icon: "shield.lefthalf.filled",
         "title-color": titleColor,
     });
+}
+
+function renderSmoothReport(basic, types, risks, factors, media, audit, probe) {
+    const width = 350;
+    const padding = 14;
+    const right = width - padding;
+    const elements = [];
+    let y = 0;
+
+    function space(value) {
+        y += Number(value) || 0;
+    }
+
+    function text(value, options) {
+        const config = options || {};
+        const content = cleanValue(value);
+        if (!content) return;
+        const x = numberOrNull(config.x) === null ? padding : Number(config.x);
+        const size = Number(config.size) || 14;
+        const lineHeight = Number(config.lineHeight) || Math.ceil(size * 1.45);
+        const maxWidth = Number(config.maxWidth) || right - x;
+        const lines = wrapSvgText(content, maxWidth, size, config.weight);
+        lines.forEach((line) => {
+            y += lineHeight;
+            elements.push(svgTextElement(line, x, y, {
+                size,
+                weight: config.weight,
+                color: config.color,
+            }));
+        });
+    }
+
+    function rich(segments, options) {
+        const config = options || {};
+        const x = numberOrNull(config.x) === null ? padding : Number(config.x);
+        const maxWidth = Number(config.maxWidth) || right - x;
+        const lineHeight = Number(config.lineHeight) || 22;
+        const lines = [];
+        let current = [];
+        let used = 0;
+
+        function flush() {
+            if (!current.length) return;
+            lines.push(current);
+            current = [];
+            used = 0;
+        }
+
+        (segments || []).forEach((segment) => {
+            if (!segment || !segment.text) return;
+            const item = Object.assign({ size: 14, weight: 400, color: "" }, segment);
+            let content = String(item.text);
+            let itemWidth = estimateSvgTextWidth(content, item.size, item.weight);
+            if (used && used + itemWidth > maxWidth) {
+                flush();
+                content = content.replace(/^\s+/, "");
+                itemWidth = estimateSvgTextWidth(content, item.size, item.weight);
+            }
+            if (itemWidth <= maxWidth) {
+                current.push(Object.assign({}, item, { text: content }));
+                used += itemWidth;
+                return;
+            }
+            const wrapped = wrapSvgText(content, maxWidth, item.size, item.weight);
+            wrapped.forEach((part, index) => {
+                if (index) flush();
+                current.push(Object.assign({}, item, { text: part }));
+                used = estimateSvgTextWidth(part, item.size, item.weight);
+            });
+        });
+        flush();
+        lines.forEach((line) => {
+            y += lineHeight;
+            elements.push(svgRichTextElement(line, x, y));
+        });
+    }
+
+    function sectionTitle(title) {
+        space(12);
+        text(`▌${title}`, {
+            size: 15,
+            weight: 700,
+            color: "#0A84FF",
+            lineHeight: 30,
+        });
+    }
+
+    function muted(value) {
+        text(value, {
+            size: 11,
+            color: "#8e8e93",
+            lineHeight: 16,
+        });
+    }
+
+    space(18);
+    text("节点 IP 质量检测", { size: 20, weight: 700, lineHeight: 25 });
+    space(12);
+    text(`节点 · ${truncateText(nodeName, 30)}`, {
+        size: 11,
+        color: "#8e8e93",
+        lineHeight: 16,
+    });
+    space(8);
+    text(basic.ip, { size: 24, weight: 800, lineHeight: 29 });
+    if (basic.nature) {
+        space(5);
+        text(basic.nature, {
+            size: 12,
+            weight: 600,
+            color: "#0A84FF",
+            lineHeight: 18,
+        });
+    }
+    if (basic.actualRegion) {
+        space(7);
+        text(basic.actualRegion, { size: 14, weight: 600, lineHeight: 19 });
+    }
+    if (basic.city) {
+        space(2);
+        text(basic.city, { size: 12, color: "#8e8e93", lineHeight: 17 });
+    }
+    const asn = [basic.asn, basic.organization].filter(Boolean).join(" · ");
+    if (asn) {
+        space(5);
+        text(asn, { size: 11, color: "#8e8e93", lineHeight: 16 });
+    }
+
+    sectionTitle("基础信息");
+    [
+        ["来源", basic.source],
+        ["网段", basic.route],
+        ["时区", basic.timezone],
+        ["注册地", basic.registeredRegion],
+        ["坐标", basic.coordinates],
+    ].filter((row) => row[1]).forEach((row) => {
+        rich([
+            { text: `${row[0]}　`, size: 12, color: "#8e8e93" },
+            { text: row[1], size: 14, weight: 600 },
+        ], { lineHeight: 25 });
+    });
+
+    sectionTitle("IP 类型属性");
+    if (!types.length) {
+        muted("本次没有可验证的网络类型");
+    } else {
+        types.forEach((row) => {
+            text(row.name, { size: 14, weight: 700, lineHeight: 20 });
+            if (row.usage) {
+                rich([
+                    { text: "使用　", size: 12, color: "#8e8e93" },
+                    { text: row.usage, size: 12 },
+                ], { lineHeight: 18 });
+            }
+            if (row.company) {
+                rich([
+                    { text: "公司　", size: 12, color: "#8e8e93" },
+                    { text: row.company, size: 12 },
+                ], { lineHeight: 18 });
+            }
+            space(7);
+        });
+    }
+
+    sectionTitle("风险评分");
+    const availableRisks = risks.filter((row) => row.available);
+    const unavailableRisks = risks.filter((row) => !row.available).map((row) => row.name);
+    if (!availableRisks.length) {
+        muted("本次没有可验证的风险评分");
+    } else {
+        availableRisks.forEach((row) => {
+            const color = row.severity === null ? "#0A84FF" : riskColor(row.severity);
+            rich([
+                { text: "● ", size: 11, color },
+                { text: `${row.name}　`, size: 14, weight: 700 },
+                {
+                    text: [row.detail, row.label].filter(Boolean).join(" · "),
+                    size: 14,
+                    weight: 600,
+                    color,
+                },
+            ], { lineHeight: 28 });
+        });
+    }
+    if (unavailableRisks.length) muted(`本次未返回：${unavailableRisks.join("、")}`);
+
+    sectionTitle("风险因素");
+    if (!factors.length) {
+        muted("本次没有可验证的风险标记");
+    } else {
+        factors.forEach((source) => {
+            const hit = [];
+            const clear = [];
+            Object.keys(source.checks).forEach((key) => {
+                const value = booleanOrNull(source.checks[key]);
+                if (value === true) hit.push(key);
+                if (value === false) clear.push(key);
+            });
+            const region = cleanValue(source.country);
+            const title = region && region.length === 2
+                ? `${source.name} · ${flagEmoji(region)} [${region.toUpperCase()}]`
+                : source.name;
+            text(title, { size: 14, weight: 700, lineHeight: 20 });
+            if (hit.length) {
+                text(`命中 ${hit.join("、")}`, {
+                    size: 12,
+                    weight: 600,
+                    color: "#ff453a",
+                    lineHeight: 18,
+                });
+            }
+            if (clear.length) {
+                text(`未命中 ${clear.join("、")}`, {
+                    size: 12,
+                    color: "#30d158",
+                    lineHeight: 18,
+                });
+            }
+            space(7);
+        });
+    }
+
+    sectionTitle("流媒体与 AI");
+    if (!mediaEnabled) {
+        muted("流媒体检测已关闭");
+    } else {
+        const confirmed = media.filter((row) => row.status !== "unknown");
+        const unknown = media.filter((row) => row.status === "unknown");
+        if (!confirmed.length) muted("本次没有确认任何服务状态");
+        confirmed.forEach((row) => {
+            const status = mediaStatus(row.status);
+            const icon = row.status === "yes" ? "✅" : row.status === "partial" ? "🟠" : "❌";
+            const summary = `${status.text}${row.region ? ` · [${row.region}]` : ""}`;
+            rich([
+                { text: `${icon} `, size: 14 },
+                { text: `${row.name}　`, size: 14, weight: 700 },
+                { text: summary, size: 14, weight: 600, color: status.color },
+            ], { lineHeight: 24 });
+            if (row.detail) {
+                text(row.detail, {
+                    size: 11,
+                    color: "#8e8e93",
+                    lineHeight: 16,
+                });
+            }
+            space(6);
+        });
+        if (unknown.length) muted(`⚪ 未确认：${unknown.map((row) => row.name).join("、")}`);
+    }
+
+    sectionTitle("数据状态");
+    const sourceStatus = `来源 ${audit.success.length}/${audit.total}`;
+    const probeStatus = probe && probe.total
+        ? `出口 ${probe.matched}/${probe.total}${probe.unique > 1 ? " · 存在分流差异" : " · 一致"}`
+        : "";
+    rich([
+        { text: "状态　", size: 12, color: "#8e8e93" },
+        { text: [sourceStatus, probeStatus].filter(Boolean).join("　"), size: 14, weight: 600 },
+    ], { lineHeight: 24 });
+    muted(audit.failed.length
+        ? `未返回 · ${audit.failed.join("、")}`
+        : "全部数据来源已返回");
+    if (audit.skipped && audit.skipped.length) {
+        muted(`已跳过 · ${audit.skipped.join("、")}`);
+    }
+    if (audit.supplemental && audit.supplemental.length) {
+        muted(`补充来源 · ${audit.supplemental.join("、")}`);
+    }
+
+    space(14);
+    text(
+        "类型名称、评分分档与风险字段遵循 xykt/IPQuality 的展示口径；各库结果独立展示，不生成综合结论。"
+        + "聚合来源不可用时保留直连结果。Loon 不提供节点 TCP/DNS API，25 端口与 DNSBL 未检测。",
+        { size: 10, color: "#8e8e93", lineHeight: 15 }
+    );
+    space(112);
+
+    const height = Math.ceil(y + 4);
+    if (height > 8192) {
+        console.log(`[WARN] 平滑报告高度 ${height}px 超出安全范围，回退富文本`);
+        return "";
+    }
+    const svg = [
+        `<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+        "<style>",
+        ".base{fill:#1c1c1e}",
+        "@media (prefers-color-scheme:dark){.base{fill:#f2f2f7}}",
+        "text{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif}",
+        "</style>",
+        elements.join(""),
+        "</svg>",
+    ].join("");
+    const source = `data:image/svg+xml;base64,${base64Utf8(svg)}`;
+    return `<img src="${source}" width="${width}" height="${height}" style="display:block;width:${width}px;max-width:100%;height:auto" />`;
+}
+
+function svgTextElement(value, x, y, options) {
+    const config = options || {};
+    const color = config.color
+        ? ` fill="${escapeHtml(config.color)}"`
+        : ' class="base"';
+    const weight = config.weight ? ` font-weight="${Number(config.weight)}"` : "";
+    return `<text x="${round(x, 2)}" y="${round(y, 2)}" font-size="${Number(config.size) || 14}"${weight}${color}>`
+        + `${escapeHtml(value)}</text>`;
+}
+
+function svgRichTextElement(segments, x, y) {
+    const content = (segments || []).map((segment) => {
+        const color = segment.color ? ` fill="${escapeHtml(segment.color)}"` : "";
+        const weight = segment.weight ? ` font-weight="${Number(segment.weight)}"` : "";
+        return `<tspan font-size="${Number(segment.size) || 14}"${weight}${color}>`
+            + `${escapeHtml(segment.text)}</tspan>`;
+    }).join("");
+    return `<text class="base" x="${round(x, 2)}" y="${round(y, 2)}">${content}</text>`;
+}
+
+function wrapSvgText(value, maxWidth, size, weight) {
+    const characters = Array.from(String(value || ""));
+    if (!characters.length) return [];
+    const tokens = [];
+    let token = "";
+    let tokenType = "";
+    characters.forEach((character) => {
+        const type = /[A-Za-z0-9_./:@%+\-]/.test(character)
+            ? "latin"
+            : /\s/.test(character)
+                ? "space"
+                : "single";
+        if (type === "single") {
+            if (token) tokens.push(token);
+            tokens.push(character);
+            token = "";
+            tokenType = "";
+            return;
+        }
+        if (token && type !== tokenType) {
+            tokens.push(token);
+            token = "";
+        }
+        token += character;
+        tokenType = type;
+    });
+    if (token) tokens.push(token);
+
+    const lines = [];
+    let line = "";
+    let width = 0;
+    function flush() {
+        const content = line.replace(/\s+$/, "");
+        if (content) lines.push(content);
+        line = "";
+        width = 0;
+    }
+
+    tokens.forEach((item) => {
+        let content = item;
+        let itemWidth = estimateSvgTextWidth(content, size, weight);
+        if (line && width + itemWidth > maxWidth) {
+            flush();
+            content = content.replace(/^\s+/, "");
+            itemWidth = estimateSvgTextWidth(content, size, weight);
+        }
+        if (itemWidth <= maxWidth) {
+            line += content;
+            width += itemWidth;
+            return;
+        }
+        Array.from(content).forEach((character) => {
+            const characterWidth = estimateSvgTextWidth(character, size, weight);
+            if (line && width + characterWidth > maxWidth) flush();
+            line += character;
+            width += characterWidth;
+        });
+    });
+    if (line) {
+        const content = line.replace(/\s+$/, "");
+        if (content) {
+            lines.push(content);
+        }
+    }
+    return lines.filter(Boolean);
+}
+
+function estimateSvgTextWidth(value, size, weight) {
+    const fontSize = Number(size) || 14;
+    const boldFactor = Number(weight) >= 600 ? 1.04 : 1;
+    return Array.from(String(value || "")).reduce((total, character) => {
+        const code = character.codePointAt(0);
+        let ratio = 0.56;
+        if (/\s/.test(character)) ratio = 0.34;
+        else if (/[\u2e80-\u9fff\uac00-\ud7af]/.test(character) || code > 0xffff) ratio = 1;
+        else if (/[A-Z]/.test(character)) ratio = 0.64;
+        else if (/[0-9]/.test(character)) ratio = 0.58;
+        else if (/[,.:;|()[\]{}'"]/u.test(character)) ratio = 0.34;
+        return total + fontSize * ratio * boldFactor;
+    }, 0);
+}
+
+function base64Utf8(value) {
+    const input = wellFormedUtf16(value);
+    const binary = encodeURIComponent(input).replace(
+        /%([0-9A-F]{2})/g,
+        (_, hexadecimal) => String.fromCharCode(parseInt(hexadecimal, 16))
+    );
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let output = "";
+    for (let index = 0; index < binary.length; index += 3) {
+        const first = binary.charCodeAt(index);
+        const second = index + 1 < binary.length ? binary.charCodeAt(index + 1) : NaN;
+        const third = index + 2 < binary.length ? binary.charCodeAt(index + 2) : NaN;
+        const value24 = (first << 16)
+            | ((Number.isNaN(second) ? 0 : second) << 8)
+            | (Number.isNaN(third) ? 0 : third);
+        output += alphabet[(value24 >> 18) & 63];
+        output += alphabet[(value24 >> 12) & 63];
+        output += Number.isNaN(second) ? "=" : alphabet[(value24 >> 6) & 63];
+        output += Number.isNaN(third) ? "=" : alphabet[value24 & 63];
+    }
+    return output;
+}
+
+function wellFormedUtf16(value) {
+    const input = String(value || "");
+    let output = "";
+    for (let index = 0; index < input.length; index += 1) {
+        const code = input.charCodeAt(index);
+        if (code >= 0xd800 && code <= 0xdbff) {
+            const next = input.charCodeAt(index + 1);
+            if (next >= 0xdc00 && next <= 0xdfff) {
+                output += input[index] + input[index + 1];
+                index += 1;
+            } else {
+                output += "\ufffd";
+            }
+        } else if (code >= 0xdc00 && code <= 0xdfff) {
+            output += "\ufffd";
+        } else {
+            output += input[index];
+        }
+    }
+    return output;
 }
 
 function buildBasic(ip, data) {

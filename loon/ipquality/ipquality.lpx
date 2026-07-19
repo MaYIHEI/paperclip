@@ -6,6 +6,7 @@
 #!select = MaskIP,false,true
 #!select = MediaTest,true,false
 #!select = MapNotification,false,true
+#!select = SmoothRender,true,false
 #!tag=节点,IP,风险,流媒体
 #!date=2026-07-19
 

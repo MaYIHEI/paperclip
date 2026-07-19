@@ -1,6 +1,6 @@
 # 节点 IP 质量检测
 
-> 🧪 r9 流畅度测试 · 仅支持 Loon
+> 🧪 r10 流畅度测试 · 仅支持 Loon
 
 在 Loon 的节点或策略组页面查看所选节点的出口 IP、IP 类型与风险信息，并检测常见流媒体和 AI 服务可用性。结果按 VPS `IP.Check.Place` / `xykt/IPQuality` 的多源展示口径呈现，不生成自定义综合评分。
 
@@ -35,6 +35,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 | `MaskIP` | 关闭 | 隐藏报告中 IP 的后半段，适合截图分享 |
 | `MediaTest` | 开启 | 检测 TikTok、Disney+、Netflix、YouTube、Prime Video、Reddit、ChatGPT |
 | `MapNotification` | 关闭 | 完成后发送通知；点按通知可在 Apple 地图查看 IP 数据库估算的位置 |
+| `SmoothRender` | 开启 | 将完整报告预渲染为单个透明矢量图层，减少 Loon 长富文本滚动时的重复排版；关闭后使用原富文本报告 |
 
 ## 报告内容
 
@@ -54,6 +55,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 | 日期 | 变更 |
 |---|---|
+| 2026-07-19 | r10：新增单图层平滑渲染，保留完整内容、颜色、字号与信息层级 |
 | 2026-07-19 | r9：保持报告内容与视觉层级，改用轻量单层 HTML 文本流以改善滚动流畅度 |
 | 2026-07-19 | r8：补充 ASN/组织、IPPure 分流出口识别、Apple 地图通知与多源稳定性修复 |
 | 2026-07-18 | r1：初版进入 testing |
