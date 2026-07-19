@@ -11,10 +11,10 @@
  *
  * ===== Loon =====
  * [Script]
- * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
+ * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-19.r8";
+const SCRIPT_VERSION = "2026-07-19.r9";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -582,7 +582,7 @@ function render(ip, data, media) {
         '<div style="font-family:-apple-system,BlinkMacSystemFont;font-size:14px;line-height:1.5;text-align:left;overflow-wrap:anywhere">',
         '<div style="font-size:18px;line-height:18px">&nbsp;</div>',
         '<div style="font-size:20px;font-weight:700;line-height:1.25;margin-bottom:16px">节点 IP 质量检测</div>',
-        `<div style="color:#8e8e93;font-size:11px;margin-bottom:10px">节点 · ${escapeHtml(displayNodeName)}</div>`,
+        `<span style="color:#8e8e93;font-size:11px;line-height:2.4">节点 · ${escapeHtml(displayNodeName)}</span><br/>`,
         summaryCard(basic),
         section("基础信息", renderBasic(basic)),
         section("IP 类型属性", renderTypeList(types)),
@@ -596,8 +596,7 @@ function render(ip, data, media) {
         '<div style="color:#8e8e93;font-size:10px;line-height:1.45">'
             + '类型名称、评分分档与风险字段遵循 xykt/IPQuality 的展示口径；各库结果独立展示，不生成综合结论。'
             + '聚合来源不可用时保留直连结果。Loon 不提供节点 TCP/DNS API，25 端口与 DNSBL 未检测。</div>',
-        '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
-        '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
+        '<div style="font-size:112px;line-height:112px">&nbsp;</div>',
         "</div>",
     ].join("");
 
@@ -1283,7 +1282,9 @@ function summaryCard(basic) {
         + (basic.city
             ? `<div style="margin-top:2px;color:#8e8e93;font-size:12px;line-height:1.4">${escapeHtml(basic.city)}</div>`
             : "")
-        + (asn ? `<div style="margin-top:5px;color:#8e8e93;font-size:11px;line-height:1.35">${escapeHtml(asn)}</div>` : "")
+        + (asn
+            ? `<div style="margin-top:5px;color:#8e8e93;font-size:11px;line-height:1.35">${escapeHtml(asn)}</div>`
+            : "")
         + "</div>";
 }
 
@@ -1313,11 +1314,10 @@ function renderRiskList(rows) {
     const unavailable = rows.filter((row) => !row.available).map((row) => row.name);
     const body = available.map((row) => {
         const color = row.severity === null ? "#0A84FF" : riskColor(row.severity);
-        return '<div style="margin-bottom:9px">'
-            + `<span style="color:${color};font-size:11px">●</span>&nbsp;`
-            + `<span style="font-weight:700">${escapeHtml(row.name)}</span>&nbsp;&nbsp;`
-            + `<span style="color:${color};font-weight:600">${escapeHtml([row.detail, row.label].filter(Boolean).join(" · "))}</span>`
-            + "</div>";
+        return `<span style="color:${color};font-size:11px">●</span>&nbsp;`
+            + `<b>${escapeHtml(row.name)}</b>&nbsp;&nbsp;`
+            + `<span style="color:${color};font-weight:600;line-height:2.1">${escapeHtml([row.detail, row.label].filter(Boolean).join(" · "))}</span>`
+            + "<br/>";
     }).join("");
     const missing = unavailable.length
         ? mutedLine(`本次未返回：${unavailable.join("、")}`)
@@ -1331,10 +1331,8 @@ function renderTypeList(rows) {
         const details = [];
         if (row.usage) details.push(`<span style="color:#8e8e93">使用</span>&nbsp;${escapeHtml(row.usage)}`);
         if (row.company) details.push(`<span style="color:#8e8e93">公司</span>&nbsp;${escapeHtml(row.company)}`);
-        return '<div style="margin-bottom:11px">'
-            + `<div style="font-weight:700">${escapeHtml(row.name)}</div>`
-            + `<div style="margin-top:2px;font-size:12px;line-height:1.5">${details.join('<br/>')}</div>`
-            + "</div>";
+        return `<b>${escapeHtml(row.name)}</b><br/>`
+            + `<span style="font-size:12px;line-height:1.9">${details.join("<br/>")}</span><br/>`;
     }).join("");
 }
 
@@ -1359,10 +1357,8 @@ function renderFactorCards(sources) {
         const title = region && region.length === 2
             ? `${source.name} · ${flagEmoji(region)} [${region.toUpperCase()}]`
             : source.name;
-        return '<div style="margin-bottom:11px">'
-            + `<div style="font-weight:700">${escapeHtml(title)}</div>`
-            + `<div style="margin-top:2px;font-size:12px;line-height:1.5">${lines.join('<br/>')}</div>`
-            + "</div>";
+        return `<b>${escapeHtml(title)}</b><br/>`
+            + `<span style="font-size:12px;line-height:1.9">${lines.join("<br/>")}</span><br/>`;
     }).join("");
 }
 
@@ -1374,12 +1370,11 @@ function renderMediaList(rows) {
         const icon = row.status === "yes" ? "✅" : row.status === "partial" ? "🟠" : "❌";
         const summary = `${status.text}${row.region ? ` · [${row.region}]` : ""}`;
         const detail = row.detail
-            ? `<div style="font-size:11px;color:#8e8e93;margin-top:1px">${escapeHtml(row.detail)}</div>`
+            ? `<br/><span style="font-size:11px;color:#8e8e93">${escapeHtml(row.detail)}</span>`
             : "";
-        return '<div style="margin-bottom:10px">'
-            + `<span>${icon}</span>&nbsp;<span style="font-weight:700">${escapeHtml(row.name)}</span>&nbsp;&nbsp;`
-            + `<span style="color:${status.color};font-weight:600">${escapeHtml(summary)}</span>${detail}`
-            + "</div>";
+        return `${icon}&nbsp;<b>${escapeHtml(row.name)}</b>&nbsp;&nbsp;`
+            + `<span style="color:${status.color};font-weight:600;line-height:2.1">${escapeHtml(summary)}</span>${detail}`
+            + "<br/>";
     }).join("");
     const unknownLine = unknown.length
         ? mutedLine(`⚪ 未确认：${unknown.map((row) => row.name).join("、")}`)
@@ -1434,21 +1429,19 @@ function mediaResult(name, status, region, detail) {
 }
 
 function section(title, content) {
-    return '<div style="font-size:8px;line-height:8px">&nbsp;</div>'
-        + '<div>'
-        + `<div style="color:#0A84FF;font-weight:700;font-size:15px;margin-bottom:9px">▌${escapeHtml(title)}</div>`
-        + `${content}</div>`;
-}
-
-function infoLine(label, value) {
-    return '<div style="margin-bottom:8px;line-height:1.4">'
-        + `<span style="color:#8e8e93;font-size:12px">${escapeHtml(label)}</span>&nbsp;&nbsp;`
-        + `<span style="font-weight:600">${escapeHtml(value)}</span>`
+    return '<div style="margin-top:12px">'
+        + `<span style="color:#0A84FF;font-weight:700;font-size:15px;line-height:2">▌${escapeHtml(title)}</span><br/>`
+        + content
         + "</div>";
 }
 
+function infoLine(label, value) {
+    return `<span style="color:#8e8e93;font-size:12px;line-height:2">${escapeHtml(label)}</span>&nbsp;&nbsp;`
+        + `<b>${escapeHtml(value)}</b><br/>`;
+}
+
 function mutedLine(value) {
-    return `<div style="color:#8e8e93;font-size:11px;margin:5px 0;line-height:1.45">${escapeHtml(value)}</div>`;
+    return `<span style="color:#8e8e93;font-size:11px;line-height:2.3">${escapeHtml(value)}</span><br/>`;
 }
 
 function browserHeaders() {
