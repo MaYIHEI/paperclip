@@ -1,5 +1,5 @@
 #!name=节点 IP 质量检测
-#!desc=多源直连检测节点 IP、网络类型、原始风险、风险标记及流媒体与 AI 可用性；手机单列排版，缺失数据不参与判断。
+#!desc=对齐 IP.Check.Place 口径检测节点 IP 类型、原始风险、风险标记及流媒体与 AI 可用性；手机单列排版，缺失数据不参与判断。
 #!openUrl=
 #!author=MaYIHEI[https://github.com/MaYIHEI]
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/loon/ipquality
