@@ -11,10 +11,10 @@
  *
  * ===== Loon =====
  * [Script]
- * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
+ * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-19.r8";
+const SCRIPT_VERSION = "2026-07-19.r11";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -30,6 +30,7 @@ const nodeName = params.node || "";
 const maskIP = readSwitch("MaskIP", false);
 const mediaEnabled = readSwitch("MediaTest", true);
 const mapNotificationEnabled = readSwitch("MapNotification", false);
+const compactReportEnabled = readSwitch("CompactReport", true);
 
 console.log(`[INFO] 节点 IP 质量检测 ${SCRIPT_VERSION}`);
 console.log(`[INFO] 节点: ${nodeName || "未获取"}`);
@@ -578,28 +579,30 @@ function render(ip, data, media) {
     const titleColor = reportColor(risks);
     const displayNodeName = truncateText(nodeName, 30);
 
-    const html = [
-        '<div style="font-family:-apple-system,BlinkMacSystemFont;font-size:14px;line-height:1.5;text-align:left;overflow-wrap:anywhere">',
-        '<div style="font-size:18px;line-height:18px">&nbsp;</div>',
-        '<div style="font-size:20px;font-weight:700;line-height:1.25;margin-bottom:16px">节点 IP 质量检测</div>',
-        `<div style="color:#8e8e93;font-size:11px;margin-bottom:10px">节点 · ${escapeHtml(displayNodeName)}</div>`,
-        summaryCard(basic),
-        section("基础信息", renderBasic(basic)),
-        section("IP 类型属性", renderTypeList(types)),
-        section("风险评分", renderRiskList(risks)),
-        section("风险因素", renderFactorCards(factors)),
-        section("流媒体与 AI", mediaEnabled
-            ? renderMediaList(media)
-            : mutedLine("流媒体检测已关闭")),
-        section("数据状态", renderAudit(audit, data._probe)),
-        '<div style="font-size:9px;line-height:9px">&nbsp;</div>',
-        '<div style="color:#8e8e93;font-size:10px;line-height:1.45">'
-            + '类型名称、评分分档与风险字段遵循 xykt/IPQuality 的展示口径；各库结果独立展示，不生成综合结论。'
-            + '聚合来源不可用时保留直连结果。Loon 不提供节点 TCP/DNS API，25 端口与 DNSBL 未检测。</div>',
-        '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
-        '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
-        "</div>",
-    ].join("");
+    const html = compactReportEnabled
+        ? renderCompactReport(basic, types, risks, factors, media, audit, data._probe)
+        : [
+            '<div style="font-family:-apple-system,BlinkMacSystemFont;font-size:14px;line-height:1.5;text-align:left;overflow-wrap:anywhere">',
+            '<div style="font-size:18px;line-height:18px">&nbsp;</div>',
+            '<div style="font-size:20px;font-weight:700;line-height:1.25;margin-bottom:16px">节点 IP 质量检测</div>',
+            `<div style="color:#8e8e93;font-size:11px;margin-bottom:10px">节点 · ${escapeHtml(displayNodeName)}</div>`,
+            summaryCard(basic),
+            section("基础信息", renderBasic(basic)),
+            section("IP 类型属性", renderTypeList(types)),
+            section("风险评分", renderRiskList(risks)),
+            section("风险因素", renderFactorCards(factors)),
+            section("流媒体与 AI", mediaEnabled
+                ? renderMediaList(media)
+                : mutedLine("流媒体检测已关闭")),
+            section("数据状态", renderAudit(audit, data._probe)),
+            '<div style="font-size:9px;line-height:9px">&nbsp;</div>',
+            '<div style="color:#8e8e93;font-size:10px;line-height:1.45">'
+                + '类型名称、评分分档与风险字段遵循 xykt/IPQuality 的展示口径；各库结果独立展示，不生成综合结论。'
+                + '聚合来源不可用时保留直连结果。Loon 不提供节点 TCP/DNS API，25 端口与 DNSBL 未检测。</div>',
+            '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
+            '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
+            "</div>",
+        ].join("");
 
     postMapNotification(basic, displayNodeName);
     $done({
@@ -608,6 +611,176 @@ function render(ip, data, media) {
         icon: "shield.lefthalf.filled",
         "title-color": titleColor,
     });
+}
+
+function renderCompactReport(basic, types, risks, factors, media, audit, probe) {
+    const asn = [basic.asn, basic.organization].filter(Boolean).join(" · ");
+    const summary = [
+        '<span style="font-size:18px;line-height:18px">&nbsp;</span><br/>',
+        '<span style="font-size:20px;font-weight:700;line-height:1.25">节点 IP 质量检测</span><br/>',
+        `<span style="color:#8e8e93;font-size:11px;line-height:2.5">节点 · ${escapeHtml(truncateText(nodeName, 30))}</span><br/>`,
+        `<span style="font-size:24px;font-weight:800;line-height:1.25">${escapeHtml(basic.ip)}</span><br/>`,
+        basic.nature
+            ? `<span style="color:#0A84FF;font-size:12px;font-weight:600;line-height:1.8">${escapeHtml(basic.nature)}</span><br/>`
+            : "",
+        basic.actualRegion
+            ? `<span style="font-weight:700">${escapeHtml(basic.actualRegion)}</span>`
+                + (basic.city ? ` <span style="color:#8e8e93;font-size:12px">· ${escapeHtml(basic.city)}</span>` : "")
+                + "<br/>"
+            : basic.city
+                ? `<span style="color:#8e8e93;font-size:12px">${escapeHtml(basic.city)}</span><br/>`
+                : "",
+        asn ? `<span style="color:#8e8e93;font-size:11px">${escapeHtml(asn)}</span><br/>` : "",
+    ].join("");
+    return [
+        '<div style="font-family:-apple-system,BlinkMacSystemFont;font-size:14px;line-height:1.45;text-align:left;overflow-wrap:anywhere">',
+        summary,
+        compactSection("网络信息", renderCompactNetwork(basic, types)),
+        compactSection("风险评分", renderCompactRisks(risks)),
+        compactSection("风险因素", renderCompactFactors(factors)),
+        compactSection("流媒体与 AI", mediaEnabled
+            ? renderCompactMedia(media)
+            : compactMuted("流媒体检测已关闭")),
+        compactSection("数据状态", renderCompactAudit(audit, probe)),
+        '<br/><span style="color:#8e8e93;font-size:10px;line-height:1.45">'
+            + '各数据库结果独立展示；未返回不代表低风险。'
+            + 'Loon 不支持节点 TCP/DNS 检测，25 端口与 DNSBL 未检测。</span>',
+        '<br/><span style="font-size:112px;line-height:112px">&nbsp;</span>',
+        "</div>",
+    ].join("");
+}
+
+function renderCompactNetwork(basic, types) {
+    const rows = [
+        compactPair("来源", basic.source),
+        compactPair("网段", basic.route),
+        compactPair("时区", basic.timezone),
+        compactPair("注册地", basic.registeredRegion),
+        compactPair("坐标", basic.coordinates),
+    ].filter(Boolean);
+    const groups = {};
+    (types || []).forEach((row) => {
+        const details = [];
+        if (row.usage) details.push(`使用 ${row.usage}`);
+        if (row.company) details.push(`公司 ${row.company}`);
+        if (details.length) {
+            const key = details.join(" · ");
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(row.name);
+        }
+    });
+    Object.keys(groups).forEach((details) => {
+        rows.push(`<b>${escapeHtml(groups[details].join(" / "))}</b>　${escapeHtml(details)}<br/>`);
+    });
+    return rows.join("") || compactMuted("本次没有可验证的网络信息");
+}
+
+function renderCompactRisks(rows) {
+    const available = (rows || []).filter((row) => row.available);
+    const unavailable = (rows || []).filter((row) => !row.available).map((row) => row.name);
+    const lines = available.map((row) => {
+        const color = row.severity === null
+            ? "#0A84FF"
+            : row.severity >= 4
+                ? "#ff375f"
+                : riskColor(row.severity);
+        const value = [row.detail, row.label].filter(Boolean).join(" · ");
+        return `<span style="color:${color}"><b>● ${escapeHtml(row.name)}</b>　`
+            + `${escapeHtml(value)}</span><br/>`;
+    });
+    if (!lines.length) lines.push(compactMuted("本次没有可验证的风险评分"));
+    if (unavailable.length) {
+        lines.push(compactMuted(`未返回：${unavailable.join("、")}`));
+    }
+    return lines.join("");
+}
+
+function renderCompactFactors(sources) {
+    if (!sources || !sources.length) return compactMuted("本次没有可验证的风险标记");
+    return sources.map((source) => {
+        const hit = [];
+        const clear = [];
+        Object.keys(source.checks).forEach((key) => {
+            const value = booleanOrNull(source.checks[key]);
+            if (value === true) hit.push(key);
+            if (value === false) clear.push(key);
+        });
+        const region = cleanValue(source.country);
+        const title = region && region.length === 2
+            ? `${source.name} · ${flagEmoji(region)} [${region.toUpperCase()}]`
+            : source.name;
+        const result = [];
+        if (hit.length) {
+            result.push(`<span style="color:#ff453a;font-weight:600">命中 ${escapeHtml(hit.join("、"))}</span>`);
+            if (clear.length) result.push("其余已测未命中");
+        } else if (clear.length) {
+            result.push('<span style="color:#30d158">已返回字段均未命中</span>');
+        } else {
+            result.push('<span style="color:#8e8e93">无可验证字段</span>');
+        }
+        return `<b>${escapeHtml(title)}</b>　${result.join(" · ")}<br/>`;
+    }).join("");
+}
+
+function renderCompactMedia(rows) {
+    const confirmed = (rows || []).filter((row) => row.status !== "unknown");
+    const unknown = (rows || []).filter((row) => row.status === "unknown");
+    const lines = confirmed.map((row) => {
+        const status = mediaStatus(row.status);
+        const icon = row.status === "yes" ? "✅" : row.status === "partial" ? "🟠" : "❌";
+        const summary = `${status.text}${row.region ? ` [${row.region}]` : ""}`;
+        const detail = cleanValue(row.detail);
+        return `${icon} <b>${escapeHtml(row.name)}</b>　`
+            + `<span style="color:${status.color};font-weight:600">${escapeHtml(summary)}</span>`
+            + (detail && row.status !== "yes"
+                ? ` <span style="color:#8e8e93;font-size:11px">· ${escapeHtml(truncateText(detail, 24))}</span>`
+                : "")
+            + "<br/>";
+    });
+    if (!lines.length) lines.push(compactMuted("本次没有确认任何服务状态"));
+    unknown.forEach((row) => {
+        const detail = cleanValue(row.detail);
+        lines.push(`⚪ <b>${escapeHtml(row.name)}</b>　`
+            + '<span style="color:#8e8e93;font-size:11px">未确认'
+            + (detail ? ` · ${escapeHtml(truncateText(detail, 24))}` : "")
+            + "</span><br/>");
+    });
+    return lines.join("");
+}
+
+function renderCompactAudit(audit, probe) {
+    const status = [`来源 ${audit.success.length}/${audit.total}`];
+    if (probe && probe.total) {
+        status.push(`出口 ${probe.matched}/${probe.total}`);
+        if (probe.unique > 1) status.push("存在分流差异");
+    }
+    const lines = [`<b>${escapeHtml(status.join(" · "))}</b><br/>`];
+    if (audit.failed.length) lines.push(compactMuted(`未返回：${audit.failed.join("、")}`));
+    else lines.push(compactMuted("全部数据来源已返回"));
+    if (audit.skipped && audit.skipped.length) {
+        lines.push(compactMuted(`已跳过：${audit.skipped.join("、")}`));
+    }
+    if (audit.supplemental && audit.supplemental.length) {
+        lines.push(compactMuted(`补充来源：${audit.supplemental.join("、")}`));
+    }
+    return lines.join("");
+}
+
+function compactSection(title, content) {
+    return '<br/>'
+        + `<span style="color:#0A84FF;font-size:15px;font-weight:700;line-height:2">▌${escapeHtml(title)}</span><br/>`
+        + content;
+}
+
+function compactPair(label, value) {
+    const content = cleanValue(value);
+    if (!content) return "";
+    return `<span style="color:#8e8e93;font-size:12px">${escapeHtml(label)}</span>　`
+        + `<b>${escapeHtml(content)}</b><br/>`;
+}
+
+function compactMuted(value) {
+    return `<span style="color:#8e8e93;font-size:11px">${escapeHtml(value)}</span><br/>`;
 }
 
 function buildBasic(ip, data) {
