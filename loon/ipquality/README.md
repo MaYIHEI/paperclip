@@ -42,7 +42,8 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 ## 数据真实性
 
-- 所有查询请求都指定当前选中的 Loon 节点
+- 出口探针、IPPure 和要求“查询 IP 必须等于请求来源”的受保护聚合接口使用当前 Loon 节点
+- 支持明确指定目标 IP 的公开数据库使用 `DIRECT` 查询，并核对响应 IP，减少节点分流、限流和反爬造成的缺失
 - MaxMind 与受保护数据库优先使用 `ipinfo.check.place` 的同源聚合结果，公开站点保留直连；IP2Location 聚合失败时回退到公开页面
 - 同源聚合请求使用与 VPS `curl` 客户端一致的 JSON 请求头，避免移动端浏览器 UA 被服务端拦截
 - 每个评分和风险标记均保留来源，不生成自创的综合分
@@ -59,6 +60,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 ## 维护记录
 
+- 2026-07-19：r6 增加 `myip.check.place` 同源出口探针，受保护数据库使用该出口作为检测目标；可指定 IP 的公开数据库改为 `DIRECT` 查询。IPQS 上游额度耗尽时明确标记为跳过，不再冒充普通请求失败
 - 2026-07-19：r5 根据真机渲染限制移除依赖 `flex`、圆角和半透明背景的网页式卡片，改用 Loon 稳定支持的富文本层级；增加顶部呼吸区，重做摘要、字段换行、分区间距与底部安全区。同步修复未知布尔假阴性、基础信息跨库合成、IP2Location 回退推导、IP2Location 类型映射和 ipregistry HTML 解析等真实性问题
 - 2026-07-19：r4 恢复 VPS 同源后端以补齐 MaxMind、IP2Location、Scamalytics、AbuseIPDB、IPQS、ipdata；类型名称、风险阈值和原生/广播口径对齐 `xykt/IPQuality`；去除重复标题并重做移动端信息层级
 - 2026-07-19：r3 移除失效的聚合后端依赖，改为 8–9 个独立直连来源；桌面多列表格改为手机单列卡片，隐藏空字段
