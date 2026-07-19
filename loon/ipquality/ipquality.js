@@ -29,6 +29,7 @@ const params = typeof $environment !== "undefined" && $environment.params
 const nodeName = params.node || "";
 const maskIP = readSwitch("MaskIP", false);
 const mediaEnabled = readSwitch("MediaTest", true);
+const mapNotificationEnabled = readSwitch("MapNotification", false);
 
 console.log(`[INFO] 节点 IP 质量检测 ${SCRIPT_VERSION}`);
 console.log(`[INFO] 节点: ${nodeName || "未获取"}`);
@@ -521,6 +522,7 @@ function render(ip, data, media) {
         "</div>",
     ].join("");
 
+    postMapNotification(basic, displayNodeName);
     $done({
         title: "\u200B",
         htmlMessage: html,
@@ -1153,11 +1155,17 @@ function renderBasic(basic) {
         ["注册地", basic.registeredRegion],
         ["坐标", basic.coordinates],
     ].filter((row) => row[1]);
-    const body = rows.map((row) => infoLine(row[0], row[1])).join("");
-    const map = basic.map
-        ? `<div style="margin-top:8px"><a href="${escapeHtml(basic.map)}">↗ 在地图中查看</a></div>`
-        : "";
-    return body + map;
+    return rows.map((row) => infoLine(row[0], row[1])).join("");
+}
+
+function postMapNotification(basic, displayNodeName) {
+    if (!mapNotificationEnabled || !basic || !basic.map) return;
+    $notification.post(
+        "节点 IP 地图",
+        displayNodeName || basic.ip || "",
+        basic.coordinates || "点击查看出口 IP 坐标",
+        { openUrl: basic.map }
+    );
 }
 
 function renderRiskList(rows) {
