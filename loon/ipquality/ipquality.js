@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-19.r5";
+const SCRIPT_VERSION = "2026-07-19.r6";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -53,6 +53,7 @@ async function run() {
 
 async function discoverIP() {
     const definitions = [
+        ["myip.check.place", requestText("https://myip.check.place")],
         ["ip-api", requestJson(`${IPAPI_COM_URL}?fields=status,message,query`)],
         ["ipify", requestJson(IPIFY_URL)],
         ["ident.me", requestText("https://v4.ident.me/")],
@@ -96,14 +97,16 @@ async function discoverIP() {
     observations.forEach((item) => {
         counts[item.ip] = (counts[item.ip] || 0) + 1;
     });
-    const ip = observations.map((item) => item.ip).sort((left, right) => {
-        const countDiff = counts[right] - counts[left];
-        if (countDiff) return countDiff;
-        const ipv4Diff = Number(isIPv4(right)) - Number(isIPv4(left));
-        if (ipv4Diff) return ipv4Diff;
-        return observations.findIndex((item) => item.ip === left)
-            - observations.findIndex((item) => item.ip === right);
-    })[0];
+    const backendObservation = observations.find((item) => item.source === "myip.check.place");
+    const ip = backendObservation ? backendObservation.ip : observations.map((item) => item.ip)
+        .sort((left, right) => {
+            const countDiff = counts[right] - counts[left];
+            if (countDiff) return countDiff;
+            const ipv4Diff = Number(isIPv4(right)) - Number(isIPv4(left));
+            if (ipv4Diff) return ipv4Diff;
+            return observations.findIndex((item) => item.ip === left)
+                - observations.findIndex((item) => item.ip === right);
+        })[0];
     const matchingIppure = ippure && normalizeIPAddress(ippure.ip) === ip ? ippure : null;
     const matchingIpapi = ipapi && normalizeIPAddress(ipapi.ip) === ip ? ipapi : null;
     const unique = Object.keys(counts);
@@ -126,8 +129,8 @@ async function discoverIP() {
 async function collectDatabases(ip, discovery) {
     const pathIP = encodeURIComponent(ip);
     const tasks = {
-        maxmind: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?lang=cn`),
-        maxmindBackup: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?lang=en`),
+        maxmind: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?lang=cn`, { node: "DIRECT" }),
+        maxmindBackup: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?lang=en`, { node: "DIRECT" }),
         ippure: discovery.ippure
             ? Promise.resolve(discovery.ippure)
             : requestJson(IPPURE_URL).then((value) => {
@@ -138,22 +141,25 @@ async function collectDatabases(ip, discovery) {
             }),
         ipapi: discovery.ipapi
             ? Promise.resolve(discovery.ipapi)
-            : requestJson(`${IPAPI_URL}?q=${pathIP}`),
-        ipinfo: requestJson(`https://ipinfo.io/widget/demo/${pathIP}`),
-        ipwhois: requestJson(`https://ipwho.is/${pathIP}`),
+            : requestJson(`${IPAPI_URL}?q=${pathIP}`, { node: "DIRECT" }),
+        ipinfo: requestJson(`https://ipinfo.io/widget/demo/${pathIP}`, { node: "DIRECT" }),
+        ipwhois: requestJson(`https://ipwho.is/${pathIP}`, { node: "DIRECT" }),
         scamalytics: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?db=scamalytics`),
         abuseipdb: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?db=abuseipdb`),
         ip2locationFull: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ip2location`),
         ipdata: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ipdata`),
         ipqs: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ipqualityscore`),
-        ip2location: requestText(`https://www.ip2location.io/${pathIP}`),
-        proxycheck: requestJson(`https://proxycheck.io/v2/${pathIP}?vpn=1&asn=1&risk=1`),
-        dbip: requestText(`https://db-ip.com/${pathIP}`),
+        ip2location: requestText(`https://www.ip2location.io/${pathIP}`, { node: "DIRECT" }),
+        proxycheck: requestJson(`https://proxycheck.io/v2/${pathIP}?vpn=1&asn=1&risk=1`, {
+            node: "DIRECT",
+        }),
+        dbip: requestText(`https://db-ip.com/${pathIP}`, { node: "DIRECT" }),
         ipregistry: requestIpregistry(pathIP),
     };
     if (isIPv4(ip)) {
         tasks.ipApiCom = requestJson(
-            `${IPAPI_COM_URL}${pathIP}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,asname,mobile,proxy,hosting,query`
+            `${IPAPI_COM_URL}${pathIP}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,asname,mobile,proxy,hosting,query`,
+            { node: "DIRECT" }
         );
     }
 
@@ -178,13 +184,14 @@ async function collectDatabases(ip, discovery) {
 async function requestIpregistry(pathIP) {
     let key = "sb69ksjcajfs4c";
     try {
-        const homepage = await requestText("https://ipregistry.co");
+        const homepage = await requestText("https://ipregistry.co", { node: "DIRECT" });
         const match = String(homepage).match(/apiKey=["']([a-zA-Z0-9]+)["']/i);
         if (match) key = match[1];
     } catch (error) {
         console.log(`[WARN] ipregistry 首页密钥获取失败，使用备用密钥: ${errorMessage(error)}`);
     }
     return requestJson(`https://api.ipregistry.co/${pathIP}?hostname=true&key=${key}`, {
+        node: "DIRECT",
         headers: {
             Accept: "application/json",
             Origin: "https://ipregistry.co",
@@ -752,6 +759,7 @@ function buildRisks(data) {
     const ipqsScore = numberOrNull(data.ipqs && data.ipqs.success !== false
         ? data.ipqs.fraud_score
         : null);
+    const ipqsSkipped = ipqsUpstreamUnavailable(data);
     const dbipRisk = parseDbipRisk(data.dbip);
 
     return [
@@ -786,7 +794,7 @@ function buildRisks(data) {
             [25, 3, "高风险"],
             [0, 0, "低风险"],
         ]),
-        scoreRisk("IPQS", ipqsScore, [
+        ipqsSkipped ? null : scoreRisk("IPQS", ipqsScore, [
             [90, 4, "高风险"],
             [85, 3, "存在风险"],
             [75, 2, "可疑"],
@@ -801,7 +809,7 @@ function buildRisks(data) {
                 detail: dbipRisk,
             }
             : unavailableRisk("DB-IP"),
-    ];
+    ].filter(Boolean);
 }
 
 function buildFactors(data) {
@@ -1069,6 +1077,11 @@ function unavailableRisk(name) {
     return { name, available: false, severity: 0, label: "", detail: "" };
 }
 
+function ipqsUpstreamUnavailable(data) {
+    return !!(data && data.ipqs && data.ipqs.success === false
+        && /insufficient credits|contact IPQualityScore/i.test(data.ipqs.message || ""));
+}
+
 function ipapiSeverity(level) {
     const value = String(level || "").toLowerCase();
     if (value === "very high") return 4;
@@ -1099,6 +1112,7 @@ function typeRow(name, usage, company) {
 }
 
 function buildAudit(data) {
+    const ipqsSkipped = ipqsUpstreamUnavailable(data);
     const checks = [
         ["MaxMind", !!((data.maxmind && (data.maxmind.Country || data.maxmind.ASN))
             || (data.maxmindBackup && (data.maxmindBackup.Country || data.maxmindBackup.ASN)))],
@@ -1113,13 +1127,13 @@ function buildAudit(data) {
         ["AbuseIPDB", !!(data.abuseipdb && data.abuseipdb.data
             && (cleanValue(data.abuseipdb.data.usageType)
                 || numberOrNull(data.abuseipdb.data.abuseConfidenceScore) !== null))],
-        ["IPQS", !!(data.ipqs && data.ipqs.success !== false
+        ipqsSkipped ? null : ["IPQS", !!(data.ipqs && data.ipqs.success !== false
             && numberOrNull(data.ipqs.fraud_score) !== null)],
         ["ipdata", !!(data.ipdata && (data.ipdata.ip || data.ipdata.country_code))],
         ["proxycheck", !!proxycheckRecord(data.proxycheck)],
         ["ipregistry", !!parseIpregistry(data.ipregistry)],
         ["DB-IP", !!(parseDbipRisk(data.dbip) || parseDbip(data.dbip))],
-    ];
+    ].filter(Boolean);
     if (Object.prototype.hasOwnProperty.call(data, "ipApiCom")) {
         checks.push(["ip-api", !!(data.ipApiCom && data.ipApiCom.status === "success")]);
     }
@@ -1127,6 +1141,7 @@ function buildAudit(data) {
         total: checks.length,
         success: checks.filter((item) => item[1]).map((item) => item[0]),
         failed: checks.filter((item) => !item[1]).map((item) => item[0]),
+        skipped: ipqsSkipped ? ["IPQS（上游额度不足）"] : [],
     };
 }
 
@@ -1256,7 +1271,10 @@ function renderAudit(audit, probe) {
     const missing = audit.failed.length
         ? mutedLine(`未返回 · ${audit.failed.join("、")}`)
         : mutedLine("全部数据来源已返回");
-    return infoLine("状态", summary) + missing;
+    const skipped = audit.skipped && audit.skipped.length
+        ? mutedLine(`已跳过 · ${audit.skipped.join("、")}`)
+        : "";
+    return infoLine("状态", summary) + missing + skipped;
 }
 
 function mediaStatus(status) {
@@ -1339,7 +1357,7 @@ function request(method, url, options) {
         const backendRequest = String(url).indexOf(IPQUALITY_BACKEND) === 0;
         const requestOptions = {
             url,
-            node: nodeName,
+            node: cleanValue(config.node) || nodeName,
             headers: config.headers || (backendRequest ? backendHeaders() : browserHeaders()),
         };
         if (backendRequest) requestOptions.alpn = "h2";
