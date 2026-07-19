@@ -22,7 +22,7 @@
 
 - `MaskIP`：截图分享时隐藏 IP 后半段，默认关闭
 - `MediaTest`：检测流媒体与 AI 服务，默认开启
-- `MapNotification`：检测完成后发送可点击的地图通知，默认关闭
+- `MapNotification`：检测完成后发送可点击通知，并在系统 Apple 地图中定位出口坐标，默认关闭
 
 ## Loon
 
@@ -33,7 +33,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 ## 检测项目
 
-- 基础信息：IP、ASN、组织、坐标、城市、使用地、注册地、时区，以及按 MaxMind 使用地/注册地比较得到的原生或广播属性；可选发送地图通知
+- 基础信息：IP、ASN、组织、坐标、城市、使用地、注册地、时区，以及按 MaxMind 使用地/注册地比较得到的原生或广播属性；可选通过系统 Apple 地图定位坐标
 - 类型属性：IPinfo、ipregistry、ipapi、IP2Location、AbuseIPDB 的使用类型和公司类型
 - 风险评分：IPPure、ipapi、IP2Location、Scamalytics、AbuseIPDB、IPQS、DB-IP 的原始值及 VPS 同款分档
 - 风险因素：IP2Location、ipapi、ipregistry、IPQS、Scamalytics、ipdata、IPinfo、DB-IP 的代理、Tor、VPN、机房、滥用、机器人等明确字段
@@ -48,7 +48,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 - IPPure 不支持指定目标 IP；若它走了不同出口，结果会作为补充来源保留并明确标注“分流出口”及对应 IP，不计入主报告来源成功数，也不会影响主报告颜色
 - 同源聚合请求使用与 VPS `curl` 客户端一致的 JSON 请求头，避免移动端浏览器 UA 被服务端拦截
 - 每个评分和风险标记均保留来源，不生成自创的综合分
-- 基础信息整组选用同一数据库：优先 MaxMind，缺失时才依次降级；国家/名称、经纬度、ASN/组织不会跨库拼成合成记录
+- 位置基础信息整组选用同一数据库，优先 MaxMind、缺失时依次降级；ASN 与组织作为一组独立网络身份选用明确返回 ASN 的来源，仍缺失时调用 Loon 自带 `ipasn/ipaso`，并在来源行标注
 - `原生 IP / 广播 IP` 只比较该基础来源内的使用地与注册地，不跨库拼接；来源不同时宁可不下结论
 - 多字段布尔结果只有“任一明确为真”或“全部明确为假”才下结论；部分字段缺失时保留未知，不当作未命中
 - IP2Location 聚合失败时，网页回退只使用页面明确返回的类型、评分和总代理状态，不反推 VPN、机房等细分字段
@@ -61,6 +61,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 ## 维护记录
 
+- 2026-07-19：r8 ASN/组织改为独立选择完整网络来源，并增加 Loon 内置 `ipasn/ipaso` 兜底；地图通知改为系统 Apple 地图；IPPure 对齐参考插件的空请求头访问方式，增加响应校验与三次重试
 - 2026-07-19：r7 改用 `ipinfo.check.place/cdn-cgi/trace` 识别聚合后端当前看到的出口，并对后续 403 做有限重试；IPPure 分流结果改为带出口 IP 的补充来源；Scamalytics 增加经所选节点访问官网的严格校验回退。若负载均衡策略每条连接持续更换出口，受保护来源仍可能无法返回
 - 2026-07-19：r6 增加 `myip.check.place` 同源出口探针，受保护数据库使用该出口作为检测目标；可指定 IP 的公开数据库改为 `DIRECT` 查询。IPQS 上游额度耗尽时明确标记为跳过，不再冒充普通请求失败
 - 2026-07-19：r5 根据真机渲染限制移除依赖 `flex`、圆角和半透明背景的网页式卡片，改用 Loon 稳定支持的富文本层级；增加顶部呼吸区，重做摘要、字段换行、分区间距与底部安全区。同步修复未知布尔假阴性、基础信息跨库合成、IP2Location 回退推导、IP2Location 类型映射和 ipregistry HTML 解析等真实性问题

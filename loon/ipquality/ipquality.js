@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-19.r7";
+const SCRIPT_VERSION = "2026-07-19.r8";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -59,17 +59,19 @@ async function discoverIP() {
         ["ipify", requestJson(IPIFY_URL)],
         ["ident.me", requestText("https://v4.ident.me/")],
         ["icanhazip", requestText("https://ipv4.icanhazip.com/")],
-        ["IPPure", requestJson(IPPURE_URL)],
+        ["IPPure", requestIppure()],
         ["ipapi", requestJson(IPAPI_URL)],
     ];
     const settled = await Promise.all(definitions.map((item) => capture(item[1])));
     const observations = [];
     let ippure = null;
+    let ippureError = "";
     let ipapi = null;
 
     definitions.forEach((item, index) => {
         const result = settled[index];
         if (!result.ok) {
+            if (item[0] === "IPPure") ippureError = result.error;
             console.log(`[WARN] 出口探针 ${item[0]}: ${result.error}`);
             return;
         }
@@ -120,6 +122,7 @@ async function discoverIP() {
     return {
         ip,
         ippure,
+        ippureError,
         ipapi: matchingIpapi,
         probe: {
             matched: counts[ip],
@@ -136,7 +139,7 @@ async function collectDatabases(ip, discovery) {
         maxmindBackup: requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?lang=en`),
         ippure: discovery.ippure
             ? Promise.resolve(discovery.ippure)
-            : requestJson(IPPURE_URL),
+            : Promise.reject(new Error(discovery.ippureError || "IPPure 请求失败")),
         ipapi: discovery.ipapi
             ? Promise.resolve(discovery.ipapi)
             : requestJson(`${IPAPI_URL}?q=${pathIP}`, { node: "DIRECT" }),
@@ -204,6 +207,32 @@ async function requestBackendJson(url) {
         }
     }
     throw lastError || new Error("聚合接口请求失败");
+}
+
+async function requestIppure() {
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+            const value = await requestJson(IPPURE_URL, {
+                headers: {},
+                timeout: 6000,
+            });
+            if (!normalizeIPAddress(value && value.ip)) {
+                throw new Error("未返回可核验的出口 IP");
+            }
+            const fraudScore = numberOrNull(value.fraudScore);
+            if (fraudScore === null || fraudScore < 0 || fraudScore > 100) {
+                throw new Error("风险评分无效");
+            }
+            return value;
+        } catch (error) {
+            lastError = error;
+            if (attempt < 3) {
+                console.log(`[WARN] IPPure 第 ${attempt} 次请求失败，正在重试: ${errorMessage(error)}`);
+            }
+        }
+    }
+    throw lastError || new Error("IPPure 请求失败");
 }
 
 async function requestScamalytics(pathIP) {
@@ -729,6 +758,20 @@ function buildBasic(ip, data) {
     const profile = profiles.find((item) => item.countryCode || item.countryName)
         || profiles.find((item) => item.asn || item.organization || item.cityParts.length)
         || { source: "", cityParts: [] };
+    const loonNetwork = loonNetworkProfile(ip);
+    const networkProfile = profiles.find((item) => item.asn)
+        || (loonNetwork.asn ? loonNetwork : null)
+        || profiles.find((item) => item.organization)
+        || (loonNetwork.organization ? loonNetwork : null)
+        || profile;
+    const networkOrganization = cleanValue(networkProfile.organization)
+        || (networkProfile.asn && networkProfile.asn === loonNetwork.asn
+            ? cleanValue(loonNetwork.organization)
+            : "");
+    const sourceParts = [cleanValue(profile.source)];
+    if (networkProfile.source && networkProfile.source !== profile.source) {
+        sourceParts.push(`网络 ${networkProfile.source}`);
+    }
     const code = cleanValue(profile.countryCode);
     const country = cleanValue(profile.countryName);
     const registeredCode = cleanValue(profile.registeredCode);
@@ -747,9 +790,9 @@ function buildBasic(ip, data) {
 
     return {
         ip: maskIPAddress(ip),
-        source: cleanValue(profile.source),
-        asn: profile.asn ? `AS${profile.asn}` : "",
-        organization: cleanValue(profile.organization),
+        source: sourceParts.filter(Boolean).join(" · "),
+        asn: networkProfile.asn ? `AS${networkProfile.asn}` : "",
+        organization: networkOrganization,
         coordinates: hasCoordinates
             ? `${toDMS(latitude, true)}, ${toDMS(longitude, false)}`
             : "",
@@ -765,7 +808,7 @@ function buildBasic(ip, data) {
             : "",
         timezone: cleanValue(profile.timezone),
         nature,
-        route: cleanValue(profile.route),
+        route: cleanValue(networkProfile.route),
     };
 }
 
@@ -1449,6 +1492,7 @@ function request(method, url, options) {
             headers: config.headers || (backendRequest ? backendHeaders() : browserHeaders()),
         };
         if (backendRequest) requestOptions.alpn = "h2";
+        if (numberOrNull(config.timeout) !== null) requestOptions.timeout = Number(config.timeout);
         if (typeof config.body !== "undefined") requestOptions.body = config.body;
         const callback = (error, response, body) => {
             if (error) {
@@ -1505,6 +1549,29 @@ function normalizeIPAddress(value) {
     } catch (_) {
         return text;
     }
+}
+
+function loonNetworkProfile(ip) {
+    const result = {
+        source: "Loon",
+        asn: "",
+        organization: "",
+        route: "",
+    };
+    if (typeof $utils === "undefined") return result;
+    try {
+        if (typeof $utils.ipasn === "function") result.asn = cleanASN($utils.ipasn(ip));
+    } catch (error) {
+        console.log(`[WARN] Loon ASN 查询失败: ${errorMessage(error)}`);
+    }
+    try {
+        if (typeof $utils.ipaso === "function") {
+            result.organization = cleanValue($utils.ipaso(ip));
+        }
+    } catch (error) {
+        console.log(`[WARN] Loon ASO 查询失败: ${errorMessage(error)}`);
+    }
+    return result;
 }
 
 function cloudflareTraceIP(value) {
@@ -1705,7 +1772,8 @@ function buildMapURL(latitude, longitude, radius) {
     if (accuracy !== null && accuracy > 1000) zoom = 12;
     else if (accuracy !== null && accuracy > 500) zoom = 13;
     else if (accuracy !== null && accuracy > 250) zoom = 14;
-    return `https://check.place/${latitude},${longitude},${zoom},cn`;
+    const label = encodeURIComponent("节点 IP 出口");
+    return `https://maps.apple.com/?ll=${latitude},${longitude}&q=${label}&z=${zoom}&t=m`;
 }
 
 function firstMatch(text, patterns) {
