@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-19.r6";
+const SCRIPT_VERSION = "2026-07-19.r7";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -53,6 +53,7 @@ async function run() {
 
 async function discoverIP() {
     const definitions = [
+        ["ipinfo.check.place", requestText(`${IPQUALITY_BACKEND}/cdn-cgi/trace`)],
         ["myip.check.place", requestText("https://myip.check.place")],
         ["ip-api", requestJson(`${IPAPI_COM_URL}?fields=status,message,query`)],
         ["ipify", requestJson(IPIFY_URL)],
@@ -75,13 +76,15 @@ async function discoverIP() {
         const value = result.value;
         if (item[0] === "IPPure") ippure = value;
         if (item[0] === "ipapi") ipapi = value;
-        const candidate = item[0] === "ip-api"
-            ? value && value.query
-            : item[0] === "ipify"
-                ? value && value.ip
-                : item[0] === "IPPure" || item[0] === "ipapi"
+        const candidate = item[0] === "ipinfo.check.place"
+            ? cloudflareTraceIP(value)
+            : item[0] === "ip-api"
+                ? value && value.query
+                : item[0] === "ipify"
                     ? value && value.ip
-                    : String(value || "").trim();
+                    : item[0] === "IPPure" || item[0] === "ipapi"
+                        ? value && value.ip
+                        : String(value || "").trim();
         const normalizedCandidate = normalizeIPAddress(candidate);
         if (normalizedCandidate) observations.push({
             source: item[0],
@@ -97,7 +100,8 @@ async function discoverIP() {
     observations.forEach((item) => {
         counts[item.ip] = (counts[item.ip] || 0) + 1;
     });
-    const backendObservation = observations.find((item) => item.source === "myip.check.place");
+    const backendObservation = observations.find((item) => item.source === "ipinfo.check.place")
+        || observations.find((item) => item.source === "myip.check.place");
     const ip = backendObservation ? backendObservation.ip : observations.map((item) => item.ip)
         .sort((left, right) => {
             const countDiff = counts[right] - counts[left];
@@ -107,7 +111,6 @@ async function discoverIP() {
             return observations.findIndex((item) => item.ip === left)
                 - observations.findIndex((item) => item.ip === right);
         })[0];
-    const matchingIppure = ippure && normalizeIPAddress(ippure.ip) === ip ? ippure : null;
     const matchingIpapi = ipapi && normalizeIPAddress(ipapi.ip) === ip ? ipapi : null;
     const unique = Object.keys(counts);
     if (unique.length > 1) {
@@ -116,7 +119,7 @@ async function discoverIP() {
 
     return {
         ip,
-        ippure: matchingIppure,
+        ippure,
         ipapi: matchingIpapi,
         probe: {
             matched: counts[ip],
@@ -129,26 +132,21 @@ async function discoverIP() {
 async function collectDatabases(ip, discovery) {
     const pathIP = encodeURIComponent(ip);
     const tasks = {
-        maxmind: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?lang=cn`, { node: "DIRECT" }),
-        maxmindBackup: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?lang=en`, { node: "DIRECT" }),
+        maxmind: requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?lang=cn`),
+        maxmindBackup: requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?lang=en`),
         ippure: discovery.ippure
             ? Promise.resolve(discovery.ippure)
-            : requestJson(IPPURE_URL).then((value) => {
-                if (!value || normalizeIPAddress(value.ip) !== normalizeIPAddress(ip)) {
-                    throw new Error("IPPure 出口与检测 IP 不一致");
-                }
-                return value;
-            }),
+            : requestJson(IPPURE_URL),
         ipapi: discovery.ipapi
             ? Promise.resolve(discovery.ipapi)
             : requestJson(`${IPAPI_URL}?q=${pathIP}`, { node: "DIRECT" }),
         ipinfo: requestJson(`https://ipinfo.io/widget/demo/${pathIP}`, { node: "DIRECT" }),
         ipwhois: requestJson(`https://ipwho.is/${pathIP}`, { node: "DIRECT" }),
-        scamalytics: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?db=scamalytics`),
-        abuseipdb: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?db=abuseipdb`),
-        ip2locationFull: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ip2location`),
-        ipdata: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ipdata`),
-        ipqs: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ipqualityscore`),
+        scamalytics: requestScamalytics(pathIP),
+        abuseipdb: requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=abuseipdb`),
+        ip2locationFull: requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ip2location`),
+        ipdata: requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ipdata`),
+        ipqs: requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ipqualityscore`),
         ip2location: requestText(`https://www.ip2location.io/${pathIP}`, { node: "DIRECT" }),
         proxycheck: requestJson(`https://proxycheck.io/v2/${pathIP}?vpn=1&asn=1&risk=1`, {
             node: "DIRECT",
@@ -167,11 +165,24 @@ async function collectDatabases(ip, discovery) {
     const settled = await Promise.all(keys.map((key) => capture(tasks[key])));
     const data = {
         _errors: {},
+        _warnings: {},
         _probe: discovery.probe || { matched: 0, total: 0, unique: 0 },
     };
     keys.forEach((key, index) => {
         const value = settled[index].ok ? settled[index].value : null;
         const mismatch = value ? databaseIPMismatch(key, value, ip) : "";
+        if (key === "ippure" && value && !normalizeIPAddress(value.ip)) {
+            data[key] = null;
+            data._errors[key] = "IPPure 未返回可核验的出口 IP";
+            console.log(`[WARN] ${key}: ${data._errors[key]}`);
+            return;
+        }
+        if (key === "ippure" && value && mismatch) {
+            data[key] = Object.assign({}, value, { _egressMismatch: true });
+            data._warnings[key] = mismatch;
+            console.log(`[WARN] ${key}: ${mismatch}，保留为分流出口结果`);
+            return;
+        }
         data[key] = mismatch ? null : value;
         if (!settled[index].ok || mismatch) {
             data._errors[key] = mismatch || settled[index].error;
@@ -179,6 +190,38 @@ async function collectDatabases(ip, discovery) {
         }
     });
     return data;
+}
+
+async function requestBackendJson(url) {
+    let lastError = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+            return await requestJson(url);
+        } catch (error) {
+            lastError = error;
+            if (!/HTTP 403\b/i.test(errorMessage(error)) || attempt >= 3) throw error;
+            console.log(`[WARN] 聚合接口返回 403，第 ${attempt} 次重试`);
+        }
+    }
+    throw lastError || new Error("聚合接口请求失败");
+}
+
+async function requestScamalytics(pathIP) {
+    try {
+        const backend = await requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=scamalytics`);
+        if (numberOrNull(valueAt(backend, "scamalytics.scamalytics_score")) === null) {
+            throw new Error("聚合接口未返回评分");
+        }
+        return backend;
+    } catch (backendError) {
+        console.log(`[WARN] Scamalytics 聚合接口失败，尝试经节点访问官网: ${errorMessage(backendError)}`);
+        const html = await requestText(`https://scamalytics.com/ip/${pathIP}`, {
+            headers: browserHeaders(),
+        });
+        const parsed = parseScamalyticsHtml(html, decodeURIComponent(pathIP));
+        if (!parsed) throw new Error("Scamalytics 官网页面解析失败");
+        return parsed;
+    }
 }
 
 async function requestIpregistry(pathIP) {
@@ -540,7 +583,7 @@ function render(ip, data, media) {
 
 function buildBasic(ip, data) {
     const ipapi = data.ipapi || {};
-    const ippure = data.ippure || {};
+    const ippure = data.ippure && !data.ippure._egressMismatch ? data.ippure : {};
     const ip2 = getIp2location(data) || {};
     const ipinfo = data.ipinfo && data.ipinfo.data ? data.ipinfo.data : {};
     const ipwhois = data.ipwhois && data.ipwhois.success !== false ? data.ipwhois : {};
@@ -743,6 +786,7 @@ function buildTypes(data) {
 
 function buildRisks(data) {
     const ippureScore = numberOrNull(data.ippure && data.ippure.fraudScore);
+    const ippureMismatch = !!(data.ippure && data.ippure._egressMismatch);
     const ipapiText = data.ipapi && data.ipapi.company
         ? data.ipapi.company.abuser_score
         : "";
@@ -762,13 +806,19 @@ function buildRisks(data) {
     const ipqsSkipped = ipqsUpstreamUnavailable(data);
     const dbipRisk = parseDbipRisk(data.dbip);
 
-    return [
-        scoreRisk("IPPure（补充）", ippureScore, [
+    const ippureRisk = scoreRisk(ippureMismatch ? "IPPure（分流出口）" : "IPPure（补充）", ippureScore, [
             [80, 4, "极高风险"],
             [70, 3, "高风险"],
             [40, 2, "中风险"],
             [0, 0, "低风险"],
-        ]),
+        ]);
+    if (ippureRisk.available && ippureMismatch) {
+        ippureRisk.detail = `${ippureRisk.detail} · ${maskIPAddress(data.ippure.ip)}`;
+        ippureRisk.affectsReport = false;
+    }
+
+    return [
+        ippureRisk,
         ipapiMatch && Number.isFinite(ipapiRatio)
             ? {
                 name: "ipapi",
@@ -991,6 +1041,34 @@ function parseIp2location(html) {
     };
 }
 
+function parseScamalyticsHtml(html, ip) {
+    if (!html || /Attention Required|unable to access|cf-error-details/i.test(String(html))) {
+        return null;
+    }
+    const text = String(html);
+    const targetIP = normalizeIPAddress(ip);
+    const ipPattern = targetIP
+        ? new RegExp(`(^|[^0-9a-f:.])${escapeRegExp(targetIP)}([^0-9a-f:.]|$)`, "i")
+        : null;
+    if (!ipPattern || !/Scamalytics/i.test(text) || !ipPattern.test(text)) return null;
+    const score = text.match(/Fraud\s*Score\s*[:：]?\s*(?:<[^>]+>\s*){0,3}(\d{1,3})(?!\d)/i);
+    if (!score) return null;
+    const scoreValue = Number(score[1]);
+    if (!Number.isFinite(scoreValue) || scoreValue < 0 || scoreValue > 100) return null;
+    return {
+        ip,
+        scamalytics: {
+            scamalytics_score: scoreValue,
+            scamalytics_proxy: {
+                is_vpn: null,
+                is_datacenter: null,
+            },
+            is_blacklisted_external: null,
+        },
+        _fallback: true,
+    };
+}
+
 function getIp2location(data) {
     const full = data && data.ip2locationFull;
     if (full && typeof full === "object"
@@ -1079,7 +1157,7 @@ function unavailableRisk(name) {
 
 function ipqsUpstreamUnavailable(data) {
     return !!(data && data.ipqs && data.ipqs.success === false
-        && /insufficient credits|contact IPQualityScore/i.test(data.ipqs.message || ""));
+        && /insufficient\s+credits?/i.test(data.ipqs.message || ""));
 }
 
 function ipapiSeverity(level) {
@@ -1113,10 +1191,11 @@ function typeRow(name, usage, company) {
 
 function buildAudit(data) {
     const ipqsSkipped = ipqsUpstreamUnavailable(data);
+    const ippureMismatch = !!(data.ippure && data.ippure._egressMismatch);
     const checks = [
         ["MaxMind", !!((data.maxmind && (data.maxmind.Country || data.maxmind.ASN))
             || (data.maxmindBackup && (data.maxmindBackup.Country || data.maxmindBackup.ASN)))],
-        ["IPPure", !!(data.ippure && data.ippure.ip)],
+        ippureMismatch ? null : ["IPPure", !!(data.ippure && data.ippure.ip)],
         ["ipapi", !!(data.ipapi && data.ipapi.ip)],
         ["IPinfo", !!(data.ipinfo && data.ipinfo.data)],
         ["IPWhois", !!(data.ipwhois && data.ipwhois.success !== false
@@ -1142,6 +1221,9 @@ function buildAudit(data) {
         success: checks.filter((item) => item[1]).map((item) => item[0]),
         failed: checks.filter((item) => !item[1]).map((item) => item[0]),
         skipped: ipqsSkipped ? ["IPQS（上游额度不足）"] : [],
+        supplemental: ippureMismatch
+            ? [`IPPure（分流出口 ${maskIPAddress(data.ippure.ip)}）`]
+            : [],
     };
 }
 
@@ -1274,7 +1356,10 @@ function renderAudit(audit, probe) {
     const skipped = audit.skipped && audit.skipped.length
         ? mutedLine(`已跳过 · ${audit.skipped.join("、")}`)
         : "";
-    return infoLine("状态", summary) + missing + skipped;
+    const supplemental = audit.supplemental && audit.supplemental.length
+        ? mutedLine(`补充来源 · ${audit.supplemental.join("、")}`)
+        : "";
+    return infoLine("状态", summary) + missing + skipped + supplemental;
 }
 
 function mediaStatus(status) {
@@ -1292,9 +1377,12 @@ function riskColor(severity) {
 }
 
 function reportColor(rows) {
-    const severities = rows.filter((row) => row.available && row.severity !== null)
+    const severities = rows.filter((row) => {
+        return row.available && row.severity !== null && row.affectsReport !== false;
+    })
         .map((row) => row.severity);
-    const highest = severities.length ? Math.max.apply(null, severities) : 0;
+    if (!severities.length) return "#8e8e93";
+    const highest = Math.max.apply(null, severities);
     return highest >= 3 ? "#ff453a" : highest >= 2 ? "#ff9f0a" : "#30d158";
 }
 
@@ -1417,6 +1505,11 @@ function normalizeIPAddress(value) {
     } catch (_) {
         return text;
     }
+}
+
+function cloudflareTraceIP(value) {
+    const match = String(value || "").match(/(?:^|\n)ip=([^\r\n]+)/);
+    return match ? match[1].trim() : "";
 }
 
 function maskIPAddress(ip) {
@@ -1647,6 +1740,10 @@ function escapeHtml(value) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
+}
+
+function escapeRegExp(value) {
+    return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function errorMessage(error) {

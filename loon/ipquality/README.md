@@ -42,9 +42,10 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 ## 数据真实性
 
-- 出口探针、IPPure 和要求“查询 IP 必须等于请求来源”的受保护聚合接口使用当前 Loon 节点
+- 出口探针、IPPure 和要求“查询 IP 必须等于请求来源”的受保护聚合接口使用当前 Loon 节点；聚合接口的检测 IP 取自其 Cloudflare Trace，不再用其他域名猜测，并对出口瞬时变化造成的 403 做有限重试
 - 支持明确指定目标 IP 的公开数据库使用 `DIRECT` 查询，并核对响应 IP，减少节点分流、限流和反爬造成的缺失
 - MaxMind 与受保护数据库优先使用 `ipinfo.check.place` 的同源聚合结果，公开站点保留直连；IP2Location 聚合失败时回退到公开页面
+- IPPure 不支持指定目标 IP；若它走了不同出口，结果会作为补充来源保留并明确标注“分流出口”及对应 IP，不计入主报告来源成功数，也不会影响主报告颜色
 - 同源聚合请求使用与 VPS `curl` 客户端一致的 JSON 请求头，避免移动端浏览器 UA 被服务端拦截
 - 每个评分和风险标记均保留来源，不生成自创的综合分
 - 基础信息整组选用同一数据库：优先 MaxMind，缺失时才依次降级；国家/名称、经纬度、ASN/组织不会跨库拼成合成记录
@@ -60,6 +61,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 ## 维护记录
 
+- 2026-07-19：r7 改用 `ipinfo.check.place/cdn-cgi/trace` 识别聚合后端当前看到的出口，并对后续 403 做有限重试；IPPure 分流结果改为带出口 IP 的补充来源；Scamalytics 增加经所选节点访问官网的严格校验回退。若负载均衡策略每条连接持续更换出口，受保护来源仍可能无法返回
 - 2026-07-19：r6 增加 `myip.check.place` 同源出口探针，受保护数据库使用该出口作为检测目标；可指定 IP 的公开数据库改为 `DIRECT` 查询。IPQS 上游额度耗尽时明确标记为跳过，不再冒充普通请求失败
 - 2026-07-19：r5 根据真机渲染限制移除依赖 `flex`、圆角和半透明背景的网页式卡片，改用 Loon 稳定支持的富文本层级；增加顶部呼吸区，重做摘要、字段换行、分区间距与底部安全区。同步修复未知布尔假阴性、基础信息跨库合成、IP2Location 回退推导、IP2Location 类型映射和 ipregistry HTML 解析等真实性问题
 - 2026-07-19：r4 恢复 VPS 同源后端以补齐 MaxMind、IP2Location、Scamalytics、AbuseIPDB、IPQS、ipdata；类型名称、风险阈值和原生/广播口径对齐 `xykt/IPQuality`；去除重复标题并重做移动端信息层级
