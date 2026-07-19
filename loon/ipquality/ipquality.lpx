@@ -5,6 +5,7 @@
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/loon/ipquality
 #!select = MaskIP,false,true
 #!select = MediaTest,true,false
+#!select = MapNotification,false,true
 #!tag=节点,IP,风险,流媒体
 #!date=2026-07-19
 

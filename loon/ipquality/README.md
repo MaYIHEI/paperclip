@@ -22,6 +22,7 @@
 
 - `MaskIP`：截图分享时隐藏 IP 后半段，默认关闭
 - `MediaTest`：检测流媒体与 AI 服务，默认开启
+- `MapNotification`：检测完成后发送可点击的地图通知，默认关闭
 
 ## Loon
 
@@ -32,7 +33,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 ## 检测项目
 
-- 基础信息：IP、ASN、组织、坐标、地图、城市、使用地、注册地、时区，以及按 MaxMind 使用地/注册地比较得到的原生或广播属性
+- 基础信息：IP、ASN、组织、坐标、城市、使用地、注册地、时区，以及按 MaxMind 使用地/注册地比较得到的原生或广播属性；可选发送地图通知
 - 类型属性：IPinfo、ipregistry、ipapi、IP2Location、AbuseIPDB 的使用类型和公司类型
 - 风险评分：IPPure、ipapi、IP2Location、Scamalytics、AbuseIPDB、IPQS、DB-IP 的原始值及 VPS 同款分档
 - 风险因素：IP2Location、ipapi、ipregistry、IPQS、Scamalytics、ipdata、IPinfo、DB-IP 的代理、Tor、VPN、机房、滥用、机器人等明确字段
