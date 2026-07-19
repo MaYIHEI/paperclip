@@ -43,7 +43,13 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 - 所有查询请求都指定当前选中的 Loon 节点
 - MaxMind 与受保护数据库优先使用 `ipinfo.check.place` 的同源聚合结果，公开站点保留直连；IP2Location 聚合失败时回退到公开页面
+- 同源聚合请求使用与 VPS `curl` 客户端一致的 JSON 请求头，避免移动端浏览器 UA 被服务端拦截
 - 每个评分和风险标记均保留来源，不生成自创的综合分
+- 基础信息整组选用同一数据库：优先 MaxMind，缺失时才依次降级；国家/名称、经纬度、ASN/组织不会跨库拼成合成记录
+- `原生 IP / 广播 IP` 只比较该基础来源内的使用地与注册地，不跨库拼接；来源不同时宁可不下结论
+- 多字段布尔结果只有“任一明确为真”或“全部明确为假”才下结论；部分字段缺失时保留未知，不当作未命中
+- IP2Location 聚合失败时，网页回退只使用页面明确返回的类型、评分和总代理状态，不反推 VPN、机房等细分字段
+- ipregistry 使用与 VPS 脚本一致的 JSON API 字段；响应中带有 IP 时会核对是否等于当前检测目标
 - 只有服务响应中存在明确支持状态、地区字段或测试资源可访问证据时，才报告解锁
 - 接口失败、字段缺失或出口不一致时不会按低风险或已解锁处理
 - 不可用字段不生成空行；失败来源集中列在“数据状态”
@@ -52,6 +58,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 ## 维护记录
 
+- 2026-07-19：r5 根据真机渲染限制移除依赖 `flex`、圆角和半透明背景的网页式卡片，改用 Loon 稳定支持的富文本层级；增加顶部呼吸区，重做摘要、字段换行、分区间距与底部安全区。同步修复未知布尔假阴性、基础信息跨库合成、IP2Location 回退推导、IP2Location 类型映射和 ipregistry HTML 解析等真实性问题
 - 2026-07-19：r4 恢复 VPS 同源后端以补齐 MaxMind、IP2Location、Scamalytics、AbuseIPDB、IPQS、ipdata；类型名称、风险阈值和原生/广播口径对齐 `xykt/IPQuality`；去除重复标题并重做移动端信息层级
 - 2026-07-19：r3 移除失效的聚合后端依赖，改为 8–9 个独立直连来源；桌面多列表格改为手机单列卡片，隐藏空字段
 - 2026-07-18：r2 按 VPS 报告结构重构，增加类型/风险矩阵、判定依据和数据完整性审计
@@ -67,6 +74,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 - Loon `generic` 不提供节点 DNS 查询 API，无法等价复现 400+ DNSBL，也不能可靠区分“原生/DNS”解锁方式
 - 公共 DoH 容易被名单服务拒绝或产生误报，因此不会用它冒充 VPS 本机 `dig`
 - 流媒体检测只能反映运行当时的网络响应，不能代替账号实际播放测试
+- 当前出口发现优先 IPv4；Loon 单次 generic 报告尚未像 VPS 脚本一样分别输出 IPv4 与 IPv6 两套结果
 
 ## 致谢
 

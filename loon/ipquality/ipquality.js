@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-19.r4";
+const SCRIPT_VERSION = "2026-07-19.r5";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -80,9 +80,10 @@ async function discoverIP() {
                 : item[0] === "IPPure" || item[0] === "ipapi"
                     ? value && value.ip
                     : String(value || "").trim();
-        if (isIPAddress(candidate)) observations.push({
+        const normalizedCandidate = normalizeIPAddress(candidate);
+        if (normalizedCandidate) observations.push({
             source: item[0],
-            ip: String(candidate).trim(),
+            ip: normalizedCandidate,
         });
     });
 
@@ -102,8 +103,8 @@ async function discoverIP() {
         return observations.findIndex((item) => item.ip === left)
             - observations.findIndex((item) => item.ip === right);
     })[0];
-    const matchingIppure = ippure && String(ippure.ip) === ip ? ippure : null;
-    const matchingIpapi = ipapi && String(ipapi.ip) === ip ? ipapi : null;
+    const matchingIppure = ippure && normalizeIPAddress(ippure.ip) === ip ? ippure : null;
+    const matchingIpapi = ipapi && normalizeIPAddress(ipapi.ip) === ip ? ipapi : null;
     const unique = Object.keys(counts);
     if (unique.length > 1) {
         console.log(`[WARN] 出口探针不一致: ${observations.map((item) => `${item.source}=${item.ip}`).join(", ")}`);
@@ -125,10 +126,11 @@ async function collectDatabases(ip, discovery) {
     const pathIP = encodeURIComponent(ip);
     const tasks = {
         maxmind: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?lang=cn`),
+        maxmindBackup: requestJson(`${IPQUALITY_BACKEND}/${pathIP}?lang=en`),
         ippure: discovery.ippure
             ? Promise.resolve(discovery.ippure)
             : requestJson(IPPURE_URL).then((value) => {
-                if (!value || String(value.ip) !== ip) {
+                if (!value || normalizeIPAddress(value.ip) !== normalizeIPAddress(ip)) {
                     throw new Error("IPPure 出口与检测 IP 不一致");
                 }
                 return value;
@@ -146,7 +148,7 @@ async function collectDatabases(ip, discovery) {
         ip2location: requestText(`https://www.ip2location.io/${pathIP}`),
         proxycheck: requestJson(`https://proxycheck.io/v2/${pathIP}?vpn=1&asn=1&risk=1`),
         dbip: requestText(`https://db-ip.com/${pathIP}`),
-        ipregistry: requestText(`https://ipregistry.co/${pathIP}`),
+        ipregistry: requestIpregistry(pathIP),
     };
     if (isIPv4(ip)) {
         tasks.ipApiCom = requestJson(
@@ -161,13 +163,69 @@ async function collectDatabases(ip, discovery) {
         _probe: discovery.probe || { matched: 0, total: 0, unique: 0 },
     };
     keys.forEach((key, index) => {
-        data[key] = settled[index].ok ? settled[index].value : null;
-        if (!settled[index].ok) {
-            data._errors[key] = settled[index].error;
-            console.log(`[WARN] ${key}: ${settled[index].error}`);
+        const value = settled[index].ok ? settled[index].value : null;
+        const mismatch = value ? databaseIPMismatch(key, value, ip) : "";
+        data[key] = mismatch ? null : value;
+        if (!settled[index].ok || mismatch) {
+            data._errors[key] = mismatch || settled[index].error;
+            console.log(`[WARN] ${key}: ${data._errors[key]}`);
         }
     });
     return data;
+}
+
+async function requestIpregistry(pathIP) {
+    let key = "sb69ksjcajfs4c";
+    try {
+        const homepage = await requestText("https://ipregistry.co");
+        const match = String(homepage).match(/apiKey=["']([a-zA-Z0-9]+)["']/i);
+        if (match) key = match[1];
+    } catch (error) {
+        console.log(`[WARN] ipregistry 首页密钥获取失败，使用备用密钥: ${errorMessage(error)}`);
+    }
+    return requestJson(`https://api.ipregistry.co/${pathIP}?hostname=true&key=${key}`, {
+        headers: {
+            Accept: "application/json",
+            Origin: "https://ipregistry.co",
+            Referer: "https://ipregistry.co/",
+            "User-Agent": USER_AGENT,
+        },
+    });
+}
+
+function databaseIPMismatch(key, value, expectedIP) {
+    const paths = {
+        maxmind: ["IP", "ip"],
+        maxmindBackup: ["IP", "ip"],
+        ippure: ["ip"],
+        ipapi: ["ip"],
+        ipinfo: ["data.ip"],
+        ipwhois: ["ip"],
+        scamalytics: ["ip"],
+        abuseipdb: ["data.ipAddress"],
+        ip2locationFull: ["ip"],
+        ipdata: ["ip"],
+        ipregistry: ["ip"],
+        ipApiCom: ["query"],
+    };
+    const candidates = paths[key] || [];
+    let reported = "";
+    if (key === "proxycheck") {
+        reported = Object.keys(value || {}).find((name) => isIPAddress(name)) || "";
+    }
+    for (let i = 0; i < candidates.length; i += 1) {
+        const candidate = cleanValue(valueAt(value, candidates[i]));
+        if (candidate) {
+            reported = candidate;
+            break;
+        }
+    }
+    if (!reported) return "";
+    const normalizedReported = normalizeIPAddress(reported);
+    const normalizedExpected = normalizeIPAddress(expectedIP);
+    return normalizedReported && normalizedExpected && normalizedReported === normalizedExpected
+        ? ""
+        : `响应 IP ${reported} 与检测 IP ${expectedIP} 不一致`;
 }
 
 async function collectMedia() {
@@ -400,10 +458,12 @@ function render(ip, data, media) {
     const factors = buildFactors(data);
     const audit = buildAudit(data);
     const titleColor = reportColor(risks);
+    const displayNodeName = truncateText(nodeName, 30);
 
     const html = [
-        '<div style="font-family:-apple-system,BlinkMacSystemFont;font-size:14px;line-height:1.5;text-align:left;padding:2px 1px 76px;overflow-wrap:anywhere">',
-        `<div title="${escapeHtml(nodeName)}" style="display:block;max-width:100%;box-sizing:border-box;padding:4px 9px;margin:0 0 9px;border-radius:999px;background-color:rgba(120,120,128,0.12);color:#636366;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(nodeName)}</div>`,
+        '<div style="font-family:-apple-system,BlinkMacSystemFont;font-size:14px;line-height:1.5;text-align:left;overflow-wrap:anywhere">',
+        '<div style="font-size:18px;line-height:18px">&nbsp;</div>',
+        `<div style="color:#8e8e93;font-size:11px;margin-bottom:10px">节点 · ${escapeHtml(displayNodeName)}</div>`,
         summaryCard(basic),
         section("基础信息", renderBasic(basic)),
         section("IP 类型属性", renderTypeList(types)),
@@ -413,9 +473,12 @@ function render(ip, data, media) {
             ? renderMediaList(media)
             : mutedLine("流媒体检测已关闭")),
         section("数据状态", renderAudit(audit, data._probe)),
-        '<div style="margin-top:14px;padding-top:10px;border-top:1px solid rgba(120,120,128,0.18);color:#8e8e93;font-size:10px;line-height:1.45">'
+        '<div style="font-size:9px;line-height:9px">&nbsp;</div>',
+        '<div style="color:#8e8e93;font-size:10px;line-height:1.45">'
             + '类型名称、评分分档与风险字段遵循 xykt/IPQuality 的展示口径；各库结果独立展示，不生成综合结论。'
             + '聚合来源不可用时保留直连结果。Loon 不提供节点 TCP/DNS API，25 端口与 DNSBL 未检测。</div>',
+        '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
+        '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
         "</div>",
     ].join("");
 
@@ -435,116 +498,183 @@ function buildBasic(ip, data) {
     const ipwhois = data.ipwhois && data.ipwhois.success !== false ? data.ipwhois : {};
     const ipApiCom = data.ipApiCom && data.ipApiCom.status === "success" ? data.ipApiCom : {};
     const proxycheck = proxycheckRecord(data.proxycheck) || {};
-    const maxmind = data.maxmind || {};
+    const maxmind = mergeFallback(data.maxmind, data.maxmindBackup) || {};
     const maxmindASN = maxmind.ASN || {};
     const maxmindCity = maxmind.City || {};
     const maxmindCountry = maxmind.Country || {};
     const maxmindRegistered = maxmindCountry.RegisteredCountry || {};
     const location = ipapi.location || {};
     const asn = ipapi.asn || {};
-    const code = cleanValue(maxmindCountry.IsoCode)
-        || cleanValue(valueAt(maxmindCity, "Country.IsoCode"))
-        || cleanValue(location.country_code) || cleanValue(ipinfo.country)
-        || cleanValue(ipwhois.country_code) || cleanValue(ipApiCom.countryCode)
-        || cleanValue(ippure.countryCode) || cleanValue(ip2.country_code)
-        || cleanValue(proxycheck.isocode);
-    const country = cleanValue(maxmindCountry.Name)
-        || cleanValue(valueAt(maxmindCity, "Country.Name"))
-        || cleanValue(location.country) || cleanValue(ipwhois.country)
-        || cleanValue(ipApiCom.country) || cleanValue(ippure.country)
-        || cleanValue(ip2.country_name) || cleanValue(proxycheck.country);
-    const cityParts = [];
+    const maxmindRegion = cleanValue(maxmindCountry.IsoCode) || cleanValue(maxmindCountry.Name)
+        ? maxmindCountry
+        : valueAt(maxmindCity, "Country") || {};
+    const maxmindCityParts = [];
     if (Array.isArray(maxmindCity.Subdivisions)) {
         maxmindCity.Subdivisions.forEach((item) => {
             const name = cleanValue(item && item.Name);
-            if (name && cityParts.indexOf(name) === -1) cityParts.push(name);
+            if (name && maxmindCityParts.indexOf(name) === -1) maxmindCityParts.push(name);
         });
     }
     const preferredCity = cleanValue(maxmindCity.Name);
-    if (preferredCity && cityParts.indexOf(preferredCity) === -1) cityParts.push(preferredCity);
-    if (!cityParts.length) {
-        uniqueValues([
-            location.state,
-            location.city,
-            ipinfo.region,
-            ipinfo.city,
-            ipwhois.region,
-            ipwhois.city,
-            ipApiCom.regionName,
-            ipApiCom.city,
-            ippure.city,
-            ip2.city_name,
-        ]).slice(0, 3).forEach((value) => cityParts.push(value));
+    if (preferredCity && maxmindCityParts.indexOf(preferredCity) === -1) {
+        maxmindCityParts.push(preferredCity);
     }
-    const asnNumber = cleanASN(maxmindASN.AutonomousSystemNumber || asn.asn
-        || valueAt(ipinfo, "asn.asn") || valueAt(ipwhois, "connection.asn")
-        || proxycheck.asn || ip2.asn);
-    const organization = cleanValue(maxmindASN.AutonomousSystemOrganization)
-        || cleanValue(asn.org) || cleanValue(valueAt(ipinfo, "asn.name"))
-        || cleanValue(valueAt(ipwhois, "connection.org")) || cleanValue(ipApiCom.asname)
-        || cleanValue(proxycheck.organisation) || cleanValue(ip2.as)
-        || cleanValue(ippure.asOrganization);
-    const latitude = firstNumber([
-        maxmindCity.Latitude,
-        location.latitude,
-        splitCoordinate(ipinfo.loc, 0),
-        ipwhois.latitude,
-        ipApiCom.lat,
-        ippure.latitude,
-        ip2.latitude,
-        proxycheck.latitude,
-    ]);
-    const longitude = firstNumber([
-        maxmindCity.Longitude,
-        location.longitude,
-        splitCoordinate(ipinfo.loc, 1),
-        ipwhois.longitude,
-        ipApiCom.lon,
-        ippure.longitude,
-        ip2.longitude,
-        proxycheck.longitude,
-    ]);
-    const registeredCode = cleanValue(maxmindRegistered.IsoCode)
-        || cleanValue(valueAt(ipinfo, "abuse.country"))
-        || cleanValue(asn.country);
-    const registeredName = cleanValue(maxmindRegistered.Name)
-        || (registeredCode && code
-        && registeredCode.toUpperCase() === code.toUpperCase()
-        ? country
-        : "");
+
+    // 基础信息按整组来源选择，避免把不同数据库的国家、坐标、ASN 拼成一条合成记录。
+    const profiles = [
+        {
+            source: "MaxMind",
+            countryCode: cleanValue(maxmindRegion.IsoCode),
+            countryName: cleanValue(maxmindRegion.Name),
+            registeredCode: cleanValue(maxmindRegistered.IsoCode),
+            registeredName: cleanValue(maxmindRegistered.Name),
+            cityParts: maxmindCityParts,
+            asn: cleanASN(maxmindASN.AutonomousSystemNumber),
+            organization: cleanValue(maxmindASN.AutonomousSystemOrganization),
+            latitude: numberOrNull(maxmindCity.Latitude),
+            longitude: numberOrNull(maxmindCity.Longitude),
+            timezone: cleanValue(valueAt(maxmindCity, "Location.TimeZone")),
+            route: cleanValue(maxmindASN.Network) || cleanValue(maxmind.Network),
+        },
+        {
+            source: "IPinfo",
+            countryCode: cleanValue(ipinfo.country),
+            countryName: cleanValue(ipinfo.country_name),
+            registeredCode: cleanValue(valueAt(ipinfo, "abuse.country")),
+            registeredName: "",
+            cityParts: uniqueValues([ipinfo.region, ipinfo.city]),
+            asn: cleanASN(valueAt(ipinfo, "asn.asn")),
+            organization: cleanValue(valueAt(ipinfo, "asn.name")),
+            latitude: numberOrNull(splitCoordinate(ipinfo.loc, 0)),
+            longitude: numberOrNull(splitCoordinate(ipinfo.loc, 1)),
+            timezone: cleanValue(ipinfo.timezone),
+            route: cleanValue(valueAt(ipinfo, "asn.route")),
+        },
+        {
+            source: "ipapi",
+            countryCode: cleanValue(location.country_code),
+            countryName: cleanValue(location.country),
+            registeredCode: "",
+            registeredName: "",
+            cityParts: uniqueValues([location.state, location.city]),
+            asn: cleanASN(asn.asn),
+            organization: cleanValue(asn.org),
+            latitude: numberOrNull(location.latitude),
+            longitude: numberOrNull(location.longitude),
+            timezone: cleanValue(location.timezone),
+            route: cleanValue(asn.route),
+        },
+        {
+            source: "IPWhois",
+            countryCode: cleanValue(ipwhois.country_code),
+            countryName: cleanValue(ipwhois.country),
+            registeredCode: "",
+            registeredName: "",
+            cityParts: uniqueValues([ipwhois.region, ipwhois.city]),
+            asn: cleanASN(valueAt(ipwhois, "connection.asn")),
+            organization: cleanValue(valueAt(ipwhois, "connection.org")),
+            latitude: numberOrNull(ipwhois.latitude),
+            longitude: numberOrNull(ipwhois.longitude),
+            timezone: cleanValue(valueAt(ipwhois, "timezone.id")),
+            route: "",
+        },
+        {
+            source: "ip-api",
+            countryCode: cleanValue(ipApiCom.countryCode),
+            countryName: cleanValue(ipApiCom.country),
+            registeredCode: "",
+            registeredName: "",
+            cityParts: uniqueValues([ipApiCom.regionName, ipApiCom.city]),
+            asn: cleanASN(ipApiCom.as),
+            organization: cleanValue(ipApiCom.asname) || cleanValue(ipApiCom.org),
+            latitude: numberOrNull(ipApiCom.lat),
+            longitude: numberOrNull(ipApiCom.lon),
+            timezone: cleanValue(ipApiCom.timezone),
+            route: "",
+        },
+        {
+            source: "IPPure",
+            countryCode: cleanValue(ippure.countryCode),
+            countryName: cleanValue(ippure.country),
+            registeredCode: "",
+            registeredName: "",
+            cityParts: uniqueValues([ippure.city]),
+            asn: cleanASN(ippure.asn),
+            organization: cleanValue(ippure.asOrganization),
+            latitude: numberOrNull(ippure.latitude),
+            longitude: numberOrNull(ippure.longitude),
+            timezone: cleanValue(ippure.timezone),
+            route: "",
+        },
+        {
+            source: "IP2Location",
+            countryCode: cleanValue(ip2.country_code),
+            countryName: cleanValue(ip2.country_name),
+            registeredCode: "",
+            registeredName: "",
+            cityParts: uniqueValues([ip2.city_name]),
+            asn: cleanASN(ip2.asn),
+            organization: cleanValue(ip2.as),
+            latitude: numberOrNull(ip2.latitude),
+            longitude: numberOrNull(ip2.longitude),
+            timezone: cleanValue(ip2.time_zone),
+            route: "",
+        },
+        {
+            source: "proxycheck",
+            countryCode: cleanValue(proxycheck.isocode),
+            countryName: cleanValue(proxycheck.country),
+            registeredCode: "",
+            registeredName: "",
+            cityParts: uniqueValues([proxycheck.region, proxycheck.city]),
+            asn: cleanASN(proxycheck.asn),
+            organization: cleanValue(proxycheck.organisation),
+            latitude: numberOrNull(proxycheck.latitude),
+            longitude: numberOrNull(proxycheck.longitude),
+            timezone: cleanValue(proxycheck.timezone),
+            route: cleanValue(proxycheck.range),
+        },
+    ];
+    const profile = profiles.find((item) => item.countryCode || item.countryName)
+        || profiles.find((item) => item.asn || item.organization || item.cityParts.length)
+        || { source: "", cityParts: [] };
+    const code = cleanValue(profile.countryCode);
+    const country = cleanValue(profile.countryName);
+    const registeredCode = cleanValue(profile.registeredCode);
+    const registeredName = cleanValue(profile.registeredName)
+        || (registeredCode && code && registeredCode.toUpperCase() === code.toUpperCase()
+            ? country
+            : "");
+    const latitude = numberOrNull(profile.latitude);
+    const longitude = numberOrNull(profile.longitude);
+    const hasCoordinates = latitude !== null && longitude !== null;
     const nature = code && registeredCode
         ? code.toUpperCase() === registeredCode.toUpperCase()
             ? "原生 IP"
             : "广播 IP"
-        : typeof ippure.isBroadcast === "boolean"
-            ? ippure.isBroadcast ? "广播 IP" : "原生 IP"
-            : "";
-    const route = cleanValue(valueAt(ipinfo, "asn.route"))
-        || cleanValue(asn.route) || cleanValue(proxycheck.range);
+        : "";
 
     return {
         ip: maskIPAddress(ip),
-        asn: asnNumber ? `AS${asnNumber}` : "",
-        organization,
-        coordinates: latitude !== null && longitude !== null
+        source: cleanValue(profile.source),
+        asn: profile.asn ? `AS${profile.asn}` : "",
+        organization: cleanValue(profile.organization),
+        coordinates: hasCoordinates
             ? `${toDMS(latitude, true)}, ${toDMS(longitude, false)}`
             : "",
-        map: latitude !== null && longitude !== null
+        map: hasCoordinates
             ? buildMapURL(latitude, longitude, null)
             : "",
-        city: cityParts.join(" · "),
+        city: uniqueValues(profile.cityParts).slice(0, 2).join(" · "),
         actualRegion: code
             ? `${flagEmoji(code)} [${String(code).toUpperCase()}] ${country || ""}`.trim()
             : country,
         registeredRegion: registeredCode
             ? `[${String(registeredCode).toUpperCase()}] ${registeredName || ""}`.trim()
             : "",
-        timezone: cleanValue(valueAt(maxmindCity, "Location.TimeZone"))
-            || cleanValue(location.timezone) || cleanValue(ipinfo.timezone)
-            || cleanValue(valueAt(ipwhois, "timezone.id")) || cleanValue(ipApiCom.timezone)
-            || cleanValue(ippure.timezone) || cleanValue(proxycheck.timezone),
+        timezone: cleanValue(profile.timezone),
         nature,
-        route,
+        route: cleanValue(profile.route),
     };
 }
 
@@ -578,11 +708,13 @@ function buildRisks(data) {
         : null;
     const scamScore = numberOrNull(scam && scam.scamalytics_score);
     const abuseScore = numberOrNull(valueAt(data, "abuseipdb.data.abuseConfidenceScore"));
-    const ipqsScore = numberOrNull(data.ipqs && data.ipqs.fraud_score);
+    const ipqsScore = numberOrNull(data.ipqs && data.ipqs.success !== false
+        ? data.ipqs.fraud_score
+        : null);
     const dbipRisk = parseDbipRisk(data.dbip);
 
     return [
-        scoreRisk("IPPure", ippureScore, [
+        scoreRisk("IPPure（补充）", ippureScore, [
             [80, 4, "极高风险"],
             [70, 3, "高风险"],
             [40, 2, "中风险"],
@@ -609,13 +741,13 @@ function buildRisks(data) {
             [0, 0, "低风险"],
         ]),
         scoreRisk("AbuseIPDB", abuseScore, [
-            [75, 4, "极高风险"],
+            [75, 4, "建议封禁"],
             [25, 3, "高风险"],
             [0, 0, "低风险"],
         ]),
         scoreRisk("IPQS", ipqsScore, [
-            [90, 4, "极高风险"],
-            [85, 3, "高风险"],
+            [90, 4, "高风险"],
+            [85, 3, "存在风险"],
             [75, 2, "可疑"],
             [0, 0, "低风险"],
         ]),
@@ -638,7 +770,7 @@ function buildFactors(data) {
     const ip2 = getIp2location(data);
     const dbip = parseDbip(data.dbip);
     const ip2Proxy = ip2 && ip2.proxy ? ip2.proxy : {};
-    const ipqs = data.ipqs;
+    const ipqs = data.ipqs && data.ipqs.success !== false ? data.ipqs : null;
     const scamRoot = data.scamalytics;
     const scam = scamRoot && scamRoot.scamalytics ? scamRoot.scamalytics : null;
     const ipdata = data.ipdata;
@@ -753,46 +885,26 @@ function factorSource(name, values) {
     return source;
 }
 
-function parseIpregistry(html) {
-    if (!html) return null;
-    const fields = {
-        abuser: "Abuser",
-        attacker: "Attacker",
-        bogon: "Bogon",
-        server: "Cloud Provider",
-        proxy: "Proxy",
-        relay: "Relay",
-        tor: "Tor",
-        vpn: "VPN",
-        anonymous: "Anonymous",
-        threat: "Threat",
+function parseIpregistry(payload) {
+    if (!payload || typeof payload !== "object") return null;
+    const security = payload.security || {};
+    const result = {
+        usageType: cleanValue(valueAt(payload, "connection.type")),
+        companyType: cleanValue(valueAt(payload, "company.type")),
+        country: cleanValue(valueAt(payload, "location.country.code"))
+            || cleanValue(valueAt(payload, "location.country_code")),
+        proxy: booleanOrNull(security.is_proxy),
+        tor: anyTrue([security.is_tor, security.is_tor_exit]),
+        vpn: booleanOrNull(security.is_vpn),
+        server: booleanOrNull(security.is_cloud_provider),
+        abuser: booleanOrNull(security.is_abuser),
+        relay: null,
+        anonymous: null,
+        threat: null,
     };
-    const result = {};
-    let found = false;
-    Object.keys(fields).forEach((key) => {
-        const pattern = new RegExp(
-            `${fields[key]}</span>[\\s\\S]{0,1800}?`
-            + '<div class="(?:positive|negative)"[^>]*>[\\s\\S]{0,1200}?\\b(Yes|No)</div>',
-            "i"
-        );
-        const match = String(html).match(pattern);
-        if (match) {
-            result[key] = match[1].toLowerCase() === "yes";
-            found = true;
-        }
-    });
-    if (!found) return null;
-    result.abuser = anyTrue([result.abuser, result.attacker, result.threat]);
-    const asType = String(html).match(/AS Type<\/span>[\s\S]{0,1800}?<td>\s*([^<\s][^<]*?)\s*<\/td>/i);
-    const companyBlock = String(html).match(/<div class="card" id="company">([\s\S]{0,16000}?)<div class="card" id="security">/i);
-    const companyType = companyBlock
-        ? companyBlock[1].match(/>Type<\/span>[\s\S]{0,1800}?<td>\s*([^<\s][^<]*?)\s*<\/td>/i)
-        : null;
-    const country = String(html).match(/flags\/[^/]+\/\d+\/([a-z]{2})\.png/i);
-    result.usageType = asType ? asType[1].trim() : null;
-    result.companyType = companyType ? companyType[1].trim() : null;
-    result.country = country ? country[1].toUpperCase() : null;
-    return result;
+    const hasData = result.usageType || result.companyType || result.country
+        || Object.keys(result).some((key) => typeof result[key] === "boolean");
+    return hasData ? result : null;
 }
 
 function parseIp2location(html) {
@@ -839,9 +951,6 @@ function getIp2location(data) {
     }
     const parsed = parseIp2location(data && data.ip2location);
     if (!parsed) return null;
-    const publicProxy = parsed.proxyType
-        ? /PUB|WEB|VPN|TOR/i.test(parsed.proxyType)
-        : parsed.proxy;
     return {
         country_code: parsed.countryCode,
         country_name: parsed.country,
@@ -855,11 +964,11 @@ function getIp2location(data) {
         as_info: { as_usage_type: null },
         is_proxy: parsed.proxy,
         proxy: {
-            is_public_proxy: publicProxy,
+            is_public_proxy: null,
             is_web_proxy: null,
             is_tor: null,
-            is_vpn: parsed.proxyType ? /VPN/i.test(parsed.proxyType) : null,
-            is_data_center: parsed.proxyType ? /DCH|SES/i.test(parsed.proxyType) : null,
+            is_vpn: null,
+            is_data_center: null,
             is_spammer: null,
             is_web_crawler: null,
             is_scanner: null,
@@ -950,16 +1059,21 @@ function typeRow(name, usage, company) {
 
 function buildAudit(data) {
     const checks = [
-        ["MaxMind", !!(data.maxmind && (data.maxmind.Country || data.maxmind.ASN))],
+        ["MaxMind", !!((data.maxmind && (data.maxmind.Country || data.maxmind.ASN))
+            || (data.maxmindBackup && (data.maxmindBackup.Country || data.maxmindBackup.ASN)))],
         ["IPPure", !!(data.ippure && data.ippure.ip)],
         ["ipapi", !!(data.ipapi && data.ipapi.ip)],
         ["IPinfo", !!(data.ipinfo && data.ipinfo.data)],
-        ["IPWhois", !!(data.ipwhois && data.ipwhois.success !== false)],
+        ["IPWhois", !!(data.ipwhois && data.ipwhois.success !== false
+            && (data.ipwhois.ip || data.ipwhois.country_code || data.ipwhois.connection))],
         ["IP2Location", !!getIp2location(data)],
         ["Scamalytics", !!(data.scamalytics
             && numberOrNull(valueAt(data.scamalytics, "scamalytics.scamalytics_score")) !== null)],
-        ["AbuseIPDB", !!(data.abuseipdb && data.abuseipdb.data)],
-        ["IPQS", !!(data.ipqs && numberOrNull(data.ipqs.fraud_score) !== null)],
+        ["AbuseIPDB", !!(data.abuseipdb && data.abuseipdb.data
+            && (cleanValue(data.abuseipdb.data.usageType)
+                || numberOrNull(data.abuseipdb.data.abuseConfidenceScore) !== null))],
+        ["IPQS", !!(data.ipqs && data.ipqs.success !== false
+            && numberOrNull(data.ipqs.fraud_score) !== null)],
         ["ipdata", !!(data.ipdata && (data.ipdata.ip || data.ipdata.country_code))],
         ["proxycheck", !!proxycheckRecord(data.proxycheck)],
         ["ipregistry", !!parseIpregistry(data.ipregistry)],
@@ -977,25 +1091,24 @@ function buildAudit(data) {
 
 function summaryCard(basic) {
     const asn = [basic.asn, basic.organization].filter(Boolean).join(" · ");
-    return '<div style="padding:11px 12px;margin-bottom:3px;background-color:rgba(120,120,128,0.11);border:1px solid rgba(120,120,128,0.12);border-radius:13px">'
-        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
-        + `<div style="font-size:18px;font-weight:750;letter-spacing:0.1px">${escapeHtml(basic.ip)}</div>`
+    return '<div style="margin-bottom:16px">'
+        + `<div style="font-size:24px;font-weight:800;line-height:1.15;letter-spacing:0.2px">${escapeHtml(basic.ip)}</div>`
         + (basic.nature
-            ? `<span style="flex:0 0 auto;padding:2px 7px;border-radius:999px;background-color:rgba(10,132,255,0.12);color:#0A84FF;font-size:10px;font-weight:650">${escapeHtml(basic.nature)}</span>`
+            ? `<div style="margin-top:5px;color:#0A84FF;font-size:12px;font-weight:600">${escapeHtml(basic.nature)}</div>`
             : "")
-        + "</div>"
         + (basic.actualRegion
-            ? `<div style="margin-top:6px;font-size:13px;line-height:1.4">${escapeHtml(basic.actualRegion)}</div>`
+            ? `<div style="margin-top:7px;font-size:14px;font-weight:600;line-height:1.35">${escapeHtml(basic.actualRegion)}</div>`
             : "")
         + (basic.city
-            ? `<div style="margin-top:2px;color:#636366;font-size:12px;line-height:1.35">${escapeHtml(basic.city)}</div>`
+            ? `<div style="margin-top:2px;color:#8e8e93;font-size:12px;line-height:1.4">${escapeHtml(basic.city)}</div>`
             : "")
-        + (asn ? `<div style="margin-top:4px;color:#8e8e93;font-size:12px;line-height:1.35">${escapeHtml(asn)}</div>` : "")
+        + (asn ? `<div style="margin-top:5px;color:#8e8e93;font-size:11px;line-height:1.35">${escapeHtml(asn)}</div>` : "")
         + "</div>";
 }
 
 function renderBasic(basic) {
     const rows = [
+        ["来源", basic.source],
         ["网段", basic.route],
         ["时区", basic.timezone],
         ["注册地", basic.registeredRegion],
@@ -1003,7 +1116,7 @@ function renderBasic(basic) {
     ].filter((row) => row[1]);
     const body = rows.map((row) => infoLine(row[0], row[1])).join("");
     const map = basic.map
-        ? `<div style="margin:7px 0 0 58px"><a href="${escapeHtml(basic.map)}">在地图中查看</a></div>`
+        ? `<div style="margin-top:8px"><a href="${escapeHtml(basic.map)}">↗ 在地图中查看</a></div>`
         : "";
     return body + map;
 }
@@ -1013,11 +1126,11 @@ function renderRiskList(rows) {
     const unavailable = rows.filter((row) => !row.available).map((row) => row.name);
     const body = available.map((row) => {
         const color = row.severity === null ? "#0A84FF" : riskColor(row.severity);
-        return sourceCardHtml(
-            `<span style="display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:${color};vertical-align:1px"></span>${escapeHtml(row.name)}`,
-            `<span style="color:${color};font-weight:600">${escapeHtml([row.detail, row.label].filter(Boolean).join(" · "))}</span>`,
-            true
-        );
+        return '<div style="margin-bottom:9px">'
+            + `<span style="color:${color};font-size:11px">●</span>&nbsp;`
+            + `<span style="font-weight:700">${escapeHtml(row.name)}</span>&nbsp;&nbsp;`
+            + `<span style="color:${color};font-weight:600">${escapeHtml([row.detail, row.label].filter(Boolean).join(" · "))}</span>`
+            + "</div>";
     }).join("");
     const missing = unavailable.length
         ? mutedLine(`本次未返回：${unavailable.join("、")}`)
@@ -1028,11 +1141,13 @@ function renderRiskList(rows) {
 function renderTypeList(rows) {
     if (!rows.length) return mutedLine("本次没有可验证的网络类型");
     return rows.map((row) => {
-        const details = [
-            row.usage ? compactField("使用", row.usage) : "",
-            row.company ? compactField("公司", row.company) : "",
-        ].filter(Boolean).join("");
-        return sourceCardHtml(row.name, details);
+        const details = [];
+        if (row.usage) details.push(`<span style="color:#8e8e93">使用</span>&nbsp;${escapeHtml(row.usage)}`);
+        if (row.company) details.push(`<span style="color:#8e8e93">公司</span>&nbsp;${escapeHtml(row.company)}`);
+        return '<div style="margin-bottom:11px">'
+            + `<div style="font-weight:700">${escapeHtml(row.name)}</div>`
+            + `<div style="margin-top:2px;font-size:12px;line-height:1.5">${details.join('<br/>')}</div>`
+            + "</div>";
     }).join("");
 }
 
@@ -1057,7 +1172,10 @@ function renderFactorCards(sources) {
         const title = region && region.length === 2
             ? `${source.name} · ${flagEmoji(region)} [${region.toUpperCase()}]`
             : source.name;
-        return sourceCardHtml(title, lines.join("<br/>"));
+        return '<div style="margin-bottom:11px">'
+            + `<div style="font-weight:700">${escapeHtml(title)}</div>`
+            + `<div style="margin-top:2px;font-size:12px;line-height:1.5">${lines.join('<br/>')}</div>`
+            + "</div>";
     }).join("");
 }
 
@@ -1071,10 +1189,10 @@ function renderMediaList(rows) {
         const detail = row.detail
             ? `<div style="font-size:11px;color:#8e8e93;margin-top:1px">${escapeHtml(row.detail)}</div>`
             : "";
-        return sourceCardHtml(
-            `${icon} ${row.name}`,
-            `<span style="color:${status.color};font-weight:600">${escapeHtml(summary)}</span>${detail}`
-        );
+        return '<div style="margin-bottom:10px">'
+            + `<span>${icon}</span>&nbsp;<span style="font-weight:700">${escapeHtml(row.name)}</span>&nbsp;&nbsp;`
+            + `<span style="color:${status.color};font-weight:600">${escapeHtml(summary)}</span>${detail}`
+            + "</div>";
     }).join("");
     const unknownLine = unknown.length
         ? mutedLine(`⚪ 未确认：${unknown.map((row) => row.name).join("、")}`)
@@ -1083,17 +1201,15 @@ function renderMediaList(rows) {
 }
 
 function renderAudit(audit, probe) {
-    const parts = [
-        `数据来源 ${audit.success.length}/${audit.total}`,
-        audit.success.length ? `成功：${audit.success.join("、")}` : "",
-        audit.failed.length ? `失败：${audit.failed.join("、")}` : "",
-        probe && probe.total
-            ? `出口探针 ${probe.matched}/${probe.total} 一致${probe.unique > 1 ? "（存在分流差异）" : ""}`
-            : "",
-    ].filter(Boolean);
-    return parts.map((part, index) => {
-        return index === 0 ? infoLine("状态", part) : mutedLine(part);
-    }).join("");
+    const sourceStatus = `来源 ${audit.success.length}/${audit.total}`;
+    const probeStatus = probe && probe.total
+        ? `出口 ${probe.matched}/${probe.total}${probe.unique > 1 ? " · 存在分流差异" : " · 一致"}`
+        : "";
+    const summary = [sourceStatus, probeStatus].filter(Boolean).join("　");
+    const missing = audit.failed.length
+        ? mutedLine(`未返回 · ${audit.failed.join("、")}`)
+        : mutedLine("全部数据来源已返回");
+    return infoLine("状态", summary) + missing;
 }
 
 function mediaStatus(status) {
@@ -1122,41 +1238,21 @@ function mediaResult(name, status, region, detail) {
 }
 
 function section(title, content) {
-    return '<div style="margin-top:14px">'
-        + `<div style="display:flex;align-items:center;gap:6px;color:#0A84FF;font-weight:700;font-size:14px;margin-bottom:7px"><span style="width:3px;height:14px;border-radius:2px;background:#0A84FF"></span>${escapeHtml(title)}</div>`
+    return '<div style="font-size:8px;line-height:8px">&nbsp;</div>'
+        + '<div>'
+        + `<div style="color:#0A84FF;font-weight:700;font-size:15px;margin-bottom:9px">▌${escapeHtml(title)}</div>`
         + `${content}</div>`;
 }
 
 function infoLine(label, value) {
-    return '<div style="display:flex;align-items:flex-start;gap:10px;margin:5px 0">'
-        + `<div style="flex:0 0 48px;color:#636366;font-size:12px">${escapeHtml(label)}</div>`
-        + `<div style="min-width:0;flex:1;font-weight:500;overflow-wrap:anywhere">${escapeHtml(value)}</div>`
+    return '<div style="margin-bottom:8px;line-height:1.4">'
+        + `<span style="color:#8e8e93;font-size:12px">${escapeHtml(label)}</span>&nbsp;&nbsp;`
+        + `<span style="font-weight:600">${escapeHtml(value)}</span>`
         + "</div>";
 }
 
 function mutedLine(value) {
-    return `<div style="color:#8e8e93;font-size:12px;margin:4px 0">${escapeHtml(value)}</div>`;
-}
-
-function sourceCard(name, detail, color) {
-    return sourceCardHtml(
-        name,
-        `<span style="color:${color || "#8e8e93"}">${escapeHtml(detail)}</span>`
-    );
-}
-
-function compactField(label, value) {
-    return '<div style="display:flex;align-items:flex-start;gap:8px;margin-top:3px">'
-        + `<span style="flex:0 0 28px;color:#8e8e93">${escapeHtml(label)}</span>`
-        + `<span style="min-width:0;flex:1">${escapeHtml(value)}</span>`
-        + "</div>";
-}
-
-function sourceCardHtml(name, htmlDetail, trustedNameHtml) {
-    return '<div style="padding:8px 10px;margin:6px 0;background-color:rgba(120,120,128,0.085);border:1px solid rgba(120,120,128,0.10);border-radius:10px">'
-        + `<div style="font-weight:650">${trustedNameHtml ? name : escapeHtml(name)}</div>`
-        + (htmlDetail ? `<div style="font-size:12px;margin-top:2px">${htmlDetail}</div>` : "")
-        + "</div>";
+    return `<div style="color:#8e8e93;font-size:11px;margin:5px 0;line-height:1.45">${escapeHtml(value)}</div>`;
 }
 
 function browserHeaders() {
@@ -1164,6 +1260,13 @@ function browserHeaders() {
         Accept: "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
         "User-Agent": USER_AGENT,
+    };
+}
+
+function backendHeaders() {
+    return {
+        Accept: "application/json",
+        "User-Agent": "curl/8.7.1",
     };
 }
 
@@ -1186,12 +1289,13 @@ function requestText(url, options) {
 function request(method, url, options) {
     const config = options || {};
     return new Promise((resolve, reject) => {
+        const backendRequest = String(url).indexOf(IPQUALITY_BACKEND) === 0;
         const requestOptions = {
             url,
             node: nodeName,
-            headers: config.headers || browserHeaders(),
+            headers: config.headers || (backendRequest ? backendHeaders() : browserHeaders()),
         };
-        if (String(url).indexOf(IPQUALITY_BACKEND) === 0) requestOptions.alpn = "h2";
+        if (backendRequest) requestOptions.alpn = "h2";
         if (typeof config.body !== "undefined") requestOptions.body = config.body;
         const callback = (error, response, body) => {
             if (error) {
@@ -1239,6 +1343,17 @@ function isIPv4(value) {
     });
 }
 
+function normalizeIPAddress(value) {
+    const text = String(value || "").trim().toLowerCase();
+    if (!isIPAddress(text)) return "";
+    if (isIPv4(text)) return text;
+    try {
+        return new URL(`http://[${text}]/`).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    } catch (_) {
+        return text;
+    }
+}
+
 function maskIPAddress(ip) {
     if (!maskIP || !ip) return ip;
     const text = String(ip);
@@ -1277,6 +1392,24 @@ function uniqueValues(values) {
     return result;
 }
 
+function mergeFallback(primary, fallback) {
+    if (Array.isArray(primary)) {
+        if (!primary.length) return Array.isArray(fallback) ? fallback : primary;
+        if (!Array.isArray(fallback)) return primary;
+        return primary.map((item, index) => mergeFallback(item, fallback[index]));
+    }
+    if (primary && typeof primary === "object") {
+        const result = {};
+        const backup = fallback && typeof fallback === "object" ? fallback : {};
+        const keys = uniqueValues(Object.keys(primary).concat(Object.keys(backup)));
+        keys.forEach((key) => {
+            result[key] = mergeFallback(primary[key], backup[key]);
+        });
+        return result;
+    }
+    return cleanValue(primary) ? primary : fallback;
+}
+
 function cleanASN(value) {
     const clean = cleanValue(value).replace(/^AS/i, "");
     const match = clean.match(/^\d+/);
@@ -1297,9 +1430,10 @@ function firstNumber(values) {
 }
 
 function anyTrue(values) {
-    const booleans = values.map(booleanOrNull).filter((value) => typeof value === "boolean");
-    if (!booleans.length) return null;
-    return booleans.some(Boolean);
+    const normalized = values.map(booleanOrNull);
+    if (normalized.some((value) => value === true)) return true;
+    if (normalized.length && normalized.every((value) => value === false)) return false;
+    return null;
 }
 
 function booleanOrNull(value) {
@@ -1322,7 +1456,7 @@ function formatType(type) {
     const phraseMap = {
         "DATA CENTER/WEB HOSTING/TRANSIT": "机房",
         "FIXED LINE ISP": "家宽",
-        "MOBILE ISP": "移动网络",
+        "MOBILE ISP": "手机",
         "CONTENT DELIVERY NETWORK": "CDN",
         "DATA CENTER/TRANSIT": "机房",
         "SEARCH ENGINE SPIDER": "搜索引擎",
@@ -1332,25 +1466,33 @@ function formatType(type) {
     const map = {
         DCH: "机房",
         WEB: "机房",
-        SES: "机房",
+        SES: "搜索引擎",
         HOSTING: "机房",
         ISP: "家宽",
         RES: "住宅",
         RESIDENTIAL: "住宅",
         BUSINESS: "商业",
+        COMMERCIAL: "商业",
+        BANKING: "银行",
         COM: "商业",
-        MOB: "移动网络",
-        MOBILE: "移动网络",
+        MOB: "手机",
+        MOBILE: "手机",
         CDN: "CDN",
         EDU: "教育",
+        MIL: "军队",
+        MILITARY: "军队",
+        LIB: "图书馆",
+        LIBRARY: "图书馆",
+        RSV: "保留",
+        RESERVED: "保留",
         GOVERNMENT: "政府",
         GOV: "政府",
         ORG: "组织",
+        ORGANIZATION: "组织",
     };
-    return clean.split("/").map((part) => {
-        const key = part.trim().toUpperCase();
-        return map[key] || part.trim();
-    }).filter(Boolean).join("/");
+    const first = clean.split("/")[0].trim();
+    const key = first.toUpperCase();
+    return map[key] || first;
 }
 
 function formatTypeWithRaw(type) {
@@ -1369,14 +1511,30 @@ function cleanValue(value) {
     return text;
 }
 
+function truncateText(value, maxLength) {
+    const text = String(value || "");
+    const limit = Number(maxLength) || 0;
+    return limit > 1 && text.length > limit
+        ? `${text.slice(0, limit - 1)}…`
+        : text;
+}
+
 function toDMS(value, latitude) {
     const number = Number(value);
     if (!Number.isFinite(number)) return "";
     const absolute = Math.abs(number);
-    const degrees = Math.floor(absolute);
+    let degrees = Math.floor(absolute);
     const minutesFloat = (absolute - degrees) * 60;
-    const minutes = Math.floor(minutesFloat);
-    const seconds = round((minutesFloat - minutes) * 60, 2);
+    let minutes = Math.floor(minutesFloat);
+    let seconds = round((minutesFloat - minutes) * 60, 2);
+    if (seconds >= 60) {
+        seconds = 0;
+        minutes += 1;
+    }
+    if (minutes >= 60) {
+        minutes = 0;
+        degrees += 1;
+    }
     const direction = latitude
         ? number >= 0 ? "N" : "S"
         : number >= 0 ? "E" : "W";
