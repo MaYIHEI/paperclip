@@ -85,6 +85,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 | 日期 | 变更 |
 |---|---|
+| 2026-07-22 | r25：按 Loon 官方 `[Argument]` 协议改用 `argument=[{参数}]`，脚本直接读取 `$argument` 对象；删除会混入历史状态的持久化开关回退 |
 | 2026-07-22 | r24：低负载模式把分区内容压成单个纯文本节点，保留字段并移除内部富文本 DOM；地区门户改为三大运营商全国官网，请求由 9 个降至 3 个、单次超时降至 4.5 秒 |
 | 2026-07-22 | r23：增加默认开启的报告分区折叠，使用原生 `details`、`content-visibility` 与 CSS containment 降低超长报告布局和滑动绘制压力；合并高频内联样式并移除底部空白节点 |
 | 2026-07-22 | r22：删除不可用于机场节点的自建回程；修复 Globalping 到达判断与大陆三网探针筛选；新增 Ping、MTR、HTTPS 稳定性；按开关裁剪数据库，加入总时限，并收紧 BGP、门户和媒体结论 |

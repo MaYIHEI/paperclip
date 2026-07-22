@@ -5,6 +5,7 @@
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/loon/ipquality
 #!tag=节点,IP,风险,流媒体
 #!date=2026-07-22
+#!loon_version=3.2.1(733)
 
 [Argument]
 MaskIP = switch,false,tag=隐藏 IP,desc=隐藏报告中 IP 的后半段，适合截图分享
@@ -28,4 +29,4 @@ ShowRegionConsistency = switch,false,tag=显示地区一致性,desc=对比出口
 ShowDataStatus = switch,false,tag=显示数据状态,desc=显示成功来源、失败来源和出口一致性
 
 [Script]
-generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, argument="a={MaskIP}&b={MediaTest}&c={MapNotification}&d={ShowBasic}&e={ShowEgressMatrix}&f={ShowBGP}&g={ShowBGPPath}&h={ShowChinaHttp}&i={ShowInboundRoute}&j={ShowProbePing}&k={ShowTypes}&l={ShowRiskScores}&m={ShowRiskFactors}&n={ShowMedia}&o={ShowRegionConsistency}&p={ShowDataStatus}&q={ShowProbeMTR}&r={ShowStability}&s={FoldSections}", enable=true
+generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, argument=[{MaskIP},{MediaTest},{MapNotification},{ShowBasic},{ShowEgressMatrix},{ShowBGP},{ShowBGPPath},{ShowChinaHttp},{ShowInboundRoute},{ShowProbePing},{ShowTypes},{ShowRiskScores},{ShowRiskFactors},{ShowMedia},{ShowRegionConsistency},{ShowDataStatus},{ShowProbeMTR},{ShowStability},{FoldSections}], enable=true
