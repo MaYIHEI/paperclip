@@ -11,16 +11,20 @@
  *
  * ===== Loon =====
  * [Script]
- * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
+ * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js?ver=r32, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r31";
+const SCRIPT_VERSION = "2026-07-22.r32";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
 const IPQUALITY_BACKEND = "https://ipinfo.check.place";
 const RUN_DEADLINE_MS = 45000;
 const DEFAULT_REQUEST_TIMEOUT = 7000;
+const MAX_CONCURRENT_REQUESTS = 8;
+const SPEED_DOWNLOAD_BYTES = 1000000;
+const SPEED_UPLOAD_BYTES = 524288;
+const SPEED_UPLOAD_BODY = "0123456789abcdef".repeat(SPEED_UPLOAD_BYTES / 16);
 const USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1";
 const DISNEY_CLIENT_TOKEN = "ZGlzbmV5JmJyb3dzZXImMS4wLjA.Cu56AgSfBTDag5NiRA81oLHkDZfu5L3CKadnefEAY84";
 const PERSISTENT_SWITCH_KEYS = {
@@ -32,7 +36,7 @@ const PERSISTENT_SWITCH_KEYS = {
     ShowEgressMatrix: "显示出口分流",
     ShowBGP: "显示 BGP 信息",
     ShowBGPPath: "显示目标前缀 BGP 路径",
-    ShowChinaHttp: ["测试三网地区测速", "测试运营商官网"],
+    ShowChinaHttp: ["测试三网真实测速", "测试三网地区测速", "测试运营商官网"],
     ShowInboundRoute: "测试外部探针入站路径",
     ShowProbePing: "测试外部探针 Ping",
     ShowProbeMTR: "测试外部探针 MTR",
@@ -47,6 +51,10 @@ const PERSISTENT_SWITCH_KEYS = {
 const runtimeStats = {
     startedAt: Date.now(),
     requests: [],
+};
+const requestScheduler = {
+    active: 0,
+    queue: [],
 };
 
 const params = typeof $environment !== "undefined" && $environment.params
@@ -87,7 +95,7 @@ if (!nodeName) {
 
 async function run() {
     const discovery = await discoverIP();
-    if (!discovery.ip) throw new Error("无法获取所选节点的出口 IP");
+    if (!isIPv4(discovery.ip)) throw new Error("未检测到所选节点的 IPv4 出口");
 
     const ip = discovery.ip;
     const databaseTask = collectDatabases(ip, discovery);
@@ -99,7 +107,7 @@ async function run() {
         ? collectBGP(ip, sectionVisibility.bgpPath)
         : Promise.resolve(null);
     const chinaHttpTask = sectionVisibility.chinaHttp
-        ? collectChinaHttp()
+        ? collectChinaSpeed()
         : Promise.resolve(null);
     const inboundTask = sectionVisibility.inboundRoute
         ? collectInboundRoutes(ip)
@@ -252,8 +260,11 @@ function buildBGPPathAnalysis(lookingGlass, routingStatus) {
 }
 
 function normalizeASPath(value) {
-    const values = Array.isArray(value) ? value : String(value || "").match(/\d+/g) || [];
-    return uniqueConsecutive(values.map(cleanASN).filter(Boolean));
+    const values = Array.isArray(value) ? value : String(value || "").split(/\s+/);
+    return uniqueConsecutive(values.map((item) => {
+        const token = String(item || "").trim();
+        return /^(?:AS)?\d+$/i.test(token) ? cleanASN(token) : "";
+    }).filter(Boolean));
 }
 
 const CHINA_ROUTE_ASNS = [
@@ -266,16 +277,28 @@ const CHINA_ROUTE_ASNS = [
     { asn: "23764", name: "电信 CTGNet" },
 ];
 
-const CHINA_HTTP_TARGETS = [
-    { region: "北京", carrier: "电信", url: "https://bj.189.cn/" },
-    { region: "上海", carrier: "电信", url: "https://sh.189.cn/" },
-    { region: "广东", carrier: "电信", url: "https://gd.189.cn/" },
-    { region: "北京", carrier: "联通", url: "https://bj.10010.com/" },
-    { region: "上海", carrier: "联通", url: "https://sh.10010.com/" },
-    { region: "广东", carrier: "联通", url: "https://gd.10010.com/" },
-    { region: "北京", carrier: "移动", url: "https://bj.10086.cn/" },
-    { region: "上海", carrier: "移动", url: "https://www.sh.10086.cn/" },
-    { region: "广东", carrier: "移动", url: "https://gd.10086.cn/" },
+const CHINA_SPEED_TARGETS = [
+    {
+        carrier: "电信",
+        candidates: [
+            { city: "镇江", base: "http://5gzhenjiang.speedtest.jsinfo.net:8080/speedtest/" },
+            { city: "苏州", base: "http://4gsuzhou1.speedtest.jsinfo.net:8080/speedtest/" },
+        ],
+    },
+    {
+        carrier: "联通",
+        candidates: [
+            { city: "北京", base: "http://beijing.unicomtest.com:8080/speedtest/" },
+            { city: "上海", base: "http://mobile.shunicomtest.com:8080/speedtest/" },
+        ],
+    },
+    {
+        carrier: "移动",
+        candidates: [
+            { city: "苏州", base: "http://speedtest.jsqiuying.com:8080/speedtest/" },
+            { city: "成都", base: "http://speedtest1.sc.chinamobile.com:8080/speedtest/" },
+        ],
+    },
 ];
 
 const GLOBALPING_LOCATIONS = [
@@ -290,26 +313,96 @@ const STABILITY_TARGETS = [
     { name: "Apple", url: "https://captive.apple.com/hotspot-detect.html" },
 ];
 
-async function collectChinaHttp() {
-    const settled = await Promise.all(CHINA_HTTP_TARGETS.map(async (target) => {
-        const startedAt = Date.now();
-        const result = await capture(request("GET", target.url, {
-            timeout: 6500,
-            allowHttpErrors: true,
-            headers: browserHeaders(),
-        }));
-        const response = result.ok ? result.value : null;
-        return {
-            region: target.region,
-            carrier: target.carrier,
-            host: requestHost(target.url),
-            ok: !!(response && response.status),
-            status: response ? response.status : 0,
-            ms: Math.max(0, Date.now() - startedAt),
-            error: result.ok ? "" : result.error,
-        };
+async function collectChinaSpeed() {
+    return Promise.all(CHINA_SPEED_TARGETS.map(async (definition) => {
+        const errors = [];
+        let partial = null;
+        for (let index = 0; index < definition.candidates.length; index += 1) {
+            const result = await testSpeedTarget(definition.carrier, definition.candidates[index]);
+            if (result.downloadMbps !== null && result.uploadMbps !== null) return result;
+            errors.push(`${result.city}：${result.error || "测速未完成"}`);
+            if (!partial || result.downloadMbps !== null || result.uploadMbps !== null) partial = result;
+        }
+        if (partial) {
+            partial.error = errors.join("；");
+            return partial;
+        }
+        return { carrier: definition.carrier, downloadMbps: null, uploadMbps: null, error: errors.join("；") || "测速服务器不可达" };
     }));
-    return settled;
+}
+
+async function testSpeedTarget(carrier, target) {
+    const probe = await capture(request("GET", `${target.base}latency.txt?r=${Date.now()}`, {
+        timeout: 2800,
+        allowHttpErrors: true,
+        headers: { Accept: "text/plain", "Cache-Control": "no-cache", "User-Agent": USER_AGENT },
+    }));
+    const probeStatus = probe.ok && probe.value ? probe.value.status : 0;
+    if (probeStatus < 200 || probeStatus >= 400) {
+        return {
+            carrier, city: target.city, host: requestHost(target.base), latency: null,
+            downloadMbps: null, uploadMbps: null,
+            error: probe.ok ? `响应 HTTP ${probeStatus || "?"}` : truncateText(probe.error, 36),
+        };
+    }
+
+    const download = await capture(request("GET", `${target.base}download?size=${SPEED_DOWNLOAD_BYTES}&r=${Date.now()}`, {
+        timeout: 6500,
+        binaryMode: true,
+        headers: { Accept: "application/octet-stream", "Accept-Encoding": "identity", "User-Agent": USER_AGENT },
+    }));
+    const declaredLength = download.ok ? responseContentLength(download.value) : 0;
+    const receivedLength = download.ok ? responseBodyLength(download.value.body) : 0;
+    const validDownload = download.ok
+        && declaredLength >= SPEED_DOWNLOAD_BYTES * 0.9
+        && receivedLength >= SPEED_DOWNLOAD_BYTES * 0.9;
+    const downloadMbps = validDownload
+        ? throughputMbps(receivedLength, download.value.elapsedMs) : null;
+
+    const upload = await capture(request("POST", `${target.base}upload.php?r=${Date.now()}`, {
+        timeout: 6500,
+        headers: { "Content-Type": "application/octet-stream", "User-Agent": USER_AGENT },
+        body: SPEED_UPLOAD_BODY,
+    }));
+    const confirmedUpload = upload.ok ? uploadConfirmedBytes(upload.value.body) : 0;
+    const uploadMbps = upload.ok && confirmedUpload === SPEED_UPLOAD_BYTES
+        ? throughputMbps(confirmedUpload, upload.value.elapsedMs) : null;
+    return {
+        carrier,
+        city: target.city,
+        host: requestHost(target.base),
+        latency: probe.value.elapsedMs,
+        downloadMbps,
+        uploadMbps,
+        error: [
+            downloadMbps === null ? `下载失败：${download.ok ? `实收 ${receivedLength} / 声明 ${declaredLength} 字节` : download.error}` : "",
+            uploadMbps === null ? `上传失败：${upload.ok ? `服务器确认 ${confirmedUpload} 字节` : upload.error}` : "",
+        ].filter(Boolean).join("；"),
+    };
+}
+
+function responseContentLength(result) {
+    const response = result && result.response || {};
+    const headers = response.headers || {};
+    const key = Object.keys(headers).find((name) => name.toLowerCase() === "content-length");
+    const value = key ? Number(headers[key]) : 0;
+    return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function responseBodyLength(body) {
+    if (body === null || typeof body === "undefined") return 0;
+    if (typeof body.byteLength === "number") return body.byteLength;
+    if (typeof body.length === "number") return body.length;
+    return 0;
+}
+
+function uploadConfirmedBytes(body) {
+    const match = String(body || "").match(/(?:^|\b)size=(\d+)(?:\b|$)/i);
+    return match ? Number(match[1]) : 0;
+}
+
+function throughputMbps(bytes, ms) {
+    return round((Number(bytes) * 8) / (Math.max(1, Number(ms)) * 1000), 2);
 }
 
 async function collectInboundRoutes(ip) {
@@ -492,7 +585,7 @@ async function collectStability() {
             total: samples.length,
             success: successful.length,
             median: percentile(successful, 50),
-            p95: percentile(successful, 95),
+            maximum: successful.length ? Math.max.apply(null, successful) : null,
             jitter: successful.length > 1 ? round(standardDeviation(successful), 2) : null,
         };
     }));
@@ -544,7 +637,7 @@ async function discoverIP() {
                         ? value && value.ip
                         : String(value || "").trim();
         const normalizedCandidate = normalizeIPAddress(candidate);
-        if (normalizedCandidate) observations.push({
+        if (isIPv4(normalizedCandidate)) observations.push({
             source: item[0],
             ip: normalizedCandidate,
         });
@@ -1063,7 +1156,7 @@ function render(ip, data, media) {
         visibleSections.push(section("出口分流", renderEgressMatrix(data._egress, basic)));
     }
     if (sectionVisibility.chinaHttp) {
-        visibleSections.push(section("三网地区 HTTPS 测速（实验）", renderChinaHttp(data._chinaHttp)));
+        visibleSections.push(section("三网 Speedtest 轻量测速（实验）", renderChinaSpeed(data._chinaHttp)));
     }
     if (sectionVisibility.inboundRoute) {
         visibleSections.push(section("指定 ASN 外部探针入站路径", renderInboundRoutes(data._inboundRoutes)));
@@ -1976,24 +2069,22 @@ function renderBGPPath(analysis) {
         + mutedLine("方向为 RIPE RIS 采集器/对等体看到目标前缀的控制面路径，不是节点发出的数据路径。样本包含 AS4809/AS9929 也不证明机场节点回程经过或线路品质。 ");
 }
 
-function renderChinaHttp(results) {
+function renderChinaSpeed(results) {
     const rows = Array.isArray(results) ? results : [];
-    if (!rows.length) return mutedLine("本次没有三网地区 HTTPS 测速结果");
-    const success = rows.filter((item) => item.ok).length;
-    const header = infoLine("连通", `${success} / ${rows.length} 个地区目标返回 HTTP 响应`);
-    const regions = ["北京", "上海", "广东"].map((region) => {
-        const items = rows.filter((item) => item.region === region);
-        const detail = items.map((item) => {
-            const status = item.ok ? `${item.ms} ms · HTTP ${item.status}` : `失败 · ${truncateText(item.error, 24)}`;
-            const color = item.ok ? latencyColor(item.ms) : "#ff3b30";
-            return `<div style="margin-top:3px"><span style="display:inline-block;width:34px;color:#8e8e93">${escapeHtml(item.carrier)}</span>`
-                + `<span style="color:${color};font-weight:600">${escapeHtml(status)}</span>`
-                + `<div style="margin-left:34px;color:#8e8e93;font-size:10px">${escapeHtml(item.host)}</div></div>`;
-        }).join("");
-        return `<div style="margin:9px 0"><div style="font-size:12px;font-weight:700">${escapeHtml(region)}</div>${detail}</div>`;
+    if (!rows.length) return mutedLine("本次没有三网 Speedtest 结果");
+    const content = rows.map((item) => {
+        const title = uniqueValues([item.city, item.carrier]).join(" · ") || item.carrier;
+        if (item.downloadMbps === null && item.uploadMbps === null) {
+            return infoLine(title, `失败 · ${truncateText(item.error, 42)}`);
+        }
+        const stats = `下载 ${item.downloadMbps !== null ? `${item.downloadMbps} Mbps` : "失败"}`
+            + ` · 上传 ${item.uploadMbps !== null ? `${item.uploadMbps} Mbps` : "失败"}`
+            + `${item.latency !== null ? ` · 响应 ${item.latency} ms` : ""}`;
+        const warning = item.error ? mutedLine(`${title} · ${item.error}`) : "";
+        return infoLine(title, stats) + warning;
     }).join("");
-    return header + regions
-        + mutedLine("目标是北京、上海、广东三网品牌地区门户，测量 HTTPS 返回总耗时，不是下载带宽；域名可能使用 CDN、重定向或反爬，单站失败不代表线路失败。 ");
+    return content
+        + mutedLine("使用 xykt/NetQuality 所采用的 Ookla 三网服务器，每网选择首个可达目标；下载 1 MB、上传 512 KB 计算轻量吞吐，不等同于 Ookla CLI 的多连接完整测速。服务器可能限流或临时下线。 ");
 }
 
 function renderInboundRoutes(result) {
@@ -2063,7 +2154,7 @@ function renderStability(rows) {
     const content = results.map((row) => {
         const stats = `${row.success}/${row.total} 成功`
             + `${row.median !== null ? ` · 中位 ${row.median} ms` : ""}`
-            + `${row.p95 !== null ? ` · P95 ${row.p95} ms` : ""}`
+            + `${row.maximum !== null ? ` · 最大 ${row.maximum} ms` : ""}`
             + `${row.jitter !== null ? ` · 波动 ${row.jitter} ms` : ""}`;
         return infoLine(`${row.name} · ${row.host}`, stats);
     }).join("");
@@ -2355,6 +2446,10 @@ function requestText(url, options) {
 
 function request(method, url, options) {
     const config = options || {};
+    return enqueueRequest(() => executeRequest(method, url, config));
+}
+
+function executeRequest(method, url, config) {
     return new Promise((resolve, reject) => {
         const remaining = deadlineRemaining();
         if (remaining <= 250) {
@@ -2368,6 +2463,7 @@ function request(method, url, options) {
             node: cleanValue(config.node) || nodeName,
             headers: config.headers || (backendRequest ? backendHeaders() : browserHeaders()),
         };
+        if (config.binaryMode) requestOptions["binary-mode"] = true;
         if (backendRequest) requestOptions.alpn = "h2";
         const configuredTimeout = numberOrNull(config.timeout) !== null
             ? Number(config.timeout) : DEFAULT_REQUEST_TIMEOUT;
@@ -2384,7 +2480,12 @@ function request(method, url, options) {
                 reject(new Error(`HTTP ${status || "?"}`));
                 return;
             }
-            resolve({ status, body: String(body || ""), response: response || {} });
+            resolve({
+                status,
+                body: config.binaryMode ? body : String(body || ""),
+                response: response || {},
+                elapsedMs: Math.max(1, Date.now() - startedAt),
+            });
         };
         if (String(method).toUpperCase() === "POST") {
             $httpClient.post(requestOptions, callback);
@@ -2400,8 +2501,26 @@ function recordRuntimeRequest(url, startedAt, error, status, allowHttpErrors) {
         host: requestHost(url),
         ms: Math.max(0, Date.now() - startedAt),
         status: validStatus ? status : 0,
-        ok: !error && validStatus && (allowHttpErrors || (status >= 200 && status < 300)),
+        ok: !error && validStatus && status >= 200 && status < 400,
     });
+}
+
+function enqueueRequest(factory) {
+    return new Promise((resolve, reject) => {
+        requestScheduler.queue.push({ factory, resolve, reject });
+        drainRequestQueue();
+    });
+}
+
+function drainRequestQueue() {
+    while (requestScheduler.active < MAX_CONCURRENT_REQUESTS && requestScheduler.queue.length) {
+        const item = requestScheduler.queue.shift();
+        requestScheduler.active += 1;
+        Promise.resolve().then(item.factory).then(item.resolve, item.reject).then(() => {
+            requestScheduler.active -= 1;
+            drainRequestQueue();
+        });
+    }
 }
 
 function requestHost(url) {

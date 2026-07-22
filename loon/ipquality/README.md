@@ -21,12 +21,14 @@
 
 ```ini
 [Script]
-generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
+generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js?ver=r32, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
 ```
 
 也可直接导入插件：
 
-`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.lpx`
+`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.lpx?v=r32`
+
+Loon 可能保留已安装插件的旧 `#!select` 名称。若更新后仍显示“测试运营商官网”，请删除旧插件后用上面的版本化地址重新导入；已保存的其他选择项需要重新设置。
 
 ## 插件参数
 
@@ -40,11 +42,11 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 | 显示出口分流 | 关闭 | 按出口 IP 分组显示探针来源、ASN、组织和国家 |
 | 显示 BGP 信息 | 关闭 | 通过 RIPEstat 查询 IPv4 前缀、Origin ASN、RPKI、PTR 和注册机构 |
 | 显示目标前缀 BGP 路径 | 关闭 | 展示 RIPE RIS 到目标前缀的 AS Path、可见性和样本所含 ASN；不是节点回程 |
-| 测试三网地区测速 | 关闭 | 并发访问北京、上海、广东的电信、联通、移动地区目标，显示 HTTPS 返回总耗时 |
+| 测试三网真实测速 | 关闭 | 从 xykt/NetQuality 的 Ookla 三网服务器中选择可完成测速的目标，执行 1 MB 下载、512 KB 上传轻量吞吐测试 |
 | 测试外部探针入站路径 | 关闭 | 使用 Globalping 指定 ASN 中国探针向出口 IP 执行 traceroute |
 | 测试外部探针 Ping | 关闭 | 显示指定 ASN 中国探针与出口 IP 的 ICMP 往返延迟、丢包和抖动 |
 | 测试外部探针 MTR | 关闭 | 显示指定 ASN 中国探针到出口 IP 的入站逐跳统计 |
-| 测试 HTTPS 稳定性 | 关闭 | 经所选节点对三个 HTTPS 小响应目标各请求三次，显示成功率、中位数、P95 和波动 |
+| 测试 HTTPS 稳定性 | 关闭 | 经所选节点对三个 HTTPS 小响应目标各请求三次，显示成功率、中位数、最大值和波动 |
 | 显示 IP 类型 | 关闭 | 显示各数据库的 IP 类型属性 |
 | 显示风险评分 | 关闭 | 显示各数据库的原始风险评分 |
 | 显示风险因素 | 关闭 | 显示代理、VPN、Tor、机房等风险因素 |
@@ -64,11 +66,11 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 - **出口分流**：按实际出口 IP 汇总既有探针来源，并标注主出口、分流出口及对应 ASN、组织和国家；该分区不会增加网络请求。
 - **BGP 网络身份**：通过 RIPE NCC RIPEstat 展示 IPv4 前缀、Origin ASN、持有者、RIR、RPKI 和 PTR；不将公开路由身份描述为实际回程。
 - **目标前缀 BGP 可见路径**：展示 RIPE RIS 采集器/对等体看到目标前缀的 AS Path、可见性、MOAS 与历史 Origin 变化提示及样本所含 ASN。包含 AS4809/AS9929 不证明机场节点实际回程经过或线路品质。
-- **三网地区 HTTPS 测速（实验）**：并发访问北京、上海、广东的电信、联通、移动地区品牌门户，共 9 个目标。结果是 HTTPS 返回总耗时，不是下载带宽；域名可能使用 CDN、重定向或反爬，失败不代表运营商线路异常。
+- **三网 Speedtest 轻量测速（实验）**：使用 xykt/NetQuality 所采用的 Ookla 中国电信、联通、移动测速服务器，每网从两个候选中选择首个可达目标，下载 1 MB、上传 512 KB 并计算 Mbps。它是单连接小样本，不等同于 Ookla CLI 的多连接完整测速；服务器可能限流或临时下线。
 - **指定 ASN 外部探针入站路径**：由 Globalping 的 `AS4134+China`、`AS4837+China`、`AS9808+China` 探针向出口 IPv4 执行 traceroute。方向是探针到出口 IP，不作为节点回程结论。
 - **指定 ASN 外部探针 Ping**：展示探针与出口 IP 的 ICMP 往返 RTT、丢包和抖动，无法拆分去程与回程。
 - **指定 ASN 外部探针 MTR**：展示入站逐跳统计；路由器不响应或限制 ICMP 会造成表观丢包，不能单独视为真实业务丢包。
-- **端到端 HTTPS 稳定性**：对 Cloudflare、Google 和 Apple 小响应目标各请求三次，展示成功率、中位数、P95 与波动；结果包含手机、代理、TLS 和服务端耗时。
+- **端到端 HTTPS 稳定性**：对 Cloudflare、Google 和 Apple 小响应目标各请求三次，展示成功率、中位数、最大值与波动；结果包含手机、代理、TLS 和服务端耗时。
 - **多源风险**：分别展示各数据库返回的类型、风险评分和代理/VPN/Tor/机房等标记；数据冲突时保留原始结果。
 - **服务可达性**：分为端点可达/地区支持、受限或部分确认、明确地区受限、未确认；网页可达不等于登录后能够购买或播放。
 - **地区一致性**：汇总有明确地区的服务并与出口地区比较；不把地区差异直接判定为异常。
@@ -87,6 +89,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 | 日期 | 变更 |
 |---|---|
+| 2026-07-22 | r32：删除运营商官网/地区门户请求，改为三网 Ookla 服务器轻量上传下载测速；强制 IPv4，限制全局并发为 8，HTTP 4xx/5xx 不再计成功，3 次稳定性样本的 P95 改为最大值，并忽略 AS Path 集合中的非线性 ASN |
 | 2026-07-22 | r31：将三大运营商全国官网测试恢复为北京、上海、广东三网共 9 个地区目标的 HTTPS 耗时测试，并兼容旧配置键 |
 | 2026-07-22 | r30：真机复核后撤下按钮测试版；Cookie 插件的 switch 通过 `enable={参数}` 控制独立规则，不适用于单个 generic 动作组合 19 项报告；正式版继续使用已验证的中文 `#!select` 持久化配置 |
 | 2026-07-22 | r28：保留正式下拉版，新增最新版 Loon 按钮测试版；19 个 switch 使用 `a`–`s` 短参数按官方对象格式传入，JS 优先读取按钮参数并保留持久化回退 |
@@ -123,5 +126,6 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 - [Roddy-D 的 Loon 节点质量查询插件](https://github.com/Roddy-D/Loon_plugins)
 - [xykt 的 IPQuality](https://github.com/xykt/IPQuality)
+- [xykt 的 NetQuality 与三网 Speedtest 服务器清单](https://github.com/xykt/NetQuality)
 - [RIPE NCC RIPEstat Data API](https://stat.ripe.net/docs/data-api/ripestat-data-api)
 - [Globalping](https://globalping.io/)
