@@ -14,12 +14,13 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r21";
+const SCRIPT_VERSION = "2026-07-22.r22";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
-const IPAPI_COM_URL = "http://ip-api.com/json/";
 const IPQUALITY_BACKEND = "https://ipinfo.check.place";
+const RUN_DEADLINE_MS = 45000;
+const DEFAULT_REQUEST_TIMEOUT = 7000;
 const USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1";
 const DISNEY_CLIENT_TOKEN = "ZGlzbmV5JmJyb3dzZXImMS4wLjA.Cu56AgSfBTDag5NiRA81oLHkDZfu5L3CKadnefEAY84";
 const ARGUMENT_KEYS_R13 = [
@@ -39,7 +40,7 @@ const ARGUMENT_KEYS = [
     "MaskIP", "MediaTest", "MapNotification", "ShowBasic", "ShowEgressMatrix",
     "ShowBGP", "ShowTypes", "ShowRiskScores", "ShowRiskFactors", "ShowMedia",
     "ShowRegionConsistency", "ShowDataStatus", "ShowBGPPath", "ShowChinaHttp",
-    "ShowInboundRoute", "ShowEnhancedRoute", "EnhancedEndpoint", "EnhancedToken",
+    "ShowInboundRoute", "ShowProbePing", "ShowProbeMTR", "ShowStability",
 ];
 const ARGUMENT_ALIASES = {
     MaskIP: "a",
@@ -51,13 +52,15 @@ const ARGUMENT_ALIASES = {
     ShowBGPPath: "g",
     ShowChinaHttp: "h",
     ShowInboundRoute: "i",
-    ShowEnhancedRoute: "j",
+    ShowProbePing: "j",
     ShowTypes: "k",
     ShowRiskScores: "l",
     ShowRiskFactors: "m",
     ShowMedia: "n",
     ShowRegionConsistency: "o",
     ShowDataStatus: "p",
+    ShowProbeMTR: "q",
+    ShowStability: "r",
 };
 const pluginArguments = parsePluginArguments(
     typeof $argument !== "undefined" ? $argument : null
@@ -87,10 +90,10 @@ const sectionVisibility = {
     bgpPath: readSwitch("ShowBGPPath", false),
     chinaHttp: readSwitch("ShowChinaHttp", false),
     inboundRoute: readSwitch("ShowInboundRoute", false),
-    enhancedRoute: readSwitch("ShowEnhancedRoute", false),
+    probePing: readSwitch("ShowProbePing", false),
+    probeMTR: readSwitch("ShowProbeMTR", false),
+    stability: readSwitch("ShowStability", false),
 };
-const enhancedEndpoint = readArgument("EnhancedEndpoint");
-const enhancedToken = readArgument("EnhancedToken");
 
 console.log(`[INFO] 节点 IP 质量检测 ${SCRIPT_VERSION}`);
 console.log(`[INFO] 节点: ${nodeName || "未获取"}`);
@@ -121,16 +124,25 @@ async function run() {
     const inboundTask = sectionVisibility.inboundRoute
         ? collectInboundRoutes(ip)
         : Promise.resolve(null);
-    const enhancedTask = sectionVisibility.enhancedRoute
-        ? collectEnhancedRoute(ip)
+    const probePingTask = sectionVisibility.probePing
+        ? collectProbePing(ip)
+        : Promise.resolve(null);
+    const probeMTRTask = sectionVisibility.probeMTR
+        ? collectProbeMTR(ip)
+        : Promise.resolve(null);
+    const stabilityTask = sectionVisibility.stability
+        ? collectStability()
         : Promise.resolve(null);
     const results = await Promise.all([
-        databaseTask, mediaTask, bgpTask, chinaHttpTask, inboundTask, enhancedTask,
+        databaseTask, mediaTask, bgpTask, chinaHttpTask, inboundTask,
+        probePingTask, probeMTRTask, stabilityTask,
     ]);
     results[0]._bgp = results[2];
     results[0]._chinaHttp = results[3];
     results[0]._inboundRoutes = results[4];
-    results[0]._enhancedRoute = results[5];
+    results[0]._probePing = results[5];
+    results[0]._probeMTR = results[6];
+    results[0]._stability = results[7];
     render(ip, results[0], results[1]);
 }
 
@@ -241,6 +253,8 @@ function buildBGPPathAnalysis(lookingGlass, routingStatus) {
         return count ? { asn: definition.asn, name: definition.name, count } : null;
     }).filter(Boolean);
     const visibility = valueAt(routingStatus, "visibility.v4") || {};
+    const firstOrigin = cleanASN(valueAt(routingStatus, "first_seen.origin"));
+    const lastOrigin = cleanASN(valueAt(routingStatus, "last_seen.origin"));
     return {
         collectorCount: collectors.length,
         pathCount: paths.length,
@@ -249,6 +263,9 @@ function buildBGPPathAnalysis(lookingGlass, routingStatus) {
         clues,
         peersSeeing: numberOrNull(visibility.ris_peers_seeing),
         totalPeers: numberOrNull(visibility.total_ris_peers),
+        firstOrigin,
+        lastOrigin,
+        originChanged: !!(firstOrigin && lastOrigin && firstOrigin !== lastOrigin),
         queryTime: cleanValue(routingStatus && routingStatus.query_time)
             || cleanValue(lookingGlass && lookingGlass.latest_time),
     };
@@ -260,8 +277,8 @@ function normalizeASPath(value) {
 }
 
 const CHINA_ROUTE_ASNS = [
-    { asn: "4809", name: "电信 CN2" },
-    { asn: "9929", name: "联通 9929" },
+    { asn: "4809", name: "电信 CN2 相关" },
+    { asn: "9929", name: "联通 9929 相关" },
     { asn: "4134", name: "电信 163" },
     { asn: "4837", name: "联通 169" },
     { asn: "58453", name: "移动 CMI" },
@@ -270,15 +287,27 @@ const CHINA_ROUTE_ASNS = [
 ];
 
 const CHINA_HTTP_TARGETS = [
-    { region: "北京", carrier: "电信", url: "http://bj.189.cn/" },
-    { region: "上海", carrier: "电信", url: "http://sh.189.cn/" },
-    { region: "广东", carrier: "电信", url: "http://gd.189.cn/" },
-    { region: "北京", carrier: "联通", url: "http://bj.10010.com/" },
-    { region: "上海", carrier: "联通", url: "http://sh.10010.com/" },
-    { region: "广东", carrier: "联通", url: "http://gd.10010.com/" },
-    { region: "北京", carrier: "移动", url: "http://bj.10086.cn/" },
-    { region: "上海", carrier: "移动", url: "http://www.sh.10086.cn/" },
-    { region: "广东", carrier: "移动", url: "http://gd.10086.cn/" },
+    { region: "北京", carrier: "电信", url: "https://bj.189.cn/" },
+    { region: "上海", carrier: "电信", url: "https://sh.189.cn/" },
+    { region: "广东", carrier: "电信", url: "https://gd.189.cn/" },
+    { region: "北京", carrier: "联通", url: "https://bj.10010.com/" },
+    { region: "上海", carrier: "联通", url: "https://sh.10010.com/" },
+    { region: "广东", carrier: "联通", url: "https://gd.10010.com/" },
+    { region: "北京", carrier: "移动", url: "https://bj.10086.cn/" },
+    { region: "上海", carrier: "移动", url: "https://www.sh.10086.cn/" },
+    { region: "广东", carrier: "移动", url: "https://gd.10086.cn/" },
+];
+
+const GLOBALPING_LOCATIONS = [
+    { magic: "AS4134+China", limit: 1 },
+    { magic: "AS4837+China", limit: 1 },
+    { magic: "AS9808+China", limit: 1 },
+];
+
+const STABILITY_TARGETS = [
+    { name: "Cloudflare", url: "https://cp.cloudflare.com/generate_204" },
+    { name: "Google", url: "https://www.gstatic.com/generate_204" },
+    { name: "Apple", url: "https://captive.apple.com/hotspot-detect.html" },
 ];
 
 async function collectChinaHttp() {
@@ -305,15 +334,19 @@ async function collectChinaHttp() {
 
 async function collectInboundRoutes(ip) {
     if (!isIPv4(ip)) return { error: "仅支持 IPv4 目标" };
+    const measurement = await createGlobalpingMeasurement(
+        "traceroute", ip, { protocol: "ICMP" }, 4
+    );
+    if (measurement.error) return measurement;
+    return parseInboundMeasurement(measurement);
+}
+
+async function createGlobalpingMeasurement(type, target, measurementOptions, attempts) {
     const body = JSON.stringify({
-        type: "traceroute",
-        target: ip,
-        locations: [
-            { magic: "AS4134", limit: 1 },
-            { magic: "AS4837", limit: 1 },
-            { magic: "AS58453", limit: 1 },
-        ],
-        measurementOptions: { protocol: "ICMP" },
+        type,
+        target,
+        locations: GLOBALPING_LOCATIONS,
+        measurementOptions: measurementOptions || {},
     });
     const created = await capture(requestJson("https://api.globalping.io/v1/measurements", {
         method: "POST",
@@ -330,7 +363,9 @@ async function collectInboundRoutes(ip) {
         return { error: `Globalping 创建测量失败：${created.error || "未返回任务编号"}` };
     }
     let measurement = null;
-    for (let attempt = 0; attempt < 4; attempt += 1) {
+    const maxAttempts = Math.max(1, attempts || 4);
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        if (deadlineRemaining() < 1200) break;
         await delay(attempt ? 1400 : 900);
         const polled = await capture(requestJson(
             `https://api.globalping.io/v1/measurements/${encodeURIComponent(created.value.id)}`,
@@ -340,7 +375,7 @@ async function collectInboundRoutes(ip) {
         if (measurement && measurement.status !== "in-progress") break;
     }
     if (!measurement) return { error: "Globalping 测量结果未返回" };
-    return parseInboundMeasurement(measurement);
+    return measurement;
 }
 
 function parseInboundMeasurement(measurement) {
@@ -357,10 +392,13 @@ function parseInboundMeasurement(measurement) {
         const rtts = lastHop && Array.isArray(lastHop.timings)
             ? lastHop.timings.map((timing) => numberOrNull(timing && timing.rtt)).filter((v) => v !== null)
             : [];
-        const hopAsns = uniqueValues(hops.map((hop) => {
+        const hopAsns = uniqueValues(hops.reduce((values, hop) => {
+            const provided = Array.isArray(hop && hop.asn) ? hop.asn.map(cleanASN) : [];
             const hopIP = normalizeIPAddress(hop && hop.resolvedAddress);
-            return hopIP ? loonNetworkProfile(hopIP).asn : "";
-        }).filter(Boolean));
+            const fallback = hopIP ? loonNetworkProfile(hopIP).asn : "";
+            return values.concat(provided, fallback || []);
+        }, []).filter(Boolean));
+        const lastAddress = normalizeIPAddress(lastHop && lastHop.resolvedAddress);
         return {
             carrier: carrierByASN(cleanASN(probe.asn)),
             asn: cleanASN(probe.asn),
@@ -368,7 +406,7 @@ function parseInboundMeasurement(measurement) {
             location: uniqueValues([probe.city, probe.state, probe.country]).join(" · "),
             status: cleanValue(result.status),
             hopCount: hops.length,
-            reached: normalizeIPAddress(result.resolvedAddress) === normalizeIPAddress(measurement.target),
+            reached: !!lastAddress && lastAddress === normalizeIPAddress(measurement.target),
             lastRtt: rtts.length ? round(rtts.reduce((sum, value) => sum + value, 0) / rtts.length, 2) : null,
             routeClues: classifyASNList(hopAsns),
         };
@@ -382,54 +420,103 @@ function parseInboundMeasurement(measurement) {
     };
 }
 
-async function collectEnhancedRoute(ip) {
-    if (!enhancedEndpoint) return { unconfigured: true };
-    if (!/^https:\/\//i.test(enhancedEndpoint)) {
-        return { error: "增强服务地址必须使用 HTTPS" };
-    }
-    const separator = enhancedEndpoint.indexOf("?") === -1 ? "?" : "&";
-    const headers = { Accept: "application/json", "User-Agent": "paperclip-ipquality/1.0" };
-    if (enhancedToken) headers.Authorization = `Bearer ${enhancedToken}`;
-    const result = await capture(requestJson(
-        `${enhancedEndpoint}${separator}target=${encodeURIComponent(ip)}&family=4`,
-        { node: "DIRECT", timeout: 20000, headers }
-    ));
-    if (!result.ok) return { error: result.error };
-    return normalizeEnhancedResult(result.value, ip);
+async function collectProbePing(ip) {
+    if (!isIPv4(ip)) return { error: "仅支持 IPv4 目标" };
+    const measurement = await createGlobalpingMeasurement(
+        "ping", ip, { protocol: "ICMP", packets: 4 }, 4
+    );
+    if (measurement.error) return measurement;
+    const rows = (Array.isArray(measurement.results) ? measurement.results : []).map((item) => {
+        const probe = item.probe || {};
+        const result = item.result || {};
+        const stats = result.stats || {};
+        const timings = Array.isArray(result.timings)
+            ? result.timings.map((timing) => numberOrNull(timing && timing.rtt)).filter((v) => v !== null)
+            : [];
+        return {
+            carrier: carrierByASN(cleanASN(probe.asn)),
+            asn: cleanASN(probe.asn),
+            location: uniqueValues([probe.city, probe.state, probe.country]).join(" · "),
+            status: cleanValue(result.status),
+            avg: numberOrNull(stats.avg),
+            min: numberOrNull(stats.min),
+            max: numberOrNull(stats.max),
+            loss: numberOrNull(stats.loss),
+            jitter: timings.length > 1 ? round(standardDeviation(timings), 2) : null,
+        };
+    });
+    return {
+        id: cleanValue(measurement.id),
+        status: cleanValue(measurement.status),
+        rows,
+        missing: ["电信", "联通", "移动"].filter((carrier) => !rows.some((row) => row.carrier === carrier)),
+    };
 }
 
-function normalizeEnhancedResult(payload, ip) {
-    if (!payload || typeof payload !== "object") return { error: "增强服务响应格式无效" };
-    const routes = Array.isArray(payload.routes) ? payload.routes : [];
-    const tests = Array.isArray(payload.tests) ? payload.tests : [];
+async function collectProbeMTR(ip) {
+    if (!isIPv4(ip)) return { error: "仅支持 IPv4 目标" };
+    const measurement = await createGlobalpingMeasurement(
+        "mtr", ip, { protocol: "ICMP", packets: 5 }, 6
+    );
+    if (measurement.error) return measurement;
+    const rows = (Array.isArray(measurement.results) ? measurement.results : []).map((item) => {
+        const probe = item.probe || {};
+        const result = item.result || {};
+        const hops = Array.isArray(result.hops) ? result.hops : [];
+        const lastHop = hops.slice().reverse().find((hop) => hop && hop.resolvedAddress);
+        const stats = lastHop && lastHop.stats || {};
+        const lastAddress = normalizeIPAddress(lastHop && lastHop.resolvedAddress);
+        return {
+            carrier: carrierByASN(cleanASN(probe.asn)),
+            asn: cleanASN(probe.asn),
+            location: uniqueValues([probe.city, probe.state, probe.country]).join(" · "),
+            status: cleanValue(result.status),
+            reached: !!lastAddress && lastAddress === normalizeIPAddress(measurement.target),
+            hopCount: hops.length,
+            avg: numberOrNull(stats.avg),
+            loss: numberOrNull(stats.loss),
+            jitter: numberOrNull(stats.jAvg),
+        };
+    });
     return {
-        source: cleanValue(payload.source),
-        generatedAt: cleanValue(payload.generatedAt || payload.generated_at),
-        target: cleanValue(payload.target) || ip,
-        routes: routes.map((route) => {
-            const hops = Array.isArray(route.hops) ? route.hops : [];
-            const asns = uniqueValues(hops.map((hop) => cleanASN(hop && hop.asn)).filter(Boolean));
-            return {
-                carrier: cleanValue(route.carrier) || "未标注",
-                region: cleanValue(route.region),
-                protocol: cleanValue(route.protocol),
-                reached: route.reached === true,
-                hopCount: hops.length,
-                clues: classifyASNList(asns),
-            };
-        }),
-        tests: tests.map((test) => ({
-            carrier: cleanValue(test.carrier) || "未标注",
-            region: cleanValue(test.region),
-            protocol: cleanValue(test.protocol),
-            packetSize: numberOrNull(test.packetSize || test.packet_size),
-            sent: numberOrNull(test.sent),
-            received: numberOrNull(test.received),
-            loss: numberOrNull(test.loss),
-            avg: numberOrNull(test.avg || test.average),
-            jitter: numberOrNull(test.jitter),
-        })),
+        id: cleanValue(measurement.id),
+        status: cleanValue(measurement.status),
+        rows,
+        missing: ["电信", "联通", "移动"].filter((carrier) => !rows.some((row) => row.carrier === carrier)),
     };
+}
+
+async function collectStability() {
+    const rows = await Promise.all(STABILITY_TARGETS.map(async (target) => {
+        const samples = [];
+        for (let roundIndex = 0; roundIndex < 3; roundIndex += 1) {
+            if (deadlineRemaining() < 1200) break;
+            const startedAt = Date.now();
+            const separator = target.url.indexOf("?") === -1 ? "?" : "&";
+            const result = await capture(request("GET", `${target.url}${separator}r=${Date.now()}-${roundIndex}`, {
+                timeout: 6000,
+                allowHttpErrors: true,
+                headers: browserHeaders(),
+            }));
+            const status = result.ok && result.value ? result.value.status : 0;
+            samples.push({
+                ok: status >= 200 && status < 400,
+                status,
+                ms: Math.max(0, Date.now() - startedAt),
+            });
+        }
+        const successful = samples.filter((sample) => sample.ok).map((sample) => sample.ms);
+        return {
+            name: target.name,
+            host: requestHost(target.url),
+            total: samples.length,
+            success: successful.length,
+            median: percentile(successful, 50),
+            p95: percentile(successful, 95),
+            jitter: successful.length > 1 ? round(standardDeviation(successful), 2) : null,
+        };
+    }));
+    return rows;
 }
 
 function classifyASNList(asns) {
@@ -439,7 +526,7 @@ function classifyASNList(asns) {
 }
 
 function carrierByASN(asn) {
-    const values = { "4134": "电信", "4837": "联通", "58453": "移动" };
+    const values = { "4134": "电信", "4837": "联通", "9808": "移动", "58453": "移动国际" };
     return values[asn] || (asn ? `AS${asn}` : "未知探针");
 }
 
@@ -447,7 +534,6 @@ async function discoverIP() {
     const definitions = [
         ["ipinfo.check.place", requestText(`${IPQUALITY_BACKEND}/cdn-cgi/trace`)],
         ["myip.check.place", requestText("https://myip.check.place")],
-        ["ip-api", requestJson(`${IPAPI_COM_URL}?fields=status,message,query`)],
         ["ipify", requestJson(IPIFY_URL)],
         ["ident.me", requestText("https://v4.ident.me/")],
         ["icanhazip", requestText("https://ipv4.icanhazip.com/")],
@@ -472,9 +558,7 @@ async function discoverIP() {
         if (item[0] === "ipapi") ipapi = value;
         const candidate = item[0] === "ipinfo.check.place"
             ? cloudflareTraceIP(value)
-            : item[0] === "ip-api"
-                ? value && value.query
-                : item[0] === "ipify"
+            : item[0] === "ipify"
                     ? value && value.ip
                     : item[0] === "IPPure" || item[0] === "ipapi"
                         ? value && value.ip
@@ -514,7 +598,7 @@ async function discoverIP() {
     const matchingIpapi = ipapi && normalizeIPAddress(ipapi.ip) === ip ? ipapi : null;
     const unique = Object.keys(counts);
     if (unique.length > 1) {
-        console.log(`[WARN] 出口探针不一致: ${observations.map((item) => `${item.source}=${item.ip}`).join(", ")}`);
+        console.log(`[WARN] 出口探针不一致: ${observations.map((item) => `${item.source}=${maskIPAddress(item.ip)}`).join(", ")}`);
     }
 
     return {
@@ -544,23 +628,30 @@ async function collectDatabases(ip, discovery) {
             : requestJson(`${IPAPI_URL}?q=${pathIP}`, { node: "DIRECT" }),
         ipinfo: requestJson(`https://ipinfo.io/widget/demo/${pathIP}`, { node: "DIRECT" }),
         ipwhois: requestJson(`https://ipwho.is/${pathIP}`, { node: "DIRECT" }),
-        scamalytics: requestScamalytics(pathIP),
-        abuseipdb: requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=abuseipdb`),
-        ip2locationFull: requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ip2location`),
-        ipdata: requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ipdata`),
-        ipqs: requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ipqualityscore`),
-        ip2location: requestText(`https://www.ip2location.io/${pathIP}`, { node: "DIRECT" }),
-        proxycheck: requestJson(`https://proxycheck.io/v2/${pathIP}?vpn=1&asn=1&risk=1`, {
-            node: "DIRECT",
-        }),
-        dbip: requestText(`https://db-ip.com/${pathIP}`, { node: "DIRECT" }),
-        ipregistry: requestIpregistry(pathIP),
     };
-    if (isIPv4(ip)) {
-        tasks.ipApiCom = requestJson(
-            `${IPAPI_COM_URL}${pathIP}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,asname,mobile,proxy,hosting,query`,
-            { node: "DIRECT" }
-        );
+    const needsTypes = sectionVisibility.types;
+    const needsScores = sectionVisibility.riskScores;
+    const needsFactors = sectionVisibility.riskFactors;
+    if (needsTypes || needsScores || needsFactors) {
+        tasks.ip2locationFull = requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ip2location`);
+        tasks.ip2location = requestText(`https://www.ip2location.io/${pathIP}`, { node: "DIRECT" });
+    }
+    if (needsTypes || needsScores) {
+        tasks.abuseipdb = requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=abuseipdb`);
+    }
+    if (needsScores || needsFactors) {
+        tasks.scamalytics = requestScamalytics(pathIP);
+        tasks.ipqs = requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ipqualityscore`);
+        tasks.proxycheck = requestJson(`https://proxycheck.io/v2/${pathIP}?vpn=1&asn=1&risk=1`, {
+            node: "DIRECT",
+        });
+        tasks.dbip = requestText(`https://db-ip.com/${pathIP}`, { node: "DIRECT" });
+    }
+    if (needsTypes || needsFactors) {
+        tasks.ipregistry = requestIpregistry(pathIP);
+    }
+    if (needsFactors) {
+        tasks.ipdata = requestBackendJson(`${IPQUALITY_BACKEND}/${pathIP}?db=ipdata`);
     }
 
     const keys = Object.keys(tasks);
@@ -570,6 +661,7 @@ async function collectDatabases(ip, discovery) {
         _warnings: {},
         _probe: discovery.probe || { matched: 0, total: 0, unique: 0 },
         _egress: buildEgressGroups(discovery.observations, ip),
+        _attempted: keys.slice(),
     };
     keys.forEach((key, index) => {
         const value = settled[index].ok ? settled[index].value : null;
@@ -597,12 +689,12 @@ async function collectDatabases(ip, discovery) {
 
 async function requestBackendJson(url) {
     let lastError = null;
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
         try {
             return await requestJson(url);
         } catch (error) {
             lastError = error;
-            if (!/HTTP 403\b/i.test(errorMessage(error)) || attempt >= 3) throw error;
+            if (!/HTTP 403\b/i.test(errorMessage(error)) || attempt >= 2) throw error;
             console.log(`[WARN] 聚合接口返回 403，第 ${attempt} 次重试`);
         }
     }
@@ -611,7 +703,7 @@ async function requestBackendJson(url) {
 
 async function requestIppure() {
     let lastError = null;
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
         try {
             const value = await requestJson(IPPURE_URL, {
                 headers: {},
@@ -627,7 +719,7 @@ async function requestIppure() {
             return value;
         } catch (error) {
             lastError = error;
-            if (attempt < 3) {
+            if (attempt < 2) {
                 console.log(`[WARN] IPPure 第 ${attempt} 次请求失败，正在重试: ${errorMessage(error)}`);
             }
         }
@@ -654,14 +746,10 @@ async function requestScamalytics(pathIP) {
 }
 
 async function requestIpregistry(pathIP) {
-    let key = "sb69ksjcajfs4c";
-    try {
-        const homepage = await requestText("https://ipregistry.co", { node: "DIRECT" });
-        const match = String(homepage).match(/apiKey=["']([a-zA-Z0-9]+)["']/i);
-        if (match) key = match[1];
-    } catch (error) {
-        console.log(`[WARN] ipregistry 首页密钥获取失败，使用备用密钥: ${errorMessage(error)}`);
-    }
+    const homepage = await requestText("https://ipregistry.co", { node: "DIRECT" });
+    const match = String(homepage).match(/apiKey=["']([a-zA-Z0-9]+)["']/i);
+    if (!match) throw new Error("ipregistry 页面未公开演示密钥");
+    const key = match[1];
     return requestJson(`https://api.ipregistry.co/${pathIP}?hostname=true&key=${key}`, {
         node: "DIRECT",
         headers: {
@@ -686,7 +774,6 @@ function databaseIPMismatch(key, value, expectedIP) {
         ip2locationFull: ["ip"],
         ipdata: ["ip"],
         ipregistry: ["ip"],
-        ipApiCom: ["query"],
     };
     const candidates = paths[key] || [];
     let reported = "";
@@ -705,7 +792,7 @@ function databaseIPMismatch(key, value, expectedIP) {
     const normalizedExpected = normalizeIPAddress(expectedIP);
     return normalizedReported && normalizedExpected && normalizedReported === normalizedExpected
         ? ""
-        : `响应 IP ${reported} 与检测 IP ${expectedIP} 不一致`;
+        : `响应 IP ${maskIPAddress(reported)} 与检测 IP ${maskIPAddress(expectedIP)} 不一致`;
 }
 
 async function collectMedia() {
@@ -735,9 +822,9 @@ async function testTikTok() {
         /"region"\s*:\s*"([A-Z]{2})"/i,
         /"storeCountry"\s*:\s*"([A-Z]{2})"/i,
     ]);
-    if (region) return mediaResult("TikTok", "yes", region, "页面地区字段");
+    if (region) return mediaResult("TikTok", "yes", region, "页面端点返回地区字段");
     if (response.status === 403 || /not available|access denied/i.test(response.body)) {
-        return mediaResult("TikTok", "no", "", `HTTP ${response.status || "?"}`);
+        return mediaResult("TikTok", "unknown", "", `HTTP ${response.status || "?"} · 可能受限或反爬`);
     }
     return mediaResult("TikTok", "unknown", "", "地区未识别");
 }
@@ -821,7 +908,7 @@ async function testNetflix() {
         headers: browserHeaders(),
     })));
     if (responses.some((response) => response.status === 403)) {
-        return mediaResult("Netflix", "no", "", "HTTP 403");
+        return mediaResult("Netflix", "unknown", "", "HTTP 403 · 可能受限或反爬");
     }
     const pages = responses.map((response) => response.body);
     const region = firstMatch(pages.join("\n"), [
@@ -830,10 +917,10 @@ async function testNetflix() {
     ]);
     const unavailable = pages.map((body) => /Oh no!|NSEZ-404/i.test(body));
     if (unavailable[0] && unavailable[1]) {
-        return mediaResult("Netflix", "partial", region, "两部测试片均返回不可用");
+        return mediaResult("Netflix", "partial", region, "两部测试片标题页均显示不可用");
     }
     if (responses.some((response) => response.status >= 200 && response.status < 400)) {
-        return mediaResult("Netflix", "yes", region, "测试片标题页可访问");
+        return mediaResult("Netflix", "yes", region, "测试片标题页可达，不代表登录后可播放");
     }
     return mediaResult("Netflix", "unknown", region, "状态未识别");
 }
@@ -847,14 +934,14 @@ async function testYouTube() {
         }),
     });
     if (/www\.google\.cn/i.test(response.body)) {
-        return mediaResult("YouTube", "no", "CN", "重定向至 google.cn");
+        return mediaResult("YouTube", "partial", "CN", "重定向至 google.cn");
     }
     const region = firstMatch(response.body, [/"contentRegion"\s*:\s*"([A-Z]{2})"/i]);
     if (/Premium is not available in your country/i.test(response.body)) {
         return mediaResult("YouTube", "partial", region, "页面明确显示 Premium 不可用");
     }
     if (region && /YouTube Premium/i.test(response.body)) {
-        return mediaResult("YouTube", "yes", region, "Premium 页面及地区字段");
+        return mediaResult("YouTube", "yes", region, "Premium 页面可达并返回地区字段，不代表可购买");
     }
     return mediaResult("YouTube", "unknown", region, "状态未识别");
 }
@@ -868,9 +955,12 @@ async function testPrimeVideo() {
         /"currentTerritory"\s*:\s*"([A-Z]{2})"/i,
         /currentTerritory\\?"\s*:\s*\\?"([A-Z]{2})/i,
     ]);
-    if (region) return mediaResult("Prime Video", "yes", region, "currentTerritory");
-    if (response.status === 403 || /not available in your location/i.test(response.body)) {
-        return mediaResult("Prime Video", "no", "", "地区受限");
+    if (region) return mediaResult("Prime Video", "yes", region, "端点返回 currentTerritory，不代表实际播放");
+    if (/not available in your location/i.test(response.body)) {
+        return mediaResult("Prime Video", "no", "", "页面明确显示地区受限");
+    }
+    if (response.status === 403) {
+        return mediaResult("Prime Video", "unknown", "", "HTTP 403 · 可能受限或反爬");
     }
     return mediaResult("Prime Video", "unknown", "", "地区未识别");
 }
@@ -884,8 +974,8 @@ async function testReddit() {
         /country\s*=\s*"([A-Z]{2})"/i,
         /"countryCode"\s*:\s*"([A-Z]{2})"/i,
     ]);
-    if (response.status === 200) return mediaResult("Reddit", "yes", region, "HTTP 200");
-    if (response.status === 403) return mediaResult("Reddit", "no", "", "HTTP 403");
+    if (response.status === 200) return mediaResult("Reddit", "yes", region, "首页端点 HTTP 200，不代表账号功能");
+    if (response.status === 403) return mediaResult("Reddit", "unknown", "", "HTTP 403 · 可能受限或反爬");
     return mediaResult("Reddit", "unknown", region, `HTTP ${response.status || "?"}`);
 }
 
@@ -919,22 +1009,22 @@ async function testChatGPT() {
 
     if (!web && !app) return mediaResult("ChatGPT", "unknown", region, "请求失败");
     if (webState === "available" && appState === "available") {
-        return mediaResult("ChatGPT", "yes", region, "Web/App 均通过");
+        return mediaResult("ChatGPT", "yes", region, "Web/App 探测端点均可达，不代表登录后功能");
     }
     if (webState === "available" && appState === "blocked") {
-        return mediaResult("ChatGPT", "partial", region, `仅 Web；App HTTP ${app.status}`);
+        return mediaResult("ChatGPT", "partial", region, `仅 Web 端点可达；App HTTP ${app.status}`);
     }
     if (appState === "available" && webState === "blocked") {
-        return mediaResult("ChatGPT", "partial", region, `仅 App；Web HTTP ${web.status}`);
+        return mediaResult("ChatGPT", "partial", region, `仅 App 端点可达；Web HTTP ${web.status}`);
     }
     if (webState === "blocked" && appState === "blocked") {
-        return mediaResult("ChatGPT", "no", region, "Web/App 均受限");
+        return mediaResult("ChatGPT", "partial", region, "Web/App 均拒绝或受限，无法区分地区限制与风控");
     }
     if (webState === "available") {
-        return mediaResult("ChatGPT", "partial", region, "Web 通过；App 未确认");
+        return mediaResult("ChatGPT", "partial", region, "Web 端点可达；App 未确认");
     }
     if (appState === "available") {
-        return mediaResult("ChatGPT", "partial", region, "App 通过；Web 未确认");
+        return mediaResult("ChatGPT", "partial", region, "App 端点可达；Web 未确认");
     }
     const details = [];
     if (webState === "blocked") details.push("Web 受限");
@@ -971,9 +1061,9 @@ function classifyChatGPTApp(response) {
 
 function render(ip, data, media) {
     const basic = buildBasic(ip, data);
-    const types = buildTypes(data);
-    const risks = buildRisks(data);
-    const factors = buildFactors(data);
+    const types = sectionVisibility.types ? buildTypes(data) : [];
+    const risks = sectionVisibility.riskScores ? buildRisks(data) : [];
+    const factors = sectionVisibility.riskFactors ? buildFactors(data) : [];
     const audit = buildAudit(data);
     const regionConsistency = buildRegionConsistency(basic, media);
     const titleColor = reportColor(risks);
@@ -987,19 +1077,25 @@ function render(ip, data, media) {
         visibleSections.push(section("BGP 网络身份", renderBGP(data._bgp)));
     }
     if (sectionVisibility.bgpPath) {
-        visibleSections.push(section("BGP 路径线索", renderBGPPath(data._bgp && data._bgp.pathAnalysis)));
+        visibleSections.push(section("目标前缀 BGP 可见路径", renderBGPPath(data._bgp && data._bgp.pathAnalysis)));
     }
     if (sectionVisibility.egressMatrix) {
         visibleSections.push(section("出口分流", renderEgressMatrix(data._egress, basic)));
     }
     if (sectionVisibility.chinaHttp) {
-        visibleSections.push(section("重点地区三网 HTTP", renderChinaHttp(data._chinaHttp)));
+        visibleSections.push(section("运营商地区门户 HTTP（实验）", renderChinaHttp(data._chinaHttp)));
     }
     if (sectionVisibility.inboundRoute) {
-        visibleSections.push(section("三网入站路径", renderInboundRoutes(data._inboundRoutes)));
+        visibleSections.push(section("指定 ASN 外部探针入站路径", renderInboundRoutes(data._inboundRoutes)));
     }
-    if (sectionVisibility.enhancedRoute) {
-        visibleSections.push(section("节点端真实回程", renderEnhancedRoute(data._enhancedRoute)));
+    if (sectionVisibility.probePing) {
+        visibleSections.push(section("指定 ASN 外部探针 Ping", renderProbePing(data._probePing)));
+    }
+    if (sectionVisibility.probeMTR) {
+        visibleSections.push(section("指定 ASN 外部探针 MTR", renderProbeMTR(data._probeMTR)));
+    }
+    if (sectionVisibility.stability) {
+        visibleSections.push(section("端到端 HTTPS 稳定性", renderStability(data._stability)));
     }
     if (sectionVisibility.types) {
         visibleSections.push(section("IP 类型属性", renderTypeList(types)));
@@ -1011,7 +1107,7 @@ function render(ip, data, media) {
         visibleSections.push(section("风险因素", renderFactorCards(factors)));
     }
     if (sectionVisibility.media) {
-        visibleSections.push(section("流媒体与 AI", mediaEnabled
+        visibleSections.push(section("流媒体与 AI 可达性", mediaEnabled
             ? renderMediaList(media)
             : mutedLine("流媒体检测已关闭")));
     }
@@ -1037,7 +1133,7 @@ function render(ip, data, media) {
         '<div style="font-size:9px;line-height:9px">&nbsp;</div>',
         '<div style="color:#8e8e93;font-size:10px;line-height:1.45">'
             + '类型名称、评分分档与风险字段遵循 xykt/IPQuality 的展示口径；各库结果独立展示，不生成综合结论。'
-            + '聚合来源不可用时保留直连结果。BGP 与外部探针结果不会标记为真实回程；只有节点端增强服务返回的数据进入真实回程分区。</div>',
+            + '聚合来源不可用时保留直连结果。BGP 属于控制面观察，Globalping 属于外部探针到出口 IP 的入站/往返测量；均不代表机场节点真实回程。</div>',
         '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
         '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
         "</div>",
@@ -1058,7 +1154,6 @@ function buildBasic(ip, data) {
     const ip2 = getIp2location(data) || {};
     const ipinfo = data.ipinfo && data.ipinfo.data ? data.ipinfo.data : {};
     const ipwhois = data.ipwhois && data.ipwhois.success !== false ? data.ipwhois : {};
-    const ipApiCom = data.ipApiCom && data.ipApiCom.status === "success" ? data.ipApiCom : {};
     const proxycheck = proxycheckRecord(data.proxycheck) || {};
     const maxmind = mergeFallback(data.maxmind, data.maxmindBackup) || {};
     const maxmindASN = maxmind.ASN || {};
@@ -1141,20 +1236,6 @@ function buildBasic(ip, data) {
             route: "",
         },
         {
-            source: "ip-api",
-            countryCode: cleanValue(ipApiCom.countryCode),
-            countryName: cleanValue(ipApiCom.country),
-            registeredCode: "",
-            registeredName: "",
-            cityParts: uniqueValues([ipApiCom.regionName, ipApiCom.city]),
-            asn: cleanASN(ipApiCom.as),
-            organization: cleanValue(ipApiCom.asname) || cleanValue(ipApiCom.org),
-            latitude: numberOrNull(ipApiCom.lat),
-            longitude: numberOrNull(ipApiCom.lon),
-            timezone: cleanValue(ipApiCom.timezone),
-            route: "",
-        },
-        {
             source: "IPPure",
             countryCode: cleanValue(ippure.countryCode),
             countryName: cleanValue(ippure.country),
@@ -1226,8 +1307,8 @@ function buildBasic(ip, data) {
     const hasCoordinates = latitude !== null && longitude !== null;
     const nature = code && registeredCode
         ? code.toUpperCase() === registeredCode.toUpperCase()
-            ? "原生 IP"
-            : "广播 IP"
+            ? "使用地与注册地一致"
+            : "使用地与注册地不一致"
         : "";
 
     return {
@@ -1678,38 +1759,47 @@ function typeRow(name, usage, company) {
 function buildAudit(data) {
     const ipqsSkipped = ipqsUpstreamUnavailable(data);
     const ippureMismatch = !!(data.ippure && data.ippure._egressMismatch);
-    const checks = [
-        ["MaxMind", !!((data.maxmind && (data.maxmind.Country || data.maxmind.ASN))
-            || (data.maxmindBackup && (data.maxmindBackup.Country || data.maxmindBackup.ASN)))],
-        ippureMismatch ? null : ["IPPure", !!(data.ippure && data.ippure.ip)],
-        ["ipapi", !!(data.ipapi && data.ipapi.ip)],
-        ["IPinfo", !!(data.ipinfo && data.ipinfo.data)],
-        ["IPWhois", !!(data.ipwhois && data.ipwhois.success !== false
-            && (data.ipwhois.ip || data.ipwhois.country_code || data.ipwhois.connection))],
-        ["IP2Location", !!getIp2location(data)],
-        ["Scamalytics", !!(data.scamalytics
-            && numberOrNull(valueAt(data.scamalytics, "scamalytics.scamalytics_score")) !== null)],
-        ["AbuseIPDB", !!(data.abuseipdb && data.abuseipdb.data
+    const attempted = Array.isArray(data._attempted) ? data._attempted : [];
+    const wasAttempted = (keys) => keys.some((key) => attempted.indexOf(key) !== -1);
+    const definitions = [
+        { keys: ["maxmind", "maxmindBackup"], name: "MaxMind", ok: !!((data.maxmind && (data.maxmind.Country || data.maxmind.ASN))
+            || (data.maxmindBackup && (data.maxmindBackup.Country || data.maxmindBackup.ASN))) },
+        { keys: ["ippure"], name: "IPPure", ok: !!(data.ippure && data.ippure.ip), supplemental: ippureMismatch },
+        { keys: ["ipapi"], name: "ipapi", ok: !!(data.ipapi && data.ipapi.ip) },
+        { keys: ["ipinfo"], name: "IPinfo", ok: !!(data.ipinfo && data.ipinfo.data) },
+        { keys: ["ipwhois"], name: "IPWhois", ok: !!(data.ipwhois && data.ipwhois.success !== false
+            && (data.ipwhois.ip || data.ipwhois.country_code || data.ipwhois.connection)) },
+        { keys: ["ip2locationFull", "ip2location"], name: "IP2Location", ok: !!getIp2location(data) },
+        { keys: ["scamalytics"], name: "Scamalytics", ok: !!(data.scamalytics
+            && numberOrNull(valueAt(data.scamalytics, "scamalytics.scamalytics_score")) !== null) },
+        { keys: ["abuseipdb"], name: "AbuseIPDB", ok: !!(data.abuseipdb && data.abuseipdb.data
             && (cleanValue(data.abuseipdb.data.usageType)
-                || numberOrNull(data.abuseipdb.data.abuseConfidenceScore) !== null))],
-        ipqsSkipped ? null : ["IPQS", !!(data.ipqs && data.ipqs.success !== false
-            && numberOrNull(data.ipqs.fraud_score) !== null)],
-        ["ipdata", !!(data.ipdata && (data.ipdata.ip || data.ipdata.country_code))],
-        ["proxycheck", !!proxycheckRecord(data.proxycheck)],
-        ["ipregistry", !!parseIpregistry(data.ipregistry)],
-        ["DB-IP", !!(parseDbipRisk(data.dbip) || parseDbip(data.dbip))],
-    ].filter(Boolean);
-    if (Object.prototype.hasOwnProperty.call(data, "ipApiCom")) {
-        checks.push(["ip-api", !!(data.ipApiCom && data.ipApiCom.status === "success")]);
-    }
+                || numberOrNull(data.abuseipdb.data.abuseConfidenceScore) !== null)) },
+        { keys: ["ipqs"], name: "IPQS", ok: !!(data.ipqs && data.ipqs.success !== false
+            && numberOrNull(data.ipqs.fraud_score) !== null), skipped: ipqsSkipped },
+        { keys: ["ipdata"], name: "ipdata", ok: !!(data.ipdata && (data.ipdata.ip || data.ipdata.country_code)) },
+        { keys: ["proxycheck"], name: "proxycheck", ok: !!proxycheckRecord(data.proxycheck) },
+        { keys: ["ipregistry"], name: "ipregistry", ok: !!parseIpregistry(data.ipregistry) },
+        { keys: ["dbip"], name: "DB-IP", ok: !!(parseDbipRisk(data.dbip) || parseDbip(data.dbip)) },
+    ];
+    const included = definitions.filter((item) => wasAttempted(item.keys) && !item.supplemental);
+    const checks = included.filter((item) => !item.skipped).map((item) => [item.name, item.ok]);
     return {
         total: checks.length,
         success: checks.filter((item) => item[1]).map((item) => item[0]),
         failed: checks.filter((item) => !item[1]).map((item) => item[0]),
-        skipped: ipqsSkipped ? ["IPQS（上游额度不足）"] : [],
+        skipped: included.filter((item) => item.skipped).map((item) => `${item.name}（上游额度不足）`),
         supplemental: ippureMismatch
             ? [`IPPure（分流出口 ${maskIPAddress(data.ippure.ip)}）`]
             : [],
+        fragile: [
+            attempted.indexOf("ipinfo") !== -1 ? "IPinfo demo" : "",
+            attempted.some((key) => key === "ip2location" || key === "ip2locationFull")
+                ? "IP2Location 聚合/页面" : "",
+            attempted.indexOf("scamalytics") !== -1 ? "Scamalytics 聚合/页面回退" : "",
+            attempted.indexOf("dbip") !== -1 ? "DB-IP 页面解析" : "",
+            attempted.indexOf("ipregistry") !== -1 ? "ipregistry 演示端点" : "",
+        ].filter(Boolean),
     };
 }
 
@@ -1763,7 +1853,6 @@ function egressSourceName(source) {
     const names = {
         "ipinfo.check.place": "Check.Place",
         "myip.check.place": "MyIP.Check.Place",
-        "ip-api": "ip-api",
         ipify: "ipify",
         "ident.me": "ident.me",
         icanhazip: "icanhazip",
@@ -1839,6 +1928,9 @@ function renderBGP(bgp) {
     const rows = [
         ["前缀", bgp.prefix],
         ["Origin", origins],
+        ["Origin 状态", bgp.asns && bgp.asns.length > 1
+            ? `检测到 ${bgp.asns.length} 个 Origin，可能是 MOAS 或路由切换`
+            : ""],
         ["持有者", uniqueValues(bgp.holders || []).join("、")],
         ["注册机构", [bgp.rir, bgp.registryDescription].filter(Boolean).join(" · ")],
         ["路由状态", bgp.announced ? "已公告" : "未确认公告"],
@@ -1863,7 +1955,7 @@ function renderBGPPath(analysis) {
         : "未返回";
     const clues = analysis.clues && analysis.clues.length
         ? analysis.clues.map((item) => `${item.name}（AS${item.asn}，${item.count} 条）`).join("、")
-        : "未命中常见中国线路 ASN";
+        : "样本未包含所列中国网络 ASN";
     const paths = (analysis.uniquePaths || []).map((item, index) => {
         return '<div style="margin:7px 0">'
             + `<div style="color:#8e8e93;font-size:10px">样本 ${index + 1}${item.collector ? ` · ${escapeHtml(item.collector)}` : ""}</div>`
@@ -1872,14 +1964,17 @@ function renderBGPPath(analysis) {
     }).join("");
     return infoLine("RIS 可见性", visibility)
         + infoLine("路径样本", `${analysis.pathCount} 条 · ${analysis.collectorCount} 个采集器`)
-        + infoLine("线路命中", clues)
+        + (analysis.originChanged
+            ? infoLine("历史 Origin 变化", `AS${analysis.firstOrigin} → AS${analysis.lastOrigin}`)
+            : "")
+        + infoLine("样本包含 ASN", clues)
         + paths
-        + mutedLine("这是 RIPE RIS 采集到的公网 BGP 控制面路径，只能作为线路线索，不代表本次节点回程。CN2/9929 命中也不等于实测经过。 ");
+        + mutedLine("方向为 RIPE RIS 采集器/对等体看到目标前缀的控制面路径，不是节点发出的数据路径。样本包含 AS4809/AS9929 也不证明机场节点回程经过或线路品质。 ");
 }
 
 function renderChinaHttp(results) {
     const rows = Array.isArray(results) ? results : [];
-    if (!rows.length) return mutedLine("本次没有三网 HTTP 结果");
+    if (!rows.length) return mutedLine("本次没有运营商地区门户 HTTPS 结果");
     const success = rows.filter((item) => item.ok).length;
     const header = infoLine("连通", `${success} / ${rows.length} 个地区门户返回 HTTP 响应`);
     const regions = ["北京", "上海", "广东"].map((region) => {
@@ -1888,12 +1983,13 @@ function renderChinaHttp(results) {
             const status = item.ok ? `${item.ms} ms · HTTP ${item.status}` : `失败 · ${truncateText(item.error, 24)}`;
             const color = item.ok ? latencyColor(item.ms) : "#ff3b30";
             return `<div style="margin-top:3px"><span style="display:inline-block;width:34px;color:#8e8e93">${escapeHtml(item.carrier)}</span>`
-                + `<span style="color:${color};font-weight:600">${escapeHtml(status)}</span></div>`;
+                + `<span style="color:${color};font-weight:600">${escapeHtml(status)}</span>`
+                + `<div style="margin-left:34px;color:#8e8e93;font-size:10px">${escapeHtml(item.host)}</div></div>`;
         }).join("");
         return `<div style="margin:9px 0"><div style="font-size:12px;font-weight:700">${escapeHtml(region)}</div>${detail}</div>`;
     }).join("");
     return header + regions
-        + mutedLine("实测为手机 → 所选节点 → 运营商地区门户的 HTTP 总耗时，包含代理、DNS、TCP、CDN 与服务端处理；HTTP 错误码仍表示网络已连通，不等同于省际 RTT。 ");
+        + mutedLine("实验目标是运营商品牌地区门户，可能使用 CDN、重定向或反爬，不保证服务器位于标称地区。结果仅表示手机 → 所选节点 → 该域名的 HTTPS 可达性和总耗时；单站失败不代表运营商线路失败。 ");
 }
 
 function renderInboundRoutes(result) {
@@ -1907,9 +2003,9 @@ function renderInboundRoutes(result) {
         ]).join(" · ");
         const status = route.reached
             ? `到达目标 · ${route.hopCount} 跳${route.lastRtt !== null ? ` · ${route.lastRtt} ms` : ""}`
-            : `${route.status || "未完成"} · ${route.hopCount} 跳`;
+            : `未确认到达 · ${route.status || "未完成"} · ${route.hopCount} 跳`;
         const clues = route.routeClues && route.routeClues.length
-            ? `<div style="margin-top:2px;color:#ff9500;font-size:10px">路径关键词 · ${escapeHtml(route.routeClues.join("、"))}</div>`
+            ? `<div style="margin-top:2px;color:#ff9500;font-size:10px">跳点 ASN 样本 · ${escapeHtml(route.routeClues.join("、"))}</div>`
             : "";
         return '<div style="margin:9px 0">'
             + `<div style="font-size:12px;font-weight:700">${escapeHtml(identity)}</div>`
@@ -1919,34 +2015,55 @@ function renderInboundRoutes(result) {
     const missing = result.missing && result.missing.length
         ? mutedLine(`当前无可用探针 · ${result.missing.join("、")}`) : "";
     return content + missing
-        + mutedLine(`Globalping 测量 ${result.id || "--"}；方向为中国运营商探针 → 节点，只是入站路径，绝不作为节点回程结论。`);
+        + mutedLine(`Globalping 测量 ${result.id || "--"}；探针筛选为 AS4134+China、AS4837+China、AS9808+China。方向是外部探针 → 出口 IP，仅表示入站路径；出口 IP 不响应 ICMP 时可能无法到达。`);
 }
 
-function renderEnhancedRoute(result) {
-    if (!result) return mutedLine("本次没有增强服务结果");
-    if (result.unconfigured) {
-        return mutedLine("已开启但未填写增强服务地址；请在插件设置中配置自有 VPS 上的 HTTPS 诊断接口。 ");
-    }
-    if (result.error) return mutedLine(`增强服务失败：${result.error}`);
-    const routes = (result.routes || []).map((route) => {
-        const name = uniqueValues([route.region, route.carrier, route.protocol]).join(" · ");
-        const status = route.reached ? `已到达 · ${route.hopCount} 跳` : `未确认到达 · ${route.hopCount} 跳`;
-        const clues = route.clues && route.clues.length ? ` · ${route.clues.join("、")}` : "";
-        return infoLine(name || "回程", `${status}${clues}`);
+function renderProbePing(result) {
+    if (!result || result.error) return mutedLine(result && result.error || "本次没有外部探针 Ping 结果");
+    const rows = Array.isArray(result.rows) ? result.rows : [];
+    const content = rows.map((row) => {
+        const name = uniqueValues([row.carrier, row.asn ? `AS${row.asn}` : "", row.location]).join(" · ");
+        const stats = row.avg !== null
+            ? `${row.avg} ms · 丢包 ${row.loss !== null ? `${row.loss}%` : "--"}`
+                + `${row.jitter !== null ? ` · 抖动 ${row.jitter} ms` : ""}`
+            : `${row.status || "未完成"} · 未返回 RTT`;
+        return infoLine(name || "外部探针", stats);
     }).join("");
-    const tests = (result.tests || []).map((test) => {
-        const name = uniqueValues([test.region, test.carrier, test.protocol]).join(" · ") || "大包测试";
-        const packet = test.packetSize !== null ? `${test.packetSize} B` : "包长未知";
-        const loss = test.loss !== null ? `${test.loss}% 丢包` : "丢包未知";
-        const latency = test.avg !== null ? `${test.avg} ms` : "延迟未知";
-        const jitter = test.jitter !== null ? ` · 抖动 ${test.jitter} ms` : "";
-        return infoLine(name, `${packet} · ${latency} · ${loss}${jitter}`);
+    const missing = result.missing && result.missing.length
+        ? mutedLine(`当前无可用探针 · ${result.missing.join("、")}`) : "";
+    return (content || mutedLine("本次没有探针返回 Ping 统计")) + missing
+        + mutedLine(`Globalping 测量 ${result.id || "--"}；数据是指定 ASN 中国探针与出口 IP 之间的 ICMP 往返 RTT、丢包和抖动，无法拆分去程与回程。`);
+}
+
+function renderProbeMTR(result) {
+    if (!result || result.error) return mutedLine(result && result.error || "本次没有外部探针 MTR 结果");
+    const rows = Array.isArray(result.rows) ? result.rows : [];
+    const content = rows.map((row) => {
+        const name = uniqueValues([row.carrier, row.asn ? `AS${row.asn}` : "", row.location]).join(" · ");
+        const state = row.reached ? "到达出口 IP" : row.status === "failed" ? "测量失败" : "未确认到达";
+        const stats = `${state} · ${row.hopCount} 跳`
+            + `${row.avg !== null ? ` · 末跳 ${row.avg} ms` : ""}`
+            + `${row.loss !== null ? ` · 表观丢包 ${row.loss}%` : ""}`
+            + `${row.jitter !== null ? ` · 抖动 ${row.jitter} ms` : ""}`;
+        return infoLine(name || "外部探针", stats);
     }).join("");
-    const meta = uniqueValues([result.source, result.generatedAt]).join(" · ");
-    return (routes || mutedLine("增强服务没有返回回程路径"))
-        + (tests || mutedLine("增强服务没有返回 ICMP/TCP 大包数据"))
-        + (meta ? mutedLine(`节点端数据 · ${meta}`) : "")
-        + mutedLine("该分区仅展示用户自建节点端服务返回的源站测量；线路名称依据实际跳点 ASN 命中。 ");
+    const missing = result.missing && result.missing.length
+        ? mutedLine(`当前无可用探针 · ${result.missing.join("、")}`) : "";
+    return (content || mutedLine("本次没有探针返回 MTR 统计")) + missing
+        + mutedLine(`Globalping 测量 ${result.id || "--"}；方向为外部探针 → 出口 IP。中间路由器可能限速或不回 ICMP，单跳表观丢包不能直接视为真实业务丢包。`);
+}
+
+function renderStability(rows) {
+    const results = Array.isArray(rows) ? rows : [];
+    if (!results.length) return mutedLine("本次没有 HTTPS 稳定性结果");
+    const content = results.map((row) => {
+        const stats = `${row.success}/${row.total} 成功`
+            + `${row.median !== null ? ` · 中位 ${row.median} ms` : ""}`
+            + `${row.p95 !== null ? ` · P95 ${row.p95} ms` : ""}`
+            + `${row.jitter !== null ? ` · 波动 ${row.jitter} ms` : ""}`;
+        return infoLine(`${row.name} · ${row.host}`, stats);
+    }).join("");
+    return content + mutedLine("每个 HTTPS 小响应目标经所选节点请求 3 次；结果表示手机 → 节点 → 目标站的端到端体验，包含 DNS、TCP/TLS、代理与服务端耗时，不是节点自身 RTT。 ");
 }
 
 function latencyColor(ms) {
@@ -2097,9 +2214,12 @@ function renderAudit(audit, probe, stats) {
     const supplemental = audit.supplemental && audit.supplemental.length
         ? mutedLine(`补充来源 · ${audit.supplemental.join("、")}`)
         : "";
+    const fragile = audit.fragile && audit.fragile.length
+        ? mutedLine(`实验/易变来源 · ${audit.fragile.join("、")}`)
+        : "";
     return infoLine("状态", summary)
         + renderRuntimeStats(stats)
-        + missing + skipped + supplemental;
+        + missing + skipped + supplemental + fragile;
 }
 
 function renderRuntimeStats(stats) {
@@ -2119,6 +2239,9 @@ function renderRuntimeStats(stats) {
         infoLine("请求", `${success}/${requests.length} 成功`),
         infoLine("版本", SCRIPT_VERSION),
     ];
+    if (totalMs >= RUN_DEADLINE_MS - 500) {
+        lines.push(mutedLine("已接近 45 秒总时限；未完成来源按部分结果或未返回处理"));
+    }
     if (slowest.length) {
         lines.push(mutedLine(`最慢 · ${slowest.map((item) => `${item.host} ${formatDuration(item.ms)}`).join("、")}`));
     }
@@ -2126,9 +2249,9 @@ function renderRuntimeStats(stats) {
 }
 
 function mediaStatus(status) {
-    if (status === "yes") return { text: "解锁", color: "#00a67d" };
-    if (status === "partial") return { text: "部分可用", color: "#ff9500" };
-    if (status === "no") return { text: "不可用", color: "#ff3b30" };
+    if (status === "yes") return { text: "端点可达/地区支持", color: "#00a67d" };
+    if (status === "partial") return { text: "受限或部分确认", color: "#ff9500" };
+    if (status === "no") return { text: "明确地区受限", color: "#ff3b30" };
     return { text: "未确认", color: "#8e8e93" };
 }
 
@@ -2205,6 +2328,11 @@ function requestText(url, options) {
 function request(method, url, options) {
     const config = options || {};
     return new Promise((resolve, reject) => {
+        const remaining = deadlineRemaining();
+        if (remaining <= 250) {
+            reject(new Error("已达到本次检测总时限"));
+            return;
+        }
         const startedAt = Date.now();
         const backendRequest = String(url).indexOf(IPQUALITY_BACKEND) === 0;
         const requestOptions = {
@@ -2213,7 +2341,9 @@ function request(method, url, options) {
             headers: config.headers || (backendRequest ? backendHeaders() : browserHeaders()),
         };
         if (backendRequest) requestOptions.alpn = "h2";
-        if (numberOrNull(config.timeout) !== null) requestOptions.timeout = Number(config.timeout);
+        const configuredTimeout = numberOrNull(config.timeout) !== null
+            ? Number(config.timeout) : DEFAULT_REQUEST_TIMEOUT;
+        requestOptions.timeout = Math.max(250, Math.min(configuredTimeout, remaining));
         if (typeof config.body !== "undefined") requestOptions.body = config.body;
         const callback = (error, response, body) => {
             const status = Number(response && (response.status || response.statusCode));
@@ -2242,7 +2372,7 @@ function recordRuntimeRequest(url, startedAt, error, status, allowHttpErrors) {
         host: requestHost(url),
         ms: Math.max(0, Date.now() - startedAt),
         status: validStatus ? status : 0,
-        ok: !error && (allowHttpErrors || (validStatus && status >= 200 && status < 300)),
+        ok: !error && validStatus && (allowHttpErrors || (status >= 200 && status < 300)),
     });
 }
 
@@ -2269,15 +2399,8 @@ function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function readArgument(key) {
-    let value;
-    if (pluginArguments && Object.prototype.hasOwnProperty.call(pluginArguments, key)) {
-        value = pluginArguments[key];
-    }
-    if (value === null || typeof value === "undefined" || value === "") {
-        value = $persistentStore.read(key);
-    }
-    return cleanValue(value);
+function deadlineRemaining() {
+    return Math.max(0, RUN_DEADLINE_MS - (Date.now() - runtimeStats.startedAt));
 }
 
 function readSwitch(key, defaultValue) {
@@ -2640,6 +2763,26 @@ function numberOrNull(value) {
 function round(value, digits) {
     const factor = Math.pow(10, digits || 0);
     return Math.round(value * factor) / factor;
+}
+
+function percentile(values, percent) {
+    const rows = (Array.isArray(values) ? values : []).map(Number)
+        .filter((value) => Number.isFinite(value)).sort((left, right) => left - right);
+    if (!rows.length) return null;
+    const index = Math.min(rows.length - 1, Math.max(0,
+        Math.ceil((percent / 100) * rows.length) - 1));
+    return round(rows[index], 2);
+}
+
+function standardDeviation(values) {
+    const rows = (Array.isArray(values) ? values : []).map(Number)
+        .filter((value) => Number.isFinite(value));
+    if (rows.length < 2) return 0;
+    const average = rows.reduce((sum, value) => sum + value, 0) / rows.length;
+    const variance = rows.reduce((sum, value) => {
+        return sum + Math.pow(value - average, 2);
+    }, 0) / rows.length;
+    return Math.sqrt(variance);
 }
 
 function escapeHtml(value) {

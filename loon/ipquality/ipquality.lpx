@@ -1,5 +1,5 @@
 #!name=节点 IP 质量检测
-#!desc=对齐 IP.Check.Place 口径检测节点 IP 类型、原始风险、风险标记及流媒体与 AI 可用性；手机单列排版，缺失数据不参与判断。
+#!desc=检测节点出口 IPv4、类型、原始风险、媒体与 AI 端点可达性、BGP 控制面及外部探针网络质量；缺失数据不参与判断。
 #!openUrl=
 #!author=MaYIHEI[https://github.com/MaYIHEI]
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/loon/ipquality
@@ -8,23 +8,23 @@
 
 [Argument]
 MaskIP = switch,false,tag=隐藏 IP,desc=隐藏报告中 IP 的后半段，适合截图分享
-MediaTest = switch,true,tag=检测流媒体与 AI,desc=检测 TikTok、Disney+、Netflix、YouTube、Prime Video、Reddit 和 ChatGPT
+MediaTest = switch,true,tag=执行媒体与 AI 检测,desc=总开关；检测 TikTok、Disney+、Netflix、YouTube、Prime Video、Reddit 和 ChatGPT 探测端点
 MapNotification = switch,false,tag=地图通知,desc=完成后发送通知，点按后在 Apple 地图查看估算位置
 ShowBasic = switch,true,tag=显示基础信息,desc=显示出口 IP、位置、ASN、组织和坐标
 ShowEgressMatrix = switch,false,tag=显示出口分流,desc=按出口 IP 分组显示探针来源、ASN 和组织
 ShowBGP = switch,false,tag=显示 BGP 信息,desc=查询 IPv4 前缀、Origin ASN、RPKI、PTR 和注册机构
-ShowBGPPath = switch,false,tag=显示 BGP 路径线索,desc=分析 RIPE RIS 的 AS Path、可见性及 CN2、9929、163、169、CMI 等线路命中；不是实测回程
-ShowChinaHttp = switch,false,tag=测试重点地区三网,desc=测试北京、上海、广东三网地区门户的 HTTP 连通耗时；不是省际 RTT
-ShowInboundRoute = switch,false,tag=测试三网入站路径,desc=由 Globalping 中国电信、联通、移动探针向节点执行 traceroute；方向是入站而非回程
-ShowEnhancedRoute = switch,false,tag=测试节点端真实回程,desc=调用用户自建的节点端诊断服务，展示真实回程及 ICMP、TCP 大包数据
-EnhancedEndpoint = input,"",tag=节点端增强服务地址,desc=自有 VPS 的 HTTPS 诊断接口地址；不要附带查询参数
-EnhancedToken = input,"",tag=节点端增强服务密钥,desc=可选 Bearer 密钥；仅发送给上方自建服务
+ShowBGPPath = switch,false,tag=显示目标前缀 BGP 路径,desc=分析 RIPE RIS 到目标前缀的 AS Path、可见性和样本所含 ASN；不是节点回程
+ShowChinaHttp = switch,false,tag=测试运营商地区门户,desc=实验访问北京、上海、广东运营商品牌门户，仅表示 HTTPS 可达性和总耗时
+ShowInboundRoute = switch,false,tag=测试外部探针入站路径,desc=由 Globalping 指定 ASN 中国探针向出口 IP 执行 traceroute；方向是入站
+ShowProbePing = switch,false,tag=测试外部探针 Ping,desc=显示指定 ASN 中国探针与出口 IP 的 ICMP 往返延迟、丢包和抖动
+ShowProbeMTR = switch,false,tag=测试外部探针 MTR,desc=显示指定 ASN 中国探针到出口 IP 的入站逐跳统计；路由器限速会影响表观丢包
+ShowStability = switch,false,tag=测试 HTTPS 稳定性,desc=经所选节点对三个 HTTPS 小响应目标各请求三次，显示成功率、中位数、P95 和波动
 ShowTypes = switch,false,tag=显示 IP 类型,desc=显示各数据库返回的使用类型与公司类型
 ShowRiskScores = switch,true,tag=显示风险评分,desc=显示各数据库的原始风险评分
 ShowRiskFactors = switch,false,tag=显示风险因素,desc=显示代理、VPN、Tor、机房等风险标记
-ShowMedia = switch,true,tag=显示流媒体与 AI,desc=关闭时隐藏该分区并跳过相关请求
+ShowMedia = switch,true,tag=显示媒体与 AI 结果,desc=控制报告分区；若地区一致性仍开启，媒体请求仍会执行
 ShowRegionConsistency = switch,false,tag=显示地区一致性,desc=对比出口地区与各服务返回地区，不同只作提示
 ShowDataStatus = switch,false,tag=显示数据状态,desc=显示成功来源、失败来源和出口一致性
 
 [Script]
-generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, argument="a={MaskIP}&b={MediaTest}&c={MapNotification}&d={ShowBasic}&e={ShowEgressMatrix}&f={ShowBGP}&g={ShowBGPPath}&h={ShowChinaHttp}&i={ShowInboundRoute}&j={ShowEnhancedRoute}&k={ShowTypes}&l={ShowRiskScores}&m={ShowRiskFactors}&n={ShowMedia}&o={ShowRegionConsistency}&p={ShowDataStatus}", enable=true
+generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, argument="a={MaskIP}&b={MediaTest}&c={MapNotification}&d={ShowBasic}&e={ShowEgressMatrix}&f={ShowBGP}&g={ShowBGPPath}&h={ShowChinaHttp}&i={ShowInboundRoute}&j={ShowProbePing}&k={ShowTypes}&l={ShowRiskScores}&m={ShowRiskFactors}&n={ShowMedia}&o={ShowRegionConsistency}&p={ShowDataStatus}&q={ShowProbeMTR}&r={ShowStability}", enable=true
