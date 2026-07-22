@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r26";
+const SCRIPT_VERSION = "2026-07-22.r27";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -23,50 +23,27 @@ const RUN_DEADLINE_MS = 45000;
 const DEFAULT_REQUEST_TIMEOUT = 7000;
 const USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1";
 const DISNEY_CLIENT_TOKEN = "ZGlzbmV5JmJyb3dzZXImMS4wLjA.Cu56AgSfBTDag5NiRA81oLHkDZfu5L3CKadnefEAY84";
-const ARGUMENT_KEYS_R13 = [
-    "MaskIP", "MediaTest", "MapNotification", "ShowBasic", "ShowTypes",
-    "ShowRiskScores", "ShowRiskFactors", "ShowMedia", "ShowDataStatus",
-];
-const ARGUMENT_KEYS_R14 = [
-    "MaskIP", "MediaTest", "MapNotification", "ShowBasic", "ShowEgressMatrix",
-    "ShowTypes", "ShowRiskScores", "ShowRiskFactors", "ShowMedia", "ShowDataStatus",
-];
-const ARGUMENT_KEYS_R17 = [
-    "MaskIP", "MediaTest", "MapNotification", "ShowBasic", "ShowEgressMatrix",
-    "ShowTypes", "ShowRiskScores", "ShowRiskFactors", "ShowMedia",
-    "ShowRegionConsistency", "ShowDataStatus",
-];
-const ARGUMENT_KEYS = [
-    "MaskIP", "MediaTest", "MapNotification", "ShowBasic", "ShowEgressMatrix",
-    "ShowBGP", "ShowTypes", "ShowRiskScores", "ShowRiskFactors", "ShowMedia",
-    "ShowRegionConsistency", "ShowDataStatus", "ShowBGPPath", "ShowChinaHttp",
-    "ShowInboundRoute", "ShowProbePing", "ShowProbeMTR", "ShowStability",
-    "FoldSections",
-];
-const ARGUMENT_ALIASES = {
-    MaskIP: "a",
-    MediaTest: "b",
-    MapNotification: "c",
-    ShowBasic: "d",
-    ShowEgressMatrix: "e",
-    ShowBGP: "f",
-    ShowBGPPath: "g",
-    ShowChinaHttp: "h",
-    ShowInboundRoute: "i",
-    ShowProbePing: "j",
-    ShowTypes: "k",
-    ShowRiskScores: "l",
-    ShowRiskFactors: "m",
-    ShowMedia: "n",
-    ShowRegionConsistency: "o",
-    ShowDataStatus: "p",
-    ShowProbeMTR: "q",
-    ShowStability: "r",
-    FoldSections: "s",
+const PERSISTENT_SWITCH_KEYS = {
+    MaskIP: "隐藏 IP",
+    MediaTest: "执行媒体与 AI 检测",
+    MapNotification: "地图通知",
+    FoldSections: "低负载报告",
+    ShowBasic: "显示基础信息",
+    ShowEgressMatrix: "显示出口分流",
+    ShowBGP: "显示 BGP 信息",
+    ShowBGPPath: "显示目标前缀 BGP 路径",
+    ShowChinaHttp: "测试运营商官网",
+    ShowInboundRoute: "测试外部探针入站路径",
+    ShowProbePing: "测试外部探针 Ping",
+    ShowProbeMTR: "测试外部探针 MTR",
+    ShowStability: "测试 HTTPS 稳定性",
+    ShowTypes: "显示 IP 类型",
+    ShowRiskScores: "显示风险评分",
+    ShowRiskFactors: "显示风险因素",
+    ShowMedia: "显示媒体与 AI 结果",
+    ShowRegionConsistency: "显示地区一致性",
+    ShowDataStatus: "显示数据状态",
 };
-const pluginArguments = parsePluginArguments(
-    typeof $argument !== "undefined" ? $argument : null
-);
 const runtimeStats = {
     startedAt: Date.now(),
     requests: [],
@@ -100,7 +77,7 @@ const sectionVisibility = {
 
 console.log(`[INFO] 节点 IP 质量检测 ${SCRIPT_VERSION}`);
 console.log(`[INFO] 节点: ${nodeName || "未获取"}`);
-console.log(`[INFO] 插件开关参数: ${pluginArguments ? "已读取" : "未传入，使用兼容值或默认值"}`);
+console.log("[INFO] 插件选项: 已从 Loon 持久化配置读取");
 
 if (!nodeName) {
     finishError("未获取到节点或策略组名称");
@@ -2443,71 +2420,15 @@ function deadlineRemaining() {
 }
 
 function readSwitch(key, defaultValue) {
-    const value = pluginArguments && Object.prototype.hasOwnProperty.call(pluginArguments, key)
-        ? pluginArguments[key] : undefined;
+    let value;
+    try {
+        const storeKey = PERSISTENT_SWITCH_KEYS[key] || key;
+        value = typeof $persistentStore !== "undefined" ? $persistentStore.read(storeKey) : null;
+    } catch (error) {
+        console.log(`[WARN] 读取插件选项 ${key} 失败: ${errorMessage(error)}`);
+    }
     if (value === null || typeof value === "undefined" || value === "") return defaultValue;
     return !(value === false || value === 0 || value === "false" || value === "0");
-}
-
-function parsePluginArguments(raw) {
-    if (raw === null || typeof raw === "undefined" || raw === "") return null;
-    let value = raw;
-    if (typeof value === "string") {
-        const text = value.trim();
-        if (!text) return null;
-        try {
-            value = JSON.parse(text);
-        } catch (_) {
-            if (text.indexOf("=") !== -1) {
-                const named = {};
-                text.split(/[,&;]/).forEach((part) => {
-                    const index = part.indexOf("=");
-                    if (index <= 0) return;
-                    named[part.slice(0, index).trim()] = part.slice(index + 1).trim();
-                });
-                value = named;
-            } else {
-                value = text.replace(/^\[|\]$/g, "").split(",").map((item) => {
-                    return item.trim().replace(/^['"]|['"]$/g, "");
-                });
-            }
-        }
-    }
-    if (Array.isArray(value)) return positionalPluginArguments(value);
-    if (!value || typeof value !== "object") return null;
-
-    const rawKeys = Object.keys(value);
-    const numericKeys = rawKeys.filter((key) => /^\d+$/.test(key))
-        .sort((left, right) => Number(left) - Number(right));
-    if (numericKeys.length === rawKeys.length && numericKeys.length) {
-        return positionalPluginArguments(numericKeys.map((key) => value[key]));
-    }
-
-    const result = {};
-    ARGUMENT_KEYS.forEach((key) => {
-        const alias = ARGUMENT_ALIASES[key];
-        const matched = rawKeys.find((rawKey) => {
-            return rawKey.toLowerCase() === key.toLowerCase()
-                || (alias && rawKey.toLowerCase() === alias);
-        });
-        if (matched) result[key] = value[matched];
-    });
-    return Object.keys(result).length ? result : null;
-}
-
-function positionalPluginArguments(values) {
-    const keys = values.length === ARGUMENT_KEYS_R13.length
-        ? ARGUMENT_KEYS_R13
-        : values.length === ARGUMENT_KEYS_R14.length
-            ? ARGUMENT_KEYS_R14
-            : values.length === ARGUMENT_KEYS_R17.length
-                ? ARGUMENT_KEYS_R17
-                : ARGUMENT_KEYS;
-    const result = {};
-    keys.forEach((key, index) => {
-        if (index < values.length) result[key] = values[index];
-    });
-    return result;
 }
 
 function isIPAddress(value) {

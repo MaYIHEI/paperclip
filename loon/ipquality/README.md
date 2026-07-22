@@ -54,7 +54,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 摘要卡始终显示。全部报告分区关闭时，报告只显示摘要与设置提示。“执行媒体与 AI 检测”是总开关；媒体结果与地区一致性任一分区开启时才需要媒体数据。
 
-全部配置项使用 `select`，选项顺序固定为第一项 `false`、第二项 `true`，因此首次导入默认全部关闭。
+全部配置项使用 Loon 注释参数 `#!select`，选项顺序固定为第一项 `false`、第二项 `true`，因此首次导入默认全部关闭。Loon 会把选择结果写入持久化配置，脚本直接读取对应的中文选项名；generic 脚本行不再传递 `argument`。
 
 “低负载报告”不删除任何报告字段。开启后，每个分区只使用一个纯文本节点承载内容，并配合 WebKit 原生折叠控件；这会移除分区内部的彩色富文本样式，以大幅降低超长报告的 DOM 数量、初始解析和滑动重绘压力。关闭后恢复完整彩色报告。
 
@@ -87,6 +87,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 | 日期 | 变更 |
 |---|---|
+| 2026-07-22 | r27：完全对齐原作者 generic 插件写法，改用中文 `#!select` 与 `$persistentStore.read()`；移除 `[Argument]`、`argument` 及多格式兼容解析 |
 | 2026-07-22 | r26：按真机兼容方案改回 `select`，所有配置项统一为第一项 `false`、第二项 `true`，插件与脚本默认值全部关闭 |
 | 2026-07-22 | r25：按 Loon 官方 `[Argument]` 协议改用 `argument=[{参数}]`，脚本直接读取 `$argument` 对象；删除会混入历史状态的持久化开关回退 |
 | 2026-07-22 | r24：低负载模式把分区内容压成单个纯文本节点，保留字段并移除内部富文本 DOM；地区门户改为三大运营商全国官网，请求由 9 个降至 3 个、单次超时降至 4.5 秒 |
