@@ -1,5 +1,5 @@
-#!name=节点 IP 质量检测（按钮版测试）
-#!desc=最新版 Loon 按钮参数测试版；功能与正式版一致，19 项默认全部关闭。
+#!name=节点 IP 质量检测（按钮版测试 r29）
+#!desc=最新版 Loon 按钮参数兼容版；报告“数据状态”会显示实际收到的按钮参数，19 项默认全部关闭。
 #!openUrl=
 #!author=MaYIHEI[https://github.com/MaYIHEI]
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/loon/ipquality
@@ -29,4 +29,4 @@ r = switch,false,tag=显示地区一致性,desc=比较出口与服务地区
 s = switch,false,tag=显示数据状态,desc=显示来源、出口和耗时状态
 
 [Script]
-generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测（按钮版）, timeout=50, img-url=shield.lefthalf.filled.system, argument=[{a},{b},{c},{d},{e},{f},{g},{h},{i},{j},{k},{l},{m},{n},{o},{p},{q},{r},{s}], enable=true
+generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/testing/loon/ipquality/ipquality.js?ver=r29, tag=节点 IP 质量检测（按钮版 r29）, timeout=50, img-url=shield.lefthalf.filled.system, argument=[{a},{b},{c},{d},{e},{f},{g},{h},{i},{j},{k},{l},{m},{n},{o},{p},{q},{r},{s}], enable=true

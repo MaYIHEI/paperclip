@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r28";
+const SCRIPT_VERSION = "2026-07-22.r29";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -51,9 +51,8 @@ const COMPACT_ARGUMENT_KEYS = [
     "ShowTypes", "ShowRiskScores", "ShowRiskFactors", "ShowMedia",
     "ShowRegionConsistency", "ShowDataStatus",
 ];
-const argumentSwitches = readCompactArguments(
-    typeof $argument !== "undefined" ? $argument : null
-);
+const rawArgument = typeof $argument !== "undefined" ? $argument : null;
+const argumentSwitches = readCompactArguments(rawArgument);
 const runtimeStats = {
     startedAt: Date.now(),
     requests: [],
@@ -88,6 +87,7 @@ const sectionVisibility = {
 console.log(`[INFO] 节点 IP 质量检测 ${SCRIPT_VERSION}`);
 console.log(`[INFO] 节点: ${nodeName || "未获取"}`);
 console.log(`[INFO] 插件选项: ${argumentSwitches ? "按钮参数" : "持久化配置"}`);
+console.log(`[INFO] 原始按钮参数: ${describeArgument(rawArgument)}`);
 
 if (!nodeName) {
     finishError("未获取到节点或策略组名称");
@@ -2240,6 +2240,7 @@ function renderRuntimeStats(stats) {
         infoLine("耗时", formatDuration(totalMs)),
         infoLine("请求", `${success}/${requests.length} 成功`),
         infoLine("版本", SCRIPT_VERSION),
+        infoLine("配置", argumentSwitches ? `按钮 · ${describeArgument(rawArgument)}` : "旧版选择项/持久化配置"),
     ];
     if (totalMs >= RUN_DEADLINE_MS - 500) {
         lines.push(mutedLine("已接近 45 秒总时限；未完成来源按部分结果或未返回处理"));
@@ -2446,6 +2447,15 @@ function readSwitch(key, defaultValue) {
 }
 
 function readCompactArguments(raw) {
+    if (typeof raw === "string") {
+        const text = raw.trim();
+        if (!text) return null;
+        try {
+            raw = JSON.parse(text);
+        } catch (_) {
+            raw = text.split(",").map((value) => value.trim());
+        }
+    }
     if (!raw || typeof raw !== "object") return null;
     const values = Array.isArray(raw)
         ? raw
@@ -2458,6 +2468,16 @@ function readCompactArguments(raw) {
         }
     });
     return result;
+}
+
+function describeArgument(raw) {
+    if (raw === null || typeof raw === "undefined") return "未传入";
+    try {
+        const text = typeof raw === "string" ? raw : JSON.stringify(raw);
+        return truncateText(text || "空", 120);
+    } catch (_) {
+        return String(raw);
+    }
 }
 
 function isIPAddress(value) {
