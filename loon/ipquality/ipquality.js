@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r14";
+const SCRIPT_VERSION = "2026-07-22.r15";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -22,6 +22,17 @@ const IPAPI_COM_URL = "http://ip-api.com/json/";
 const IPQUALITY_BACKEND = "https://ipinfo.check.place";
 const USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1";
 const DISNEY_CLIENT_TOKEN = "ZGlzbmV5JmJyb3dzZXImMS4wLjA.Cu56AgSfBTDag5NiRA81oLHkDZfu5L3CKadnefEAY84";
+const ARGUMENT_KEYS_R13 = [
+    "MaskIP", "MediaTest", "MapNotification", "ShowBasic", "ShowTypes",
+    "ShowRiskScores", "ShowRiskFactors", "ShowMedia", "ShowDataStatus",
+];
+const ARGUMENT_KEYS = [
+    "MaskIP", "MediaTest", "MapNotification", "ShowBasic", "ShowEgressMatrix",
+    "ShowTypes", "ShowRiskScores", "ShowRiskFactors", "ShowMedia", "ShowDataStatus",
+];
+const pluginArguments = parsePluginArguments(
+    typeof $argument !== "undefined" ? $argument : null
+);
 
 const params = typeof $environment !== "undefined" && $environment.params
     ? $environment.params
@@ -42,6 +53,7 @@ const sectionVisibility = {
 
 console.log(`[INFO] 节点 IP 质量检测 ${SCRIPT_VERSION}`);
 console.log(`[INFO] 节点: ${nodeName || "未获取"}`);
+console.log(`[INFO] 插件开关参数: ${pluginArguments ? "已读取" : "未传入，使用兼容值或默认值"}`);
 
 if (!nodeName) {
     finishError("未获取到节点或策略组名称");
@@ -1631,14 +1643,67 @@ function capture(promise) {
 
 function readSwitch(key, defaultValue) {
     let value;
-    if (typeof $argument !== "undefined" && $argument && typeof $argument === "object") {
-        value = $argument[key];
+    if (pluginArguments && Object.prototype.hasOwnProperty.call(pluginArguments, key)) {
+        value = pluginArguments[key];
     }
     if (value === null || typeof value === "undefined" || value === "") {
         value = $persistentStore.read(key);
     }
     if (value === null || typeof value === "undefined" || value === "") return defaultValue;
     return !(value === false || value === 0 || value === "false" || value === "0");
+}
+
+function parsePluginArguments(raw) {
+    if (raw === null || typeof raw === "undefined" || raw === "") return null;
+    let value = raw;
+    if (typeof value === "string") {
+        const text = value.trim();
+        if (!text) return null;
+        try {
+            value = JSON.parse(text);
+        } catch (_) {
+            if (text.indexOf("=") !== -1) {
+                const named = {};
+                text.split(/[,&;]/).forEach((part) => {
+                    const index = part.indexOf("=");
+                    if (index <= 0) return;
+                    named[part.slice(0, index).trim()] = part.slice(index + 1).trim();
+                });
+                value = named;
+            } else {
+                value = text.replace(/^\[|\]$/g, "").split(",").map((item) => {
+                    return item.trim().replace(/^['"]|['"]$/g, "");
+                });
+            }
+        }
+    }
+    if (Array.isArray(value)) return positionalPluginArguments(value);
+    if (!value || typeof value !== "object") return null;
+
+    const rawKeys = Object.keys(value);
+    const numericKeys = rawKeys.filter((key) => /^\d+$/.test(key))
+        .sort((left, right) => Number(left) - Number(right));
+    if (numericKeys.length === rawKeys.length && numericKeys.length) {
+        return positionalPluginArguments(numericKeys.map((key) => value[key]));
+    }
+
+    const result = {};
+    ARGUMENT_KEYS.forEach((key) => {
+        const matched = rawKeys.find((rawKey) => rawKey.toLowerCase() === key.toLowerCase());
+        if (matched) result[key] = value[matched];
+    });
+    return Object.keys(result).length ? result : null;
+}
+
+function positionalPluginArguments(values) {
+    const keys = values.length === ARGUMENT_KEYS_R13.length
+        ? ARGUMENT_KEYS_R13
+        : ARGUMENT_KEYS;
+    const result = {};
+    keys.forEach((key, index) => {
+        if (index < values.length) result[key] = values[index];
+    });
+    return result;
 }
 
 function isIPAddress(value) {
