@@ -35,6 +35,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 | 隐藏 IP | 关闭 | 隐藏报告中 IP 的后半段，适合截图分享 |
 | 执行媒体与 AI 检测 | 开启 | 媒体检测总开关；检测 TikTok、Disney+、Netflix、YouTube、Prime Video、Reddit、ChatGPT 探测端点 |
 | 地图通知 | 关闭 | 完成后发送通知；点按通知可在 Apple 地图查看 IP 数据库估算的位置 |
+| 折叠报告分区 | 开启 | 初始只渲染各分区标题，点开后查看完整内容；建议保持开启以避免超长报告滑动卡顿 |
 | 显示基础信息 | 开启 | 显示基础信息分区 |
 | 显示出口分流 | 关闭 | 按出口 IP 分组显示探针来源、ASN、组织和国家 |
 | 显示 BGP 信息 | 关闭 | 通过 RIPEstat 查询 IPv4 前缀、Origin ASN、RPKI、PTR 和注册机构 |
@@ -52,6 +53,8 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 | 显示数据状态 | 关闭 | 显示成功来源、失败来源、出口一致性、总耗时和最慢请求 |
 
 摘要卡始终显示。全部报告分区关闭时，报告只显示摘要与设置提示。“执行媒体与 AI 检测”是总开关；媒体结果与地区一致性任一分区开启时才需要媒体数据。
+
+“折叠报告分区”不删除任何报告内容。开启后使用 WebKit 原生折叠控件，同一时间优先保持一个分区展开，并通过离屏渲染跳过和布局/绘制隔离降低长报告的初始布局、滑动重绘与内存压力；需要查看时点开对应分区即可。
 
 ## 报告内容
 
@@ -82,6 +85,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 | 日期 | 变更 |
 |---|---|
+| 2026-07-22 | r23：增加默认开启的报告分区折叠，使用原生 `details`、`content-visibility` 与 CSS containment 降低超长报告布局和滑动绘制压力；合并高频内联样式并移除底部空白节点 |
 | 2026-07-22 | r22：删除不可用于机场节点的自建回程；修复 Globalping 到达判断与大陆三网探针筛选；新增 Ping、MTR、HTTPS 稳定性；按开关裁剪数据库，加入总时限，并收紧 BGP、门户和媒体结论 |
 | 2026-07-22 | r21：压缩 `generic` 开关参数，避免配置行过长导致新增开关不生效；仍保持单脚本组合报告 |
 | 2026-07-22 | r20：增加 BGP 路径线索、北京/上海/广东三网 HTTP、Globalping 三网入站路径，以及可配置的节点端真实回程与 ICMP/TCP 大包增强接口 |

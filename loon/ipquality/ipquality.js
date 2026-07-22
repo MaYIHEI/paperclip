@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r22";
+const SCRIPT_VERSION = "2026-07-22.r23";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -41,6 +41,7 @@ const ARGUMENT_KEYS = [
     "ShowBGP", "ShowTypes", "ShowRiskScores", "ShowRiskFactors", "ShowMedia",
     "ShowRegionConsistency", "ShowDataStatus", "ShowBGPPath", "ShowChinaHttp",
     "ShowInboundRoute", "ShowProbePing", "ShowProbeMTR", "ShowStability",
+    "FoldSections",
 ];
 const ARGUMENT_ALIASES = {
     MaskIP: "a",
@@ -61,6 +62,7 @@ const ARGUMENT_ALIASES = {
     ShowDataStatus: "p",
     ShowProbeMTR: "q",
     ShowStability: "r",
+    FoldSections: "s",
 };
 const pluginArguments = parsePluginArguments(
     typeof $argument !== "undefined" ? $argument : null
@@ -77,6 +79,7 @@ const nodeName = params.node || "";
 const maskIP = readSwitch("MaskIP", false);
 const mediaEnabled = readSwitch("MediaTest", true);
 const mapNotificationEnabled = readSwitch("MapNotification", false);
+const foldSections = readSwitch("FoldSections", true);
 const sectionVisibility = {
     basic: readSwitch("ShowBasic", true),
     types: readSwitch("ShowTypes", false),
@@ -1124,18 +1127,15 @@ function render(ip, data, media) {
     }
 
     const html = [
-        '<div style="font-family:-apple-system,BlinkMacSystemFont;font-size:14px;line-height:1.5;text-align:left;overflow-wrap:anywhere">',
-        '<div style="font-size:18px;line-height:18px">&nbsp;</div>',
-        '<div style="font-size:20px;font-weight:700;line-height:1.25;margin-bottom:16px">节点 IP 质量检测</div>',
-        `<div style="color:#8e8e93;font-size:11px;margin-bottom:10px">节点 · ${escapeHtml(displayNodeName)}</div>`,
+        reportStyle(),
+        '<div class="report-root">',
+        '<div class="report-title">节点 IP 质量检测</div>',
+        `<div class="node-label">节点 · ${escapeHtml(displayNodeName)}</div>`,
         summaryCard(basic),
         visibleSections.join(""),
-        '<div style="font-size:9px;line-height:9px">&nbsp;</div>',
-        '<div style="color:#8e8e93;font-size:10px;line-height:1.45">'
+        '<div class="report-note">'
             + '类型名称、评分分档与风险字段遵循 xykt/IPQuality 的展示口径；各库结果独立展示，不生成综合结论。'
             + '聚合来源不可用时保留直连结果。BGP 属于控制面观察，Globalping 属于外部探针到出口 IP 的入站/往返测量；均不代表机场节点真实回程。</div>',
-        '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
-        '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
         "</div>",
     ].join("");
 
@@ -1862,20 +1862,46 @@ function egressSourceName(source) {
     return names[source] || cleanValue(source);
 }
 
+function reportStyle() {
+    return '<style>'
+        + '.report-root{font-family:-apple-system,BlinkMacSystemFont;font-size:14px;line-height:1.5;text-align:left;word-break:break-word;padding:18px 0 92px}'
+        + '.report-title{font-size:20px;font-weight:700;line-height:1.25;margin-bottom:16px}'
+        + '.node-label{color:#8e8e93;font-size:11px;margin-bottom:10px}'
+        + '.summary-card{margin-bottom:14px;contain:layout paint style}'
+        + '.summary-ip{font-size:24px;font-weight:800;line-height:1.15;letter-spacing:.2px}'
+        + '.summary-nature{margin-top:5px;color:#0A84FF;font-size:12px;font-weight:600}'
+        + '.summary-region{margin-top:7px;font-size:14px;font-weight:600;line-height:1.35}'
+        + '.summary-city{margin-top:2px;color:#8e8e93;font-size:12px;line-height:1.4}'
+        + '.summary-asn{margin-top:5px;color:#8e8e93;font-size:11px;line-height:1.35}'
+        + '.report-section{display:block;margin:8px 0;border-top:1px solid rgba(142,142,147,.2);content-visibility:auto;contain-intrinsic-size:auto 180px}'
+        + '.section-summary{display:flex;align-items:center;justify-content:space-between;min-height:42px;color:#0A84FF;font-weight:700;font-size:15px;line-height:1.3;list-style:none;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}'
+        + '.section-summary::-webkit-details-marker{display:none}'
+        + '.section-summary::after{content:"›";color:#8e8e93;font-size:19px;font-weight:400;margin-left:10px}'
+        + '.section-static::after{display:none}'
+        + 'details[open]>.section-summary::after{content:"⌄"}'
+        + '.section-body{padding:2px 0 7px;contain:layout paint style}'
+        + '.info-line{margin-bottom:8px;line-height:1.4}'
+        + '.info-label{color:#8e8e93;font-size:12px;margin-right:8px}'
+        + '.info-value{font-weight:600}'
+        + '.muted-line{color:#8e8e93;font-size:11px;margin:5px 0;line-height:1.45}'
+        + '.report-note{color:#8e8e93;font-size:10px;line-height:1.45;margin-top:14px;content-visibility:auto}'
+        + '</style>';
+}
+
 function summaryCard(basic) {
     const asn = [basic.asn, basic.organization].filter(Boolean).join(" · ");
-    return '<div style="margin-bottom:16px">'
-        + `<div style="font-size:24px;font-weight:800;line-height:1.15;letter-spacing:0.2px">${escapeHtml(basic.ip)}</div>`
+    return '<div class="summary-card">'
+        + `<div class="summary-ip">${escapeHtml(basic.ip)}</div>`
         + (basic.nature
-            ? `<div style="margin-top:5px;color:#0A84FF;font-size:12px;font-weight:600">${escapeHtml(basic.nature)}</div>`
+            ? `<div class="summary-nature">${escapeHtml(basic.nature)}</div>`
             : "")
         + (basic.actualRegion
-            ? `<div style="margin-top:7px;font-size:14px;font-weight:600;line-height:1.35">${escapeHtml(basic.actualRegion)}</div>`
+            ? `<div class="summary-region">${escapeHtml(basic.actualRegion)}</div>`
             : "")
         + (basic.city
-            ? `<div style="margin-top:2px;color:#8e8e93;font-size:12px;line-height:1.4">${escapeHtml(basic.city)}</div>`
+            ? `<div class="summary-city">${escapeHtml(basic.city)}</div>`
             : "")
-        + (asn ? `<div style="margin-top:5px;color:#8e8e93;font-size:11px;line-height:1.35">${escapeHtml(asn)}</div>` : "")
+        + (asn ? `<div class="summary-asn">${escapeHtml(asn)}</div>` : "")
         + "</div>";
 }
 
@@ -2277,21 +2303,23 @@ function mediaResult(name, status, region, detail) {
 }
 
 function section(title, content) {
-    return '<div style="font-size:8px;line-height:8px">&nbsp;</div>'
-        + '<div>'
-        + `<div style="color:#0A84FF;font-weight:700;font-size:15px;margin-bottom:9px">▌${escapeHtml(title)}</div>`
-        + `${content}</div>`;
+    const heading = `<div class="section-summary section-static">▌${escapeHtml(title)}</div>`;
+    if (!foldSections) {
+        return `<section class="report-section">${heading}<div class="section-body">${content}</div></section>`;
+    }
+    return `<details class="report-section" name="ipquality-report"><summary class="section-summary">▌${escapeHtml(title)}</summary>`
+        + `<div class="section-body">${content}</div></details>`;
 }
 
 function infoLine(label, value) {
-    return '<div style="margin-bottom:8px;line-height:1.4">'
-        + `<span style="color:#8e8e93;font-size:12px">${escapeHtml(label)}</span>&nbsp;&nbsp;`
-        + `<span style="font-weight:600">${escapeHtml(value)}</span>`
+    return '<div class="info-line">'
+        + `<span class="info-label">${escapeHtml(label)}</span>`
+        + `<span class="info-value">${escapeHtml(value)}</span>`
         + "</div>";
 }
 
 function mutedLine(value) {
-    return `<div style="color:#8e8e93;font-size:11px;margin:5px 0;line-height:1.45">${escapeHtml(value)}</div>`;
+    return `<div class="muted-line">${escapeHtml(value)}</div>`;
 }
 
 function browserHeaders() {
