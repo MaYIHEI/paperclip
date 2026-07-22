@@ -76,6 +76,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 | 日期 | 变更 |
 |---|---|
+| 2026-07-22 | r21：压缩 `generic` 开关参数，避免配置行过长导致新增开关不生效；仍保持单脚本组合报告 |
 | 2026-07-22 | r20：增加 BGP 路径线索、北京/上海/广东三网 HTTP、Globalping 三网入站路径，以及可配置的节点端真实回程与 ICMP/TCP 大包增强接口 |
 | 2026-07-22 | r19：增加 RIPEstat BGP 网络身份分区，默认关闭、按需查询 |
 | 2026-07-22 | r18：数据状态增加总耗时、请求成功率、脚本版本和最慢来源 |

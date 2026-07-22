@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r20";
+const SCRIPT_VERSION = "2026-07-22.r21";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -41,6 +41,24 @@ const ARGUMENT_KEYS = [
     "ShowRegionConsistency", "ShowDataStatus", "ShowBGPPath", "ShowChinaHttp",
     "ShowInboundRoute", "ShowEnhancedRoute", "EnhancedEndpoint", "EnhancedToken",
 ];
+const ARGUMENT_ALIASES = {
+    MaskIP: "a",
+    MediaTest: "b",
+    MapNotification: "c",
+    ShowBasic: "d",
+    ShowEgressMatrix: "e",
+    ShowBGP: "f",
+    ShowBGPPath: "g",
+    ShowChinaHttp: "h",
+    ShowInboundRoute: "i",
+    ShowEnhancedRoute: "j",
+    ShowTypes: "k",
+    ShowRiskScores: "l",
+    ShowRiskFactors: "m",
+    ShowMedia: "n",
+    ShowRegionConsistency: "o",
+    ShowDataStatus: "p",
+};
 const pluginArguments = parsePluginArguments(
     typeof $argument !== "undefined" ? $argument : null
 );
@@ -2310,7 +2328,11 @@ function parsePluginArguments(raw) {
 
     const result = {};
     ARGUMENT_KEYS.forEach((key) => {
-        const matched = rawKeys.find((rawKey) => rawKey.toLowerCase() === key.toLowerCase());
+        const alias = ARGUMENT_ALIASES[key];
+        const matched = rawKeys.find((rawKey) => {
+            return rawKey.toLowerCase() === key.toLowerCase()
+                || (alias && rawKey.toLowerCase() === alias);
+        });
         if (matched) result[key] = value[matched];
     });
     return Object.keys(result).length ? result : null;
