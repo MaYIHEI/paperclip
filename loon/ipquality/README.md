@@ -40,7 +40,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 | 显示出口分流 | 关闭 | 按出口 IP 分组显示探针来源、ASN、组织和国家 |
 | 显示 BGP 信息 | 关闭 | 通过 RIPEstat 查询 IPv4 前缀、Origin ASN、RPKI、PTR 和注册机构 |
 | 显示目标前缀 BGP 路径 | 关闭 | 展示 RIPE RIS 到目标前缀的 AS Path、可见性和样本所含 ASN；不是节点回程 |
-| 测试运营商官网 | 关闭 | 轻量访问电信、联通、移动全国官网，仅表示 HTTPS 可达性和总耗时 |
+| 测试三网地区测速 | 关闭 | 并发访问北京、上海、广东的电信、联通、移动地区目标，显示 HTTPS 返回总耗时 |
 | 测试外部探针入站路径 | 关闭 | 使用 Globalping 指定 ASN 中国探针向出口 IP 执行 traceroute |
 | 测试外部探针 Ping | 关闭 | 显示指定 ASN 中国探针与出口 IP 的 ICMP 往返延迟、丢包和抖动 |
 | 测试外部探针 MTR | 关闭 | 显示指定 ASN 中国探针到出口 IP 的入站逐跳统计 |
@@ -64,7 +64,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 - **出口分流**：按实际出口 IP 汇总既有探针来源，并标注主出口、分流出口及对应 ASN、组织和国家；该分区不会增加网络请求。
 - **BGP 网络身份**：通过 RIPE NCC RIPEstat 展示 IPv4 前缀、Origin ASN、持有者、RIR、RPKI 和 PTR；不将公开路由身份描述为实际回程。
 - **目标前缀 BGP 可见路径**：展示 RIPE RIS 采集器/对等体看到目标前缀的 AS Path、可见性、MOAS 与历史 Origin 变化提示及样本所含 ASN。包含 AS4809/AS9929 不证明机场节点实际回程经过或线路品质。
-- **运营商官网 HTTPS（实验）**：并发访问电信、联通、移动三个全国官网。结果只表示网页是否返回 HTTP 响应及总耗时；官网可能使用 CDN、重定向或反爬，失败不代表运营商线路异常。
+- **三网地区 HTTPS 测速（实验）**：并发访问北京、上海、广东的电信、联通、移动地区品牌门户，共 9 个目标。结果是 HTTPS 返回总耗时，不是下载带宽；域名可能使用 CDN、重定向或反爬，失败不代表运营商线路异常。
 - **指定 ASN 外部探针入站路径**：由 Globalping 的 `AS4134+China`、`AS4837+China`、`AS9808+China` 探针向出口 IPv4 执行 traceroute。方向是探针到出口 IP，不作为节点回程结论。
 - **指定 ASN 外部探针 Ping**：展示探针与出口 IP 的 ICMP 往返 RTT、丢包和抖动，无法拆分去程与回程。
 - **指定 ASN 外部探针 MTR**：展示入站逐跳统计；路由器不响应或限制 ICMP 会造成表观丢包，不能单独视为真实业务丢包。
@@ -87,6 +87,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 | 日期 | 变更 |
 |---|---|
+| 2026-07-22 | r31：将三大运营商全国官网测试恢复为北京、上海、广东三网共 9 个地区目标的 HTTPS 耗时测试，并兼容旧配置键 |
 | 2026-07-22 | r30：真机复核后撤下按钮测试版；Cookie 插件的 switch 通过 `enable={参数}` 控制独立规则，不适用于单个 generic 动作组合 19 项报告；正式版继续使用已验证的中文 `#!select` 持久化配置 |
 | 2026-07-22 | r28：保留正式下拉版，新增最新版 Loon 按钮测试版；19 个 switch 使用 `a`–`s` 短参数按官方对象格式传入，JS 优先读取按钮参数并保留持久化回退 |
 | 2026-07-22 | r27：完全对齐原作者 generic 插件写法，改用中文 `#!select` 与 `$persistentStore.read()`；移除 `[Argument]`、`argument` 及多格式兼容解析 |

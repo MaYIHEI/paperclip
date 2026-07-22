@@ -11,7 +11,7 @@
 #!select = 显示出口分流,false,true
 #!select = 显示 BGP 信息,false,true
 #!select = 显示目标前缀 BGP 路径,false,true
-#!select = 测试运营商官网,false,true
+#!select = 测试三网地区测速,false,true
 #!select = 测试外部探针入站路径,false,true
 #!select = 测试外部探针 Ping,false,true
 #!select = 测试外部探针 MTR,false,true

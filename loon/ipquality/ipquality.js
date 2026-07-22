@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r30";
+const SCRIPT_VERSION = "2026-07-22.r31";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -32,7 +32,7 @@ const PERSISTENT_SWITCH_KEYS = {
     ShowEgressMatrix: "显示出口分流",
     ShowBGP: "显示 BGP 信息",
     ShowBGPPath: "显示目标前缀 BGP 路径",
-    ShowChinaHttp: "测试运营商官网",
+    ShowChinaHttp: ["测试三网地区测速", "测试运营商官网"],
     ShowInboundRoute: "测试外部探针入站路径",
     ShowProbePing: "测试外部探针 Ping",
     ShowProbeMTR: "测试外部探针 MTR",
@@ -267,9 +267,15 @@ const CHINA_ROUTE_ASNS = [
 ];
 
 const CHINA_HTTP_TARGETS = [
-    { carrier: "电信", url: "https://www.189.cn/" },
-    { carrier: "联通", url: "https://www.10010.com/" },
-    { carrier: "移动", url: "https://www.10086.cn/" },
+    { region: "北京", carrier: "电信", url: "https://bj.189.cn/" },
+    { region: "上海", carrier: "电信", url: "https://sh.189.cn/" },
+    { region: "广东", carrier: "电信", url: "https://gd.189.cn/" },
+    { region: "北京", carrier: "联通", url: "https://bj.10010.com/" },
+    { region: "上海", carrier: "联通", url: "https://sh.10010.com/" },
+    { region: "广东", carrier: "联通", url: "https://gd.10010.com/" },
+    { region: "北京", carrier: "移动", url: "https://bj.10086.cn/" },
+    { region: "上海", carrier: "移动", url: "https://www.sh.10086.cn/" },
+    { region: "广东", carrier: "移动", url: "https://gd.10086.cn/" },
 ];
 
 const GLOBALPING_LOCATIONS = [
@@ -288,12 +294,13 @@ async function collectChinaHttp() {
     const settled = await Promise.all(CHINA_HTTP_TARGETS.map(async (target) => {
         const startedAt = Date.now();
         const result = await capture(request("GET", target.url, {
-            timeout: 4500,
+            timeout: 6500,
             allowHttpErrors: true,
             headers: browserHeaders(),
         }));
         const response = result.ok ? result.value : null;
         return {
+            region: target.region,
             carrier: target.carrier,
             host: requestHost(target.url),
             ok: !!(response && response.status),
@@ -1056,7 +1063,7 @@ function render(ip, data, media) {
         visibleSections.push(section("出口分流", renderEgressMatrix(data._egress, basic)));
     }
     if (sectionVisibility.chinaHttp) {
-        visibleSections.push(section("运营商官网 HTTPS（实验）", renderChinaHttp(data._chinaHttp)));
+        visibleSections.push(section("三网地区 HTTPS 测速（实验）", renderChinaHttp(data._chinaHttp)));
     }
     if (sectionVisibility.inboundRoute) {
         visibleSections.push(section("指定 ASN 外部探针入站路径", renderInboundRoutes(data._inboundRoutes)));
@@ -1971,17 +1978,22 @@ function renderBGPPath(analysis) {
 
 function renderChinaHttp(results) {
     const rows = Array.isArray(results) ? results : [];
-    if (!rows.length) return mutedLine("本次没有运营商官网 HTTPS 结果");
+    if (!rows.length) return mutedLine("本次没有三网地区 HTTPS 测速结果");
     const success = rows.filter((item) => item.ok).length;
-    const header = infoLine("连通", `${success} / ${rows.length} 个全国官网返回 HTTP 响应`);
-    const detail = rows.map((item) => {
-        const status = item.ok ? `${item.ms} ms · HTTP ${item.status}` : `失败 · ${truncateText(item.error, 24)}`;
-        const color = item.ok ? latencyColor(item.ms) : "#ff3b30";
-        return `<div style="margin-top:3px"><span style="display:inline-block;width:98px;color:#8e8e93">${escapeHtml(`${item.carrier} · ${item.host}`)}</span>`
-            + `<span style="color:${color};font-weight:600">${escapeHtml(status)}</span></div>`;
+    const header = infoLine("连通", `${success} / ${rows.length} 个地区目标返回 HTTP 响应`);
+    const regions = ["北京", "上海", "广东"].map((region) => {
+        const items = rows.filter((item) => item.region === region);
+        const detail = items.map((item) => {
+            const status = item.ok ? `${item.ms} ms · HTTP ${item.status}` : `失败 · ${truncateText(item.error, 24)}`;
+            const color = item.ok ? latencyColor(item.ms) : "#ff3b30";
+            return `<div style="margin-top:3px"><span style="display:inline-block;width:34px;color:#8e8e93">${escapeHtml(item.carrier)}</span>`
+                + `<span style="color:${color};font-weight:600">${escapeHtml(status)}</span>`
+                + `<div style="margin-left:34px;color:#8e8e93;font-size:10px">${escapeHtml(item.host)}</div></div>`;
+        }).join("");
+        return `<div style="margin:9px 0"><div style="font-size:12px;font-weight:700">${escapeHtml(region)}</div>${detail}</div>`;
     }).join("");
-    return header + detail
-        + mutedLine("轻量实验项：仅表示手机 → 所选节点 → 运营商全国官网的 HTTPS 可达性和总耗时，不代表线路或回程质量。 ");
+    return header + regions
+        + mutedLine("目标是北京、上海、广东三网品牌地区门户，测量 HTTPS 返回总耗时，不是下载带宽；域名可能使用 CDN、重定向或反爬，单站失败不代表线路失败。 ");
 }
 
 function renderInboundRoutes(result) {
@@ -2422,8 +2434,14 @@ function deadlineRemaining() {
 function readSwitch(key, defaultValue) {
     let value;
     try {
-        const storeKey = PERSISTENT_SWITCH_KEYS[key] || key;
-        value = typeof $persistentStore !== "undefined" ? $persistentStore.read(storeKey) : null;
+        const configured = PERSISTENT_SWITCH_KEYS[key] || key;
+        const storeKeys = Array.isArray(configured) ? configured : [configured];
+        if (typeof $persistentStore !== "undefined") {
+            for (let index = 0; index < storeKeys.length; index += 1) {
+                value = $persistentStore.read(storeKeys[index]);
+                if (value !== null && typeof value !== "undefined" && value !== "") break;
+            }
+        }
     } catch (error) {
         console.log(`[WARN] 读取插件选项 ${key} 失败: ${errorMessage(error)}`);
     }
