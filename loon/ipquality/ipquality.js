@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r16";
+const SCRIPT_VERSION = "2026-07-22.r19";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -26,13 +26,27 @@ const ARGUMENT_KEYS_R13 = [
     "MaskIP", "MediaTest", "MapNotification", "ShowBasic", "ShowTypes",
     "ShowRiskScores", "ShowRiskFactors", "ShowMedia", "ShowDataStatus",
 ];
-const ARGUMENT_KEYS = [
+const ARGUMENT_KEYS_R14 = [
     "MaskIP", "MediaTest", "MapNotification", "ShowBasic", "ShowEgressMatrix",
     "ShowTypes", "ShowRiskScores", "ShowRiskFactors", "ShowMedia", "ShowDataStatus",
+];
+const ARGUMENT_KEYS_R17 = [
+    "MaskIP", "MediaTest", "MapNotification", "ShowBasic", "ShowEgressMatrix",
+    "ShowTypes", "ShowRiskScores", "ShowRiskFactors", "ShowMedia",
+    "ShowRegionConsistency", "ShowDataStatus",
+];
+const ARGUMENT_KEYS = [
+    "MaskIP", "MediaTest", "MapNotification", "ShowBasic", "ShowEgressMatrix",
+    "ShowBGP", "ShowTypes", "ShowRiskScores", "ShowRiskFactors", "ShowMedia",
+    "ShowRegionConsistency", "ShowDataStatus",
 ];
 const pluginArguments = parsePluginArguments(
     typeof $argument !== "undefined" ? $argument : null
 );
+const runtimeStats = {
+    startedAt: Date.now(),
+    requests: [],
+};
 
 const params = typeof $environment !== "undefined" && $environment.params
     ? $environment.params
@@ -47,8 +61,10 @@ const sectionVisibility = {
     riskScores: readSwitch("ShowRiskScores", true),
     riskFactors: readSwitch("ShowRiskFactors", false),
     media: readSwitch("ShowMedia", true),
+    regionConsistency: readSwitch("ShowRegionConsistency", false),
     dataStatus: readSwitch("ShowDataStatus", false),
     egressMatrix: readSwitch("ShowEgressMatrix", false),
+    bgp: readSwitch("ShowBGP", false),
 };
 
 console.log(`[INFO] 节点 IP 质量检测 ${SCRIPT_VERSION}`);
@@ -67,11 +83,82 @@ async function run() {
 
     const ip = discovery.ip;
     const databaseTask = collectDatabases(ip, discovery);
-    const mediaTask = mediaEnabled && sectionVisibility.media
+    const mediaTask = mediaEnabled
+        && (sectionVisibility.media || sectionVisibility.regionConsistency)
         ? collectMedia()
         : Promise.resolve([]);
-    const results = await Promise.all([databaseTask, mediaTask]);
+    const bgpTask = sectionVisibility.bgp ? collectBGP(ip) : Promise.resolve(null);
+    const results = await Promise.all([databaseTask, mediaTask, bgpTask]);
+    results[0]._bgp = results[2];
     render(ip, results[0], results[1]);
+}
+
+async function collectBGP(ip) {
+    if (!isIPv4(ip)) return { error: "仅查询 IPv4 网络身份" };
+    const networkResult = await capture(requestRipeStat("network-info", { resource: ip }));
+    if (!networkResult.ok) return { error: `网络信息未返回：${networkResult.error}` };
+    const network = networkResult.value;
+    const prefix = cleanValue(network.prefix);
+    const asns = uniqueValues(Array.isArray(network.asns) ? network.asns.map(cleanASN) : []);
+    if (!prefix) return { error: "RIPEstat 未返回可路由前缀" };
+
+    const tasks = [
+        capture(requestRipeStat("prefix-overview", { resource: prefix })),
+        capture(requestRipeStat("reverse-dns-ip", { resource: ip })),
+    ];
+    asns.forEach((asn) => {
+        tasks.push(capture(requestRipeStat("rpki-validation", {
+            resource: asn,
+            prefix,
+        })));
+    });
+    const settled = await Promise.all(tasks);
+    const overview = settled[0].ok ? settled[0].value : {};
+    const reverse = settled[1].ok ? settled[1].value : {};
+    const overviewAsns = Array.isArray(overview.asns) ? overview.asns : [];
+    const holderByAsn = {};
+    overviewAsns.forEach((item) => {
+        const asn = cleanASN(item && item.asn);
+        if (asn) holderByAsn[asn] = cleanValue(item.holder);
+    });
+    const rpki = asns.map((asn, index) => {
+        const result = settled[index + 2];
+        return {
+            asn,
+            status: result && result.ok ? String(result.value.status || "").trim().toLowerCase() : "",
+        };
+    });
+    const block = overview.block || {};
+    const errors = [];
+    if (!settled[0].ok) errors.push("前缀概览");
+    if (!settled[1].ok) errors.push("PTR");
+    if (rpki.some((item) => !item.status)) errors.push("RPKI");
+    return {
+        prefix,
+        asns,
+        holders: asns.map((asn) => holderByAsn[asn]).filter(Boolean),
+        announced: overview.announced === true,
+        rir: cleanValue(block.name),
+        registryDescription: cleanValue(block.desc),
+        rpki,
+        ptr: cleanValue(reverse.result),
+        queryTime: cleanValue(overview.query_time),
+        errors,
+    };
+}
+
+async function requestRipeStat(endpoint, params) {
+    const query = Object.keys(params).map((key) => {
+        return `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`;
+    }).join("&");
+    const payload = await requestJson(
+        `https://stat.ripe.net/data/${endpoint}/data.json?${query}&sourceapp=paperclip-ipquality`,
+        { node: "DIRECT", timeout: 8000 }
+    );
+    if (!payload || payload.status !== "ok" || !payload.data) {
+        throw new Error(cleanValue(payload && payload.message) || "RIPEstat 响应无效");
+    }
+    return payload.data;
 }
 
 async function discoverIP() {
@@ -606,12 +693,16 @@ function render(ip, data, media) {
     const risks = buildRisks(data);
     const factors = buildFactors(data);
     const audit = buildAudit(data);
+    const regionConsistency = buildRegionConsistency(basic, media);
     const titleColor = reportColor(risks);
     const displayNodeName = truncateText(nodeName, 30);
 
     const visibleSections = [];
     if (sectionVisibility.basic) {
         visibleSections.push(section("基础信息", renderBasic(basic)));
+    }
+    if (sectionVisibility.bgp) {
+        visibleSections.push(section("BGP 网络身份", renderBGP(data._bgp)));
     }
     if (sectionVisibility.egressMatrix) {
         visibleSections.push(section("出口分流", renderEgressMatrix(data._egress, basic)));
@@ -630,8 +721,13 @@ function render(ip, data, media) {
             ? renderMediaList(media)
             : mutedLine("流媒体检测已关闭")));
     }
+    if (sectionVisibility.regionConsistency) {
+        visibleSections.push(section("服务地区一致性", mediaEnabled
+            ? renderRegionConsistency(regionConsistency)
+            : mutedLine("流媒体与 AI 检测已关闭，没有可比较的地区数据")));
+    }
     if (sectionVisibility.dataStatus) {
-        visibleSections.push(section("数据状态", renderAudit(audit, data._probe)));
+        visibleSections.push(section("数据状态", renderAudit(audit, data._probe, runtimeStats)));
     }
     if (!visibleSections.length) {
         visibleSections.push(mutedLine("请在插件设置中选择报告分区"));
@@ -855,6 +951,7 @@ function buildBasic(ip, data) {
         actualRegion: code
             ? `${flagEmoji(code)} [${String(code).toUpperCase()}] ${country || ""}`.trim()
             : country,
+        countryCode: code ? String(code).toUpperCase() : "",
         registeredRegion: registeredCode
             ? `[${String(registeredCode).toUpperCase()}] ${registeredName || ""}`.trim()
             : "",
@@ -1322,6 +1419,25 @@ function buildAudit(data) {
     };
 }
 
+function buildRegionConsistency(basic, media) {
+    const reference = cleanValue(basic && basic.countryCode).toUpperCase();
+    const services = (Array.isArray(media) ? media : []).map((item) => {
+        const region = cleanValue(item && item.region).toUpperCase();
+        if (!/^[A-Z]{2}$/.test(region)) return null;
+        return {
+            name: cleanValue(item.name),
+            region,
+            matches: reference ? region === reference : null,
+        };
+    }).filter(Boolean);
+    return {
+        reference,
+        services,
+        matched: services.filter((item) => item.matches === true).length,
+        different: services.filter((item) => item.matches === false),
+    };
+}
+
 function buildEgressGroups(observations, primaryIP) {
     const groups = {};
     (Array.isArray(observations) ? observations : []).forEach((item) => {
@@ -1418,6 +1534,70 @@ function renderEgressMatrix(groups, basic) {
     return header + content;
 }
 
+function renderBGP(bgp) {
+    if (!bgp || bgp.error) return mutedLine(bgp && bgp.error || "本次没有 BGP 网络信息");
+    const origins = bgp.asns && bgp.asns.length
+        ? bgp.asns.map((asn) => `AS${asn}`).join("、")
+        : "";
+    const rpki = (bgp.rpki || []).map((item) => {
+        return `${item.asn ? `AS${item.asn} ` : ""}${rpkiStatusText(item.status)}`.trim();
+    }).join("、");
+    const rows = [
+        ["前缀", bgp.prefix],
+        ["Origin", origins],
+        ["持有者", uniqueValues(bgp.holders || []).join("、")],
+        ["注册机构", [bgp.rir, bgp.registryDescription].filter(Boolean).join(" · ")],
+        ["路由状态", bgp.announced ? "已公告" : "未确认公告"],
+        ["RPKI", rpki],
+        ["PTR", bgp.ptr],
+        ["数据时间", bgp.queryTime],
+    ].filter((row) => row[1]);
+    const missing = bgp.errors && bgp.errors.length
+        ? mutedLine(`本次未返回 · ${uniqueValues(bgp.errors).join("、")}`)
+        : "";
+    return rows.map((row) => infoLine(row[0], row[1])).join("")
+        + mutedLine("来源 · RIPE NCC RIPEstat；公开路由身份不等于本次实际回程路径")
+        + missing;
+}
+
+function rpkiStatusText(status) {
+    const values = {
+        valid: "有效",
+        invalid_asn: "无效 · ASN 不匹配",
+        invalid_length: "无效 · 前缀长度",
+        unknown: "未找到 ROA",
+    };
+    return values[String(status || "").trim().toLowerCase()] || "未确认";
+}
+
+function renderRegionConsistency(result) {
+    const data = result || { reference: "", services: [], matched: 0, different: [] };
+    if (!data.services.length) return mutedLine("本次没有服务返回可确认的地区");
+    const reference = data.reference
+        ? `${flagEmoji(data.reference)} [${data.reference}]`
+        : "未确认";
+    const comparable = data.reference ? data.services.length : 0;
+    const summary = comparable
+        ? data.different.length
+            ? `<span style="color:#ff9500;font-weight:700">一致 ${data.matched}/${comparable}</span>`
+            : `<span style="color:#00a67d;font-weight:700">地区全部一致 · ${data.matched}/${comparable}</span>`
+        : '<span style="color:#8e8e93;font-weight:700">缺少出口地区参照</span>';
+    const rows = data.services.map((item) => {
+        const state = item.matches === false
+            ? '<span style="color:#ff9500">地区不同</span>'
+            : item.matches === true
+                ? '<span style="color:#00a67d">一致</span>'
+                : '<span style="color:#8e8e93">仅展示</span>';
+        return '<div style="margin-bottom:8px">'
+            + `<span style="font-weight:700">${escapeHtml(item.name)}</span>&nbsp;&nbsp;`
+            + `${flagEmoji(item.region)} <span style="font-weight:600">[${escapeHtml(item.region)}]</span>&nbsp;&nbsp;${state}`
+            + "</div>";
+    }).join("");
+    return infoLine("出口地区", reference)
+        + `<div style="margin:2px 0 10px">${summary}</div>`
+        + rows;
+}
+
 function postMapNotification(basic, displayNodeName) {
     if (!mapNotificationEnabled || !basic || !basic.map) return;
     $notification.post(
@@ -1507,7 +1687,7 @@ function renderMediaList(rows) {
     return (body || mutedLine("本次没有确认任何服务状态")) + unknownLine;
 }
 
-function renderAudit(audit, probe) {
+function renderAudit(audit, probe, stats) {
     const sourceStatus = `来源 ${audit.success.length}/${audit.total}`;
     const probeStatus = probe && probe.total
         ? `出口 ${probe.matched}/${probe.total}${probe.unique > 1 ? " · 存在分流差异" : " · 一致"}`
@@ -1522,7 +1702,32 @@ function renderAudit(audit, probe) {
     const supplemental = audit.supplemental && audit.supplemental.length
         ? mutedLine(`补充来源 · ${audit.supplemental.join("、")}`)
         : "";
-    return infoLine("状态", summary) + missing + skipped + supplemental;
+    return infoLine("状态", summary)
+        + renderRuntimeStats(stats)
+        + missing + skipped + supplemental;
+}
+
+function renderRuntimeStats(stats) {
+    const requests = stats && Array.isArray(stats.requests) ? stats.requests : [];
+    const totalMs = Math.max(0, Date.now() - (stats && stats.startedAt || Date.now()));
+    const success = requests.filter((item) => item.ok).length;
+    const slowestByHost = {};
+    requests.forEach((item) => {
+        if (!slowestByHost[item.host] || item.ms > slowestByHost[item.host].ms) {
+            slowestByHost[item.host] = item;
+        }
+    });
+    const slowest = Object.keys(slowestByHost).map((key) => slowestByHost[key])
+        .sort((left, right) => right.ms - left.ms).slice(0, 3);
+    const lines = [
+        infoLine("耗时", formatDuration(totalMs)),
+        infoLine("请求", `${success}/${requests.length} 成功`),
+        infoLine("版本", SCRIPT_VERSION),
+    ];
+    if (slowest.length) {
+        lines.push(mutedLine(`最慢 · ${slowest.map((item) => `${item.host} ${formatDuration(item.ms)}`).join("、")}`));
+    }
+    return lines.join("");
 }
 
 function mediaStatus(status) {
@@ -1605,6 +1810,7 @@ function requestText(url, options) {
 function request(method, url, options) {
     const config = options || {};
     return new Promise((resolve, reject) => {
+        const startedAt = Date.now();
         const backendRequest = String(url).indexOf(IPQUALITY_BACKEND) === 0;
         const requestOptions = {
             url,
@@ -1615,11 +1821,12 @@ function request(method, url, options) {
         if (numberOrNull(config.timeout) !== null) requestOptions.timeout = Number(config.timeout);
         if (typeof config.body !== "undefined") requestOptions.body = config.body;
         const callback = (error, response, body) => {
+            const status = Number(response && (response.status || response.statusCode));
+            recordRuntimeRequest(url, startedAt, error, status, config.allowHttpErrors);
             if (error) {
                 reject(new Error(String(error)));
                 return;
             }
-            const status = Number(response && (response.status || response.statusCode));
             if (!config.allowHttpErrors && (!Number.isFinite(status) || status < 200 || status >= 300)) {
                 reject(new Error(`HTTP ${status || "?"}`));
                 return;
@@ -1632,6 +1839,28 @@ function request(method, url, options) {
             $httpClient.get(requestOptions, callback);
         }
     });
+}
+
+function recordRuntimeRequest(url, startedAt, error, status, allowHttpErrors) {
+    const validStatus = Number.isFinite(status);
+    runtimeStats.requests.push({
+        host: requestHost(url),
+        ms: Math.max(0, Date.now() - startedAt),
+        status: validStatus ? status : 0,
+        ok: !error && (allowHttpErrors || (validStatus && status >= 200 && status < 300)),
+    });
+}
+
+function requestHost(url) {
+    const match = String(url || "").match(/^https?:\/\/([^/?#]+)/i);
+    return match ? match[1] : "未知来源";
+}
+
+function formatDuration(ms) {
+    const value = Number(ms);
+    if (!Number.isFinite(value) || value < 0) return "--";
+    if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 1 : 2)} 秒`;
+    return `${Math.round(value)} ms`;
 }
 
 function capture(promise) {
@@ -1698,7 +1927,11 @@ function parsePluginArguments(raw) {
 function positionalPluginArguments(values) {
     const keys = values.length === ARGUMENT_KEYS_R13.length
         ? ARGUMENT_KEYS_R13
-        : ARGUMENT_KEYS;
+        : values.length === ARGUMENT_KEYS_R14.length
+            ? ARGUMENT_KEYS_R14
+            : values.length === ARGUMENT_KEYS_R17.length
+                ? ARGUMENT_KEYS_R17
+                : ARGUMENT_KEYS;
     const result = {};
     keys.forEach((key, index) => {
         if (index < values.length) result[key] = values[index];

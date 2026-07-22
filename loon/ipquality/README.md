@@ -37,11 +37,13 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 | 地图通知 | 关闭 | 完成后发送通知；点按通知可在 Apple 地图查看 IP 数据库估算的位置 |
 | 显示基础信息 | 开启 | 显示基础信息分区 |
 | 显示出口分流 | 关闭 | 按出口 IP 分组显示探针来源、ASN、组织和国家 |
+| 显示 BGP 信息 | 关闭 | 通过 RIPEstat 查询 IPv4 前缀、Origin ASN、RPKI、PTR 和注册机构 |
 | 显示 IP 类型 | 关闭 | 显示各数据库的 IP 类型属性 |
 | 显示风险评分 | 开启 | 显示各数据库的原始风险评分 |
 | 显示风险因素 | 关闭 | 显示代理、VPN、Tor、机房等风险因素 |
 | 显示流媒体与 AI | 开启 | 显示流媒体与 AI 分区；关闭时同时跳过相关请求 |
-| 显示数据状态 | 关闭 | 显示成功来源、失败来源及出口一致性 |
+| 显示地区一致性 | 关闭 | 对比出口地区与各服务返回地区；地区不同只作提示，不反推出口 |
+| 显示数据状态 | 关闭 | 显示成功来源、失败来源、出口一致性、总耗时和最慢请求 |
 
 摘要卡始终显示。全部报告分区关闭时，报告只显示摘要与设置提示。“检测流媒体与 AI”是媒体检测总开关；“显示流媒体与 AI”关闭时不会发送媒体检测请求。
 
@@ -49,9 +51,11 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 - **基础信息**：出口 IP、ASN、组织、国家/地区、城市、时区、坐标及 IP 类型。
 - **出口分流**：按实际出口 IP 汇总既有探针来源，并标注主出口、分流出口及对应 ASN、组织和国家；该分区不会增加网络请求。
+- **BGP 网络身份**：通过 RIPE NCC RIPEstat 展示 IPv4 前缀、Origin ASN、持有者、RIR、RPKI 和 PTR；不将公开路由身份描述为实际回程。
 - **多源风险**：分别展示各数据库返回的类型、风险评分和代理/VPN/Tor/机房等标记；数据冲突时保留原始结果。
 - **服务可用性**：展示各服务本次请求的可用状态与地区。
-- **数据状态**：显示本次成功来源、未返回来源和出口是否存在差异。
+- **地区一致性**：汇总有明确地区的服务并与出口地区比较；不把地区差异直接判定为异常。
+- **数据状态**：显示本次成功来源、未返回来源、出口差异、总耗时、请求成功数和最慢来源。
 
 ## 数据说明
 
@@ -64,6 +68,9 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 | 日期 | 变更 |
 |---|---|
+| 2026-07-22 | r19：增加 RIPEstat BGP 网络身份分区，默认关闭、按需查询 |
+| 2026-07-22 | r18：数据状态增加总耗时、请求成功率、脚本版本和最慢来源 |
+| 2026-07-22 | r17：增加服务地区一致性分区，复用现有媒体检测结果 |
 | 2026-07-22 | r16：改用 `generic` 明确支持的键值字符串传递中文开关，修复结构化参数未生效 |
 | 2026-07-22 | r15：修复新版中文开关未生效，兼容 Loon 参数的对象、数组和字符串形态 |
 | 2026-07-22 | r14：增加出口分流矩阵，按出口 IP 汇总探针来源并复用 ASN 信息 |
@@ -83,3 +90,4 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 - [Roddy-D 的 Loon 节点质量查询插件](https://github.com/Roddy-D/Loon_plugins)
 - [xykt 的 IPQuality](https://github.com/xykt/IPQuality)
+- [RIPE NCC RIPEstat Data API](https://stat.ripe.net/docs/data-api/ripestat-data-api)
