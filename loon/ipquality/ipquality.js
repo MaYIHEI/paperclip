@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r25";
+const SCRIPT_VERSION = "2026-07-22.r26";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -77,15 +77,15 @@ const params = typeof $environment !== "undefined" && $environment.params
     : {};
 const nodeName = params.node || "";
 const maskIP = readSwitch("MaskIP", false);
-const mediaEnabled = readSwitch("MediaTest", true);
+const mediaEnabled = readSwitch("MediaTest", false);
 const mapNotificationEnabled = readSwitch("MapNotification", false);
-const foldSections = readSwitch("FoldSections", true);
+const foldSections = readSwitch("FoldSections", false);
 const sectionVisibility = {
-    basic: readSwitch("ShowBasic", true),
+    basic: readSwitch("ShowBasic", false),
     types: readSwitch("ShowTypes", false),
-    riskScores: readSwitch("ShowRiskScores", true),
+    riskScores: readSwitch("ShowRiskScores", false),
     riskFactors: readSwitch("ShowRiskFactors", false),
-    media: readSwitch("ShowMedia", true),
+    media: readSwitch("ShowMedia", false),
     regionConsistency: readSwitch("ShowRegionConsistency", false),
     dataStatus: readSwitch("ShowDataStatus", false),
     egressMatrix: readSwitch("ShowEgressMatrix", false),

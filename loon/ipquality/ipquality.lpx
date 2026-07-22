@@ -8,25 +8,25 @@
 #!loon_version=3.2.1(733)
 
 [Argument]
-MaskIP = switch,false,tag=隐藏 IP,desc=隐藏报告中 IP 的后半段，适合截图分享
-MediaTest = switch,true,tag=执行媒体与 AI 检测,desc=总开关；检测 TikTok、Disney+、Netflix、YouTube、Prime Video、Reddit 和 ChatGPT 探测端点
-MapNotification = switch,false,tag=地图通知,desc=完成后发送通知，点按后在 Apple 地图查看估算位置
-FoldSections = switch,true,tag=低负载报告,desc=使用折叠纯文本分区大幅减少页面节点；关闭后恢复完整彩色报告
-ShowBasic = switch,true,tag=显示基础信息,desc=显示出口 IP、位置、ASN、组织和坐标
-ShowEgressMatrix = switch,false,tag=显示出口分流,desc=按出口 IP 分组显示探针来源、ASN 和组织
-ShowBGP = switch,false,tag=显示 BGP 信息,desc=查询 IPv4 前缀、Origin ASN、RPKI、PTR 和注册机构
-ShowBGPPath = switch,false,tag=显示目标前缀 BGP 路径,desc=分析 RIPE RIS 到目标前缀的 AS Path、可见性和样本所含 ASN；不是节点回程
-ShowChinaHttp = switch,false,tag=测试运营商官网,desc=轻量访问电信、联通、移动全国官网，仅表示 HTTPS 可达性和总耗时
-ShowInboundRoute = switch,false,tag=测试外部探针入站路径,desc=由 Globalping 指定 ASN 中国探针向出口 IP 执行 traceroute；方向是入站
-ShowProbePing = switch,false,tag=测试外部探针 Ping,desc=显示指定 ASN 中国探针与出口 IP 的 ICMP 往返延迟、丢包和抖动
-ShowProbeMTR = switch,false,tag=测试外部探针 MTR,desc=显示指定 ASN 中国探针到出口 IP 的入站逐跳统计；路由器限速会影响表观丢包
-ShowStability = switch,false,tag=测试 HTTPS 稳定性,desc=经所选节点对三个 HTTPS 小响应目标各请求三次，显示成功率、中位数、P95 和波动
-ShowTypes = switch,false,tag=显示 IP 类型,desc=显示各数据库返回的使用类型与公司类型
-ShowRiskScores = switch,true,tag=显示风险评分,desc=显示各数据库的原始风险评分
-ShowRiskFactors = switch,false,tag=显示风险因素,desc=显示代理、VPN、Tor、机房等风险标记
-ShowMedia = switch,true,tag=显示媒体与 AI 结果,desc=控制报告分区；若地区一致性仍开启，媒体请求仍会执行
-ShowRegionConsistency = switch,false,tag=显示地区一致性,desc=对比出口地区与各服务返回地区，不同只作提示
-ShowDataStatus = switch,false,tag=显示数据状态,desc=显示成功来源、失败来源和出口一致性
+MaskIP = select,"false","true",tag=隐藏 IP,desc=false 为关闭，true 为开启；隐藏报告中 IP 的后半段
+MediaTest = select,"false","true",tag=执行媒体与 AI 检测,desc=false 为关闭，true 为开启；媒体检测总开关
+MapNotification = select,"false","true",tag=地图通知,desc=false 为关闭，true 为开启；完成后发送地图通知
+FoldSections = select,"false","true",tag=低负载报告,desc=false 为关闭，true 为开启；使用折叠纯文本分区减少页面节点
+ShowBasic = select,"false","true",tag=显示基础信息,desc=false 为关闭，true 为开启；显示出口 IP、位置和 ASN
+ShowEgressMatrix = select,"false","true",tag=显示出口分流,desc=false 为关闭，true 为开启；按出口 IP 分组显示探针来源
+ShowBGP = select,"false","true",tag=显示 BGP 信息,desc=false 为关闭，true 为开启；查询前缀、Origin ASN 和 RPKI
+ShowBGPPath = select,"false","true",tag=显示目标前缀 BGP 路径,desc=false 为关闭，true 为开启；分析 RIPE RIS 控制面路径
+ShowChinaHttp = select,"false","true",tag=测试运营商官网,desc=false 为关闭，true 为开启；测试三大运营商全国官网 HTTPS
+ShowInboundRoute = select,"false","true",tag=测试外部探针入站路径,desc=false 为关闭，true 为开启；Globalping 中国探针 traceroute
+ShowProbePing = select,"false","true",tag=测试外部探针 Ping,desc=false 为关闭，true 为开启；显示往返延迟、丢包和抖动
+ShowProbeMTR = select,"false","true",tag=测试外部探针 MTR,desc=false 为关闭，true 为开启；显示入站逐跳统计
+ShowStability = select,"false","true",tag=测试 HTTPS 稳定性,desc=false 为关闭，true 为开启；显示成功率、中位数和 P95
+ShowTypes = select,"false","true",tag=显示 IP 类型,desc=false 为关闭，true 为开启；显示数据库使用类型与公司类型
+ShowRiskScores = select,"false","true",tag=显示风险评分,desc=false 为关闭，true 为开启；显示数据库原始风险评分
+ShowRiskFactors = select,"false","true",tag=显示风险因素,desc=false 为关闭，true 为开启；显示代理、VPN、Tor 和机房标记
+ShowMedia = select,"false","true",tag=显示媒体与 AI 结果,desc=false 为关闭，true 为开启；显示媒体检测报告分区
+ShowRegionConsistency = select,"false","true",tag=显示地区一致性,desc=false 为关闭，true 为开启；比较出口与服务地区
+ShowDataStatus = select,"false","true",tag=显示数据状态,desc=false 为关闭，true 为开启；显示来源、出口和耗时状态
 
 [Script]
 generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, argument=[{MaskIP},{MediaTest},{MapNotification},{ShowBasic},{ShowEgressMatrix},{ShowBGP},{ShowBGPPath},{ShowChinaHttp},{ShowInboundRoute},{ShowProbePing},{ShowTypes},{ShowRiskScores},{ShowRiskFactors},{ShowMedia},{ShowRegionConsistency},{ShowDataStatus},{ShowProbeMTR},{ShowStability},{FoldSections}], enable=true
