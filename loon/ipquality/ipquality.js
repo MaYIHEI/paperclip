@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r13";
+const SCRIPT_VERSION = "2026-07-22.r14";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -37,6 +37,7 @@ const sectionVisibility = {
     riskFactors: readSwitch("ShowRiskFactors", false),
     media: readSwitch("ShowMedia", true),
     dataStatus: readSwitch("ShowDataStatus", false),
+    egressMatrix: readSwitch("ShowEgressMatrix", false),
 };
 
 console.log(`[INFO] 节点 IP 质量检测 ${SCRIPT_VERSION}`);
@@ -105,7 +106,13 @@ async function discoverIP() {
     });
 
     if (!observations.length) {
-        return { ip: "", ippure: null, ipapi: null, probe: { matched: 0, total: 0 } };
+        return {
+            ip: "",
+            ippure: null,
+            ipapi: null,
+            observations: [],
+            probe: { matched: 0, total: 0, unique: 0 },
+        };
     }
 
     const counts = {};
@@ -134,6 +141,7 @@ async function discoverIP() {
         ippure,
         ippureError,
         ipapi: matchingIpapi,
+        observations,
         probe: {
             matched: counts[ip],
             total: observations.length,
@@ -180,6 +188,7 @@ async function collectDatabases(ip, discovery) {
         _errors: {},
         _warnings: {},
         _probe: discovery.probe || { matched: 0, total: 0, unique: 0 },
+        _egress: buildEgressGroups(discovery.observations, ip),
     };
     keys.forEach((key, index) => {
         const value = settled[index].ok ? settled[index].value : null;
@@ -591,6 +600,9 @@ function render(ip, data, media) {
     const visibleSections = [];
     if (sectionVisibility.basic) {
         visibleSections.push(section("基础信息", renderBasic(basic)));
+    }
+    if (sectionVisibility.egressMatrix) {
+        visibleSections.push(section("出口分流", renderEgressMatrix(data._egress, basic)));
     }
     if (sectionVisibility.types) {
         visibleSections.push(section("IP 类型属性", renderTypeList(types)));
@@ -1298,6 +1310,47 @@ function buildAudit(data) {
     };
 }
 
+function buildEgressGroups(observations, primaryIP) {
+    const groups = {};
+    (Array.isArray(observations) ? observations : []).forEach((item) => {
+        const ip = normalizeIPAddress(item && item.ip);
+        if (!isIPv4(ip)) return;
+        if (!groups[ip]) {
+            const network = loonNetworkProfile(ip);
+            groups[ip] = {
+                ip,
+                primary: ip === normalizeIPAddress(primaryIP),
+                sources: [],
+                asn: network.asn,
+                organization: network.organization,
+                country: network.country,
+            };
+        }
+        const source = egressSourceName(item && item.source);
+        if (source && groups[ip].sources.indexOf(source) === -1) {
+            groups[ip].sources.push(source);
+        }
+    });
+    return Object.keys(groups).map((ip) => groups[ip]).sort((left, right) => {
+        if (left.primary !== right.primary) return left.primary ? -1 : 1;
+        return right.sources.length - left.sources.length;
+    });
+}
+
+function egressSourceName(source) {
+    const names = {
+        "ipinfo.check.place": "Check.Place",
+        "myip.check.place": "MyIP.Check.Place",
+        "ip-api": "ip-api",
+        ipify: "ipify",
+        "ident.me": "ident.me",
+        icanhazip: "icanhazip",
+        IPPure: "IPPure",
+        ipapi: "ipapi",
+    };
+    return names[source] || cleanValue(source);
+}
+
 function summaryCard(basic) {
     const asn = [basic.asn, basic.organization].filter(Boolean).join(" · ");
     return '<div style="margin-bottom:16px">'
@@ -1324,6 +1377,33 @@ function renderBasic(basic) {
         ["坐标", basic.coordinates],
     ].filter((row) => row[1]);
     return rows.map((row) => infoLine(row[0], row[1])).join("");
+}
+
+function renderEgressMatrix(groups, basic) {
+    const rows = Array.isArray(groups) ? groups : [];
+    if (!rows.length) return mutedLine("本次没有可显示的 IPv4 出口观测");
+    const probeCount = rows.reduce((total, item) => total + item.sources.length, 0);
+    const summary = rows.length > 1
+        ? `<span style="color:#ff9500;font-weight:700">检测到 ${rows.length} 个出口</span>`
+        : '<span style="color:#00a67d;font-weight:700">探针出口一致</span>';
+    const header = `<div style="margin-bottom:10px">${summary}`
+        + `<span style="color:#8e8e93;font-size:11px"> · ${probeCount} 个探针</span></div>`;
+    const content = rows.map((item, index) => {
+        const isPrimary = item.primary;
+        const asn = item.asn || (isPrimary && basic ? basic.asn : "");
+        const organization = item.organization || (isPrimary && basic ? basic.organization : "");
+        const identity = uniqueValues([asn, organization, item.country]).join(" · ");
+        const label = isPrimary ? "主出口" : `分流出口 ${index}`;
+        return '<div style="margin-bottom:11px">'
+            + `<div><span style="color:${isPrimary ? "#0A84FF" : "#ff9500"};font-size:11px;font-weight:700">${label}</span>`
+            + `&nbsp;&nbsp;<b>${escapeHtml(maskIPAddress(item.ip))}</b></div>`
+            + (identity
+                ? `<div style="margin-top:2px;color:#8e8e93;font-size:11px">${escapeHtml(identity)}</div>`
+                : "")
+            + `<div style="margin-top:3px;font-size:11px">${escapeHtml(item.sources.join("、"))}</div>`
+            + "</div>";
+    }).join("");
+    return header + content;
 }
 
 function postMapNotification(basic, displayNodeName) {
@@ -1591,6 +1671,7 @@ function loonNetworkProfile(ip) {
         asn: "",
         organization: "",
         route: "",
+        country: "",
     };
     if (typeof $utils === "undefined") return result;
     try {
@@ -1604,6 +1685,14 @@ function loonNetworkProfile(ip) {
         }
     } catch (error) {
         console.log(`[WARN] Loon ASO 查询失败: ${errorMessage(error)}`);
+    }
+    try {
+        if (typeof $utils.geoip === "function") {
+            const country = cleanValue($utils.geoip(ip)).toUpperCase();
+            result.country = country ? `${flagEmoji(country)} ${country}` : "";
+        }
+    } catch (error) {
+        console.log(`[WARN] Loon GeoIP 查询失败: ${errorMessage(error)}`);
     }
     return result;
 }
