@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r12";
+const SCRIPT_VERSION = "2026-07-22.r13";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -1550,7 +1550,13 @@ function capture(promise) {
 }
 
 function readSwitch(key, defaultValue) {
-    const value = $persistentStore.read(key);
+    let value;
+    if (typeof $argument !== "undefined" && $argument && typeof $argument === "object") {
+        value = $argument[key];
+    }
+    if (value === null || typeof value === "undefined" || value === "") {
+        value = $persistentStore.read(key);
+    }
     if (value === null || typeof value === "undefined" || value === "") return defaultValue;
     return !(value === false || value === 0 || value === "false" || value === "0");
 }

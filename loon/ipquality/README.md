@@ -30,17 +30,17 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 ## 插件参数
 
-| 参数 | 默认值 | 说明 |
+| 开关 | 默认值 | 说明 |
 |---|---:|---|
-| `MaskIP` | 关闭 | 隐藏报告中 IP 的后半段，适合截图分享 |
-| `MediaTest` | 开启 | 检测 TikTok、Disney+、Netflix、YouTube、Prime Video、Reddit、ChatGPT |
-| `MapNotification` | 关闭 | 完成后发送通知；点按通知可在 Apple 地图查看 IP 数据库估算的位置 |
-| `ShowBasic` | 开启 | 显示基础信息分区 |
-| `ShowTypes` | 关闭 | 显示各数据库的 IP 类型属性 |
-| `ShowRiskScores` | 开启 | 显示各数据库的原始风险评分 |
-| `ShowRiskFactors` | 关闭 | 显示代理、VPN、Tor、机房等风险因素 |
-| `ShowMedia` | 开启 | 显示流媒体与 AI 分区；关闭时同时跳过相关请求 |
-| `ShowDataStatus` | 关闭 | 显示成功来源、失败来源及出口一致性 |
+| 隐藏 IP | 关闭 | 隐藏报告中 IP 的后半段，适合截图分享 |
+| 检测流媒体与 AI | 开启 | 检测 TikTok、Disney+、Netflix、YouTube、Prime Video、Reddit、ChatGPT |
+| 地图通知 | 关闭 | 完成后发送通知；点按通知可在 Apple 地图查看 IP 数据库估算的位置 |
+| 显示基础信息 | 开启 | 显示基础信息分区 |
+| 显示 IP 类型 | 关闭 | 显示各数据库的 IP 类型属性 |
+| 显示风险评分 | 开启 | 显示各数据库的原始风险评分 |
+| 显示风险因素 | 关闭 | 显示代理、VPN、Tor、机房等风险因素 |
+| 显示流媒体与 AI | 开启 | 显示流媒体与 AI 分区；关闭时同时跳过相关请求 |
+| 显示数据状态 | 关闭 | 显示成功来源、失败来源及出口一致性 |
 
 摘要卡始终显示。六个报告分区全部关闭时，报告只显示摘要与设置提示。`MediaTest` 是媒体检测总开关；`ShowMedia` 关闭时不会发送媒体检测请求。
 
@@ -62,6 +62,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 | 日期 | 变更 |
 |---|---|
+| 2026-07-22 | r13：插件参数改为中文布尔开关，并兼容旧配置读取 |
 | 2026-07-22 | r12：增加六个报告分区开关，关闭流媒体分区时跳过相关请求 |
 | 2026-07-19 | r8：补充 ASN/组织、IPPure 分流出口识别、Apple 地图通知与多源稳定性修复 |
 | 2026-07-18 | r1：初版进入 testing |

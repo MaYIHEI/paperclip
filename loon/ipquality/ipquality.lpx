@@ -3,17 +3,19 @@
 #!openUrl=
 #!author=MaYIHEI[https://github.com/MaYIHEI]
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/loon/ipquality
-#!select = MaskIP,false,true
-#!select = MediaTest,true,false
-#!select = MapNotification,false,true
-#!select = ShowBasic,true,false
-#!select = ShowTypes,false,true
-#!select = ShowRiskScores,true,false
-#!select = ShowRiskFactors,false,true
-#!select = ShowMedia,true,false
-#!select = ShowDataStatus,false,true
 #!tag=节点,IP,风险,流媒体
 #!date=2026-07-22
 
+[Argument]
+MaskIP = switch,false,tag=隐藏 IP,desc=隐藏报告中 IP 的后半段，适合截图分享
+MediaTest = switch,true,tag=检测流媒体与 AI,desc=检测 TikTok、Disney+、Netflix、YouTube、Prime Video、Reddit 和 ChatGPT
+MapNotification = switch,false,tag=地图通知,desc=完成后发送通知，点按后在 Apple 地图查看估算位置
+ShowBasic = switch,true,tag=显示基础信息,desc=显示出口 IP、位置、ASN、组织和坐标
+ShowTypes = switch,false,tag=显示 IP 类型,desc=显示各数据库返回的使用类型与公司类型
+ShowRiskScores = switch,true,tag=显示风险评分,desc=显示各数据库的原始风险评分
+ShowRiskFactors = switch,false,tag=显示风险因素,desc=显示代理、VPN、Tor、机房等风险标记
+ShowMedia = switch,true,tag=显示流媒体与 AI,desc=关闭时隐藏该分区并跳过相关请求
+ShowDataStatus = switch,false,tag=显示数据状态,desc=显示成功来源、失败来源和出口一致性
+
 [Script]
-generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
+generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, argument=[{MaskIP},{MediaTest},{MapNotification},{ShowBasic},{ShowTypes},{ShowRiskScores},{ShowRiskFactors},{ShowMedia},{ShowDataStatus}], enable=true
