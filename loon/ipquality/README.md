@@ -38,6 +38,10 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 | 显示基础信息 | 开启 | 显示基础信息分区 |
 | 显示出口分流 | 关闭 | 按出口 IP 分组显示探针来源、ASN、组织和国家 |
 | 显示 BGP 信息 | 关闭 | 通过 RIPEstat 查询 IPv4 前缀、Origin ASN、RPKI、PTR 和注册机构 |
+| 显示 BGP 路径线索 | 关闭 | 展示 RIPE RIS 可见 AS Path、路由可见性及 CN2、9929、163、169、CMI、CMIN2 等 ASN 命中；不是实测回程 |
+| 测试重点地区三网 | 关闭 | 测试北京、上海、广东电信、联通、移动地区门户的 HTTP 连通和总耗时 |
+| 测试三网入站路径 | 关闭 | 使用 Globalping 三网探针向节点执行 ICMP traceroute；探针缺席时如实显示未覆盖 |
+| 测试节点端真实回程 | 关闭 | 调用用户自建的 HTTPS 诊断服务，展示真实回程与 ICMP/TCP 大包测试 |
 | 显示 IP 类型 | 关闭 | 显示各数据库的 IP 类型属性 |
 | 显示风险评分 | 开启 | 显示各数据库的原始风险评分 |
 | 显示风险因素 | 关闭 | 显示代理、VPN、Tor、机房等风险因素 |
@@ -52,6 +56,10 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 - **基础信息**：出口 IP、ASN、组织、国家/地区、城市、时区、坐标及 IP 类型。
 - **出口分流**：按实际出口 IP 汇总既有探针来源，并标注主出口、分流出口及对应 ASN、组织和国家；该分区不会增加网络请求。
 - **BGP 网络身份**：通过 RIPE NCC RIPEstat 展示 IPv4 前缀、Origin ASN、持有者、RIR、RPKI 和 PTR；不将公开路由身份描述为实际回程。
+- **BGP 路径线索**：展示 RIPE RIS 采集器可见的 AS Path、路由可见性和常见中国线路 ASN 命中。该结果属于公网控制面观察，即使命中 CN2/9929 也不代表节点实际回程经过。
+- **重点地区三网 HTTP**：并发访问北京、上海、广东三网地区门户，展示是否返回 HTTP 响应及总耗时。错误状态码仍表示网络已连通；结果包含代理、DNS、TCP、CDN 和服务端处理，不等同于省际 RTT。
+- **三网入站路径**：由 Globalping 的中国电信、联通、移动探针向节点 IPv4 执行 traceroute，展示探针城市、跳数和末跳耗时。方向是三网探针到节点，不作为节点回程结论。
+- **节点端真实回程**：仅在用户配置自建 HTTPS 诊断服务后运行。服务必须在被测节点或同一出口执行探测并返回路径及大包结果；插件依据实际跳点 ASN 标注 CN2、9929、163、169、CMI、CMIN2 等命中。
 - **多源风险**：分别展示各数据库返回的类型、风险评分和代理/VPN/Tor/机房等标记；数据冲突时保留原始结果。
 - **服务可用性**：展示各服务本次请求的可用状态与地区。
 - **地区一致性**：汇总有明确地区的服务并与出口地区比较；不把地区差异直接判定为异常。
@@ -68,6 +76,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 | 日期 | 变更 |
 |---|---|
+| 2026-07-22 | r20：增加 BGP 路径线索、北京/上海/广东三网 HTTP、Globalping 三网入站路径，以及可配置的节点端真实回程与 ICMP/TCP 大包增强接口 |
 | 2026-07-22 | r19：增加 RIPEstat BGP 网络身份分区，默认关闭、按需查询 |
 | 2026-07-22 | r18：数据状态增加总耗时、请求成功率、脚本版本和最慢来源 |
 | 2026-07-22 | r17：增加服务地区一致性分区，复用现有媒体检测结果 |
@@ -85,9 +94,12 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 - 流媒体结果只反映检测当时的网络响应，不代替登录账号后的实际播放。
 - 当前优先检测 IPv4，IPv6 尚未单独出报告。
 - Loon `generic` 没有原始 TCP 与节点 DNS 查询能力，因此无法等价提供 VPS 脚本中的 SMTP 25、DNSBL、DNS 泄漏、traceroute、MTU 或 NAT 类型检测。
+- 纯 Loon 模式不能从代理服务器发起 traceroute 或 ICMP/TCP 大包探测；真实回程分区需要用户自建节点端增强服务。增强接口使用 `GET <地址>?target=<IPv4>&family=4`，可选密钥通过 `Authorization: Bearer <密钥>` 发送。
+- 增强接口 JSON 可返回 `source`、`generatedAt`、`target`、`routes[]` 与 `tests[]`。`routes[].hops[].asn` 用于实际线路命中；`tests[]` 可包含 `carrier`、`region`、`protocol`、`packetSize`、`sent`、`received`、`loss`、`avg`、`jitter`。
 
 ## 致谢
 
 - [Roddy-D 的 Loon 节点质量查询插件](https://github.com/Roddy-D/Loon_plugins)
 - [xykt 的 IPQuality](https://github.com/xykt/IPQuality)
 - [RIPE NCC RIPEstat Data API](https://stat.ripe.net/docs/data-api/ripestat-data-api)
+- [Globalping](https://globalping.io/)

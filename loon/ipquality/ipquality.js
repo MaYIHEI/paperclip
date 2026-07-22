@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r19";
+const SCRIPT_VERSION = "2026-07-22.r20";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -38,7 +38,8 @@ const ARGUMENT_KEYS_R17 = [
 const ARGUMENT_KEYS = [
     "MaskIP", "MediaTest", "MapNotification", "ShowBasic", "ShowEgressMatrix",
     "ShowBGP", "ShowTypes", "ShowRiskScores", "ShowRiskFactors", "ShowMedia",
-    "ShowRegionConsistency", "ShowDataStatus",
+    "ShowRegionConsistency", "ShowDataStatus", "ShowBGPPath", "ShowChinaHttp",
+    "ShowInboundRoute", "ShowEnhancedRoute", "EnhancedEndpoint", "EnhancedToken",
 ];
 const pluginArguments = parsePluginArguments(
     typeof $argument !== "undefined" ? $argument : null
@@ -65,7 +66,13 @@ const sectionVisibility = {
     dataStatus: readSwitch("ShowDataStatus", false),
     egressMatrix: readSwitch("ShowEgressMatrix", false),
     bgp: readSwitch("ShowBGP", false),
+    bgpPath: readSwitch("ShowBGPPath", false),
+    chinaHttp: readSwitch("ShowChinaHttp", false),
+    inboundRoute: readSwitch("ShowInboundRoute", false),
+    enhancedRoute: readSwitch("ShowEnhancedRoute", false),
 };
+const enhancedEndpoint = readArgument("EnhancedEndpoint");
+const enhancedToken = readArgument("EnhancedToken");
 
 console.log(`[INFO] 节点 IP 质量检测 ${SCRIPT_VERSION}`);
 console.log(`[INFO] 节点: ${nodeName || "未获取"}`);
@@ -87,13 +94,29 @@ async function run() {
         && (sectionVisibility.media || sectionVisibility.regionConsistency)
         ? collectMedia()
         : Promise.resolve([]);
-    const bgpTask = sectionVisibility.bgp ? collectBGP(ip) : Promise.resolve(null);
-    const results = await Promise.all([databaseTask, mediaTask, bgpTask]);
+    const bgpTask = sectionVisibility.bgp || sectionVisibility.bgpPath
+        ? collectBGP(ip, sectionVisibility.bgpPath)
+        : Promise.resolve(null);
+    const chinaHttpTask = sectionVisibility.chinaHttp
+        ? collectChinaHttp()
+        : Promise.resolve(null);
+    const inboundTask = sectionVisibility.inboundRoute
+        ? collectInboundRoutes(ip)
+        : Promise.resolve(null);
+    const enhancedTask = sectionVisibility.enhancedRoute
+        ? collectEnhancedRoute(ip)
+        : Promise.resolve(null);
+    const results = await Promise.all([
+        databaseTask, mediaTask, bgpTask, chinaHttpTask, inboundTask, enhancedTask,
+    ]);
     results[0]._bgp = results[2];
+    results[0]._chinaHttp = results[3];
+    results[0]._inboundRoutes = results[4];
+    results[0]._enhancedRoute = results[5];
     render(ip, results[0], results[1]);
 }
 
-async function collectBGP(ip) {
+async function collectBGP(ip, includePaths) {
     if (!isIPv4(ip)) return { error: "仅查询 IPv4 网络身份" };
     const networkResult = await capture(requestRipeStat("network-info", { resource: ip }));
     if (!networkResult.ok) return { error: `网络信息未返回：${networkResult.error}` };
@@ -106,6 +129,11 @@ async function collectBGP(ip) {
         capture(requestRipeStat("prefix-overview", { resource: prefix })),
         capture(requestRipeStat("reverse-dns-ip", { resource: ip })),
     ];
+    if (includePaths) {
+        tasks.push(capture(requestRipeStat("looking-glass", { resource: prefix })));
+        tasks.push(capture(requestRipeStat("routing-status", { resource: prefix })));
+    }
+    const fixedTaskCount = tasks.length;
     asns.forEach((asn) => {
         tasks.push(capture(requestRipeStat("rpki-validation", {
             resource: asn,
@@ -122,7 +150,7 @@ async function collectBGP(ip) {
         if (asn) holderByAsn[asn] = cleanValue(item.holder);
     });
     const rpki = asns.map((asn, index) => {
-        const result = settled[index + 2];
+        const result = settled[index + fixedTaskCount];
         return {
             asn,
             status: result && result.ok ? String(result.value.status || "").trim().toLowerCase() : "",
@@ -133,6 +161,10 @@ async function collectBGP(ip) {
     if (!settled[0].ok) errors.push("前缀概览");
     if (!settled[1].ok) errors.push("PTR");
     if (rpki.some((item) => !item.status)) errors.push("RPKI");
+    const lookingGlass = includePaths && settled[2] && settled[2].ok ? settled[2].value : null;
+    const routingStatus = includePaths && settled[3] && settled[3].ok ? settled[3].value : null;
+    if (includePaths && !lookingGlass) errors.push("AS Path");
+    if (includePaths && !routingStatus) errors.push("路由可见性");
     return {
         prefix,
         asns,
@@ -143,6 +175,7 @@ async function collectBGP(ip) {
         rpki,
         ptr: cleanValue(reverse.result),
         queryTime: cleanValue(overview.query_time),
+        pathAnalysis: includePaths ? buildBGPPathAnalysis(lookingGlass, routingStatus) : null,
         errors,
     };
 }
@@ -159,6 +192,237 @@ async function requestRipeStat(endpoint, params) {
         throw new Error(cleanValue(payload && payload.message) || "RIPEstat 响应无效");
     }
     return payload.data;
+}
+
+function buildBGPPathAnalysis(lookingGlass, routingStatus) {
+    const paths = [];
+    const collectors = Array.isArray(lookingGlass && lookingGlass.rrcs)
+        ? lookingGlass.rrcs : [];
+    collectors.forEach((collector) => {
+        const peers = Array.isArray(collector && collector.peers) ? collector.peers : [];
+        peers.forEach((peer) => {
+            const path = normalizeASPath(peer && peer.as_path);
+            if (!path.length) return;
+            paths.push({
+                collector: cleanValue(collector.location) || cleanValue(collector.rrc),
+                path,
+            });
+        });
+    });
+    const uniquePaths = [];
+    const seen = {};
+    paths.forEach((item) => {
+        const key = item.path.join(" ");
+        if (seen[key]) return;
+        seen[key] = true;
+        uniquePaths.push(item);
+    });
+    const allAsns = uniqueValues(paths.reduce((list, item) => list.concat(item.path), []));
+    const clues = CHINA_ROUTE_ASNS.map((definition) => {
+        const count = paths.filter((item) => item.path.indexOf(definition.asn) !== -1).length;
+        return count ? { asn: definition.asn, name: definition.name, count } : null;
+    }).filter(Boolean);
+    const visibility = valueAt(routingStatus, "visibility.v4") || {};
+    return {
+        collectorCount: collectors.length,
+        pathCount: paths.length,
+        uniquePaths: uniquePaths.slice(0, 4),
+        allAsns,
+        clues,
+        peersSeeing: numberOrNull(visibility.ris_peers_seeing),
+        totalPeers: numberOrNull(visibility.total_ris_peers),
+        queryTime: cleanValue(routingStatus && routingStatus.query_time)
+            || cleanValue(lookingGlass && lookingGlass.latest_time),
+    };
+}
+
+function normalizeASPath(value) {
+    const values = Array.isArray(value) ? value : String(value || "").match(/\d+/g) || [];
+    return uniqueConsecutive(values.map(cleanASN).filter(Boolean));
+}
+
+const CHINA_ROUTE_ASNS = [
+    { asn: "4809", name: "电信 CN2" },
+    { asn: "9929", name: "联通 9929" },
+    { asn: "4134", name: "电信 163" },
+    { asn: "4837", name: "联通 169" },
+    { asn: "58453", name: "移动 CMI" },
+    { asn: "58807", name: "移动 CMIN2" },
+    { asn: "23764", name: "电信 CTGNet" },
+];
+
+const CHINA_HTTP_TARGETS = [
+    { region: "北京", carrier: "电信", url: "http://bj.189.cn/" },
+    { region: "上海", carrier: "电信", url: "http://sh.189.cn/" },
+    { region: "广东", carrier: "电信", url: "http://gd.189.cn/" },
+    { region: "北京", carrier: "联通", url: "http://bj.10010.com/" },
+    { region: "上海", carrier: "联通", url: "http://sh.10010.com/" },
+    { region: "广东", carrier: "联通", url: "http://gd.10010.com/" },
+    { region: "北京", carrier: "移动", url: "http://bj.10086.cn/" },
+    { region: "上海", carrier: "移动", url: "http://www.sh.10086.cn/" },
+    { region: "广东", carrier: "移动", url: "http://gd.10086.cn/" },
+];
+
+async function collectChinaHttp() {
+    const settled = await Promise.all(CHINA_HTTP_TARGETS.map(async (target) => {
+        const startedAt = Date.now();
+        const result = await capture(request("GET", target.url, {
+            timeout: 6500,
+            allowHttpErrors: true,
+            headers: browserHeaders(),
+        }));
+        const response = result.ok ? result.value : null;
+        return {
+            region: target.region,
+            carrier: target.carrier,
+            host: requestHost(target.url),
+            ok: !!(response && response.status),
+            status: response ? response.status : 0,
+            ms: Math.max(0, Date.now() - startedAt),
+            error: result.ok ? "" : result.error,
+        };
+    }));
+    return settled;
+}
+
+async function collectInboundRoutes(ip) {
+    if (!isIPv4(ip)) return { error: "仅支持 IPv4 目标" };
+    const body = JSON.stringify({
+        type: "traceroute",
+        target: ip,
+        locations: [
+            { magic: "AS4134", limit: 1 },
+            { magic: "AS4837", limit: 1 },
+            { magic: "AS58453", limit: 1 },
+        ],
+        measurementOptions: { protocol: "ICMP" },
+    });
+    const created = await capture(requestJson("https://api.globalping.io/v1/measurements", {
+        method: "POST",
+        node: "DIRECT",
+        timeout: 8000,
+        body,
+        headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "paperclip-ipquality/1.0",
+        },
+    }));
+    if (!created.ok || !created.value || !created.value.id) {
+        return { error: `Globalping 创建测量失败：${created.error || "未返回任务编号"}` };
+    }
+    let measurement = null;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+        await delay(attempt ? 1400 : 900);
+        const polled = await capture(requestJson(
+            `https://api.globalping.io/v1/measurements/${encodeURIComponent(created.value.id)}`,
+            { node: "DIRECT", timeout: 8000 }
+        ));
+        if (polled.ok) measurement = polled.value;
+        if (measurement && measurement.status !== "in-progress") break;
+    }
+    if (!measurement) return { error: "Globalping 测量结果未返回" };
+    return parseInboundMeasurement(measurement);
+}
+
+function parseInboundMeasurement(measurement) {
+    const routes = (Array.isArray(measurement && measurement.results)
+        ? measurement.results : []).map((item) => {
+        const probe = item.probe || {};
+        const result = item.result || {};
+        const hops = Array.isArray(result.hops) ? result.hops : [];
+        const lastHop = hops.slice().reverse().find((hop) => {
+            return Array.isArray(hop && hop.timings) && hop.timings.some((timing) => {
+                return numberOrNull(timing && timing.rtt) !== null;
+            });
+        });
+        const rtts = lastHop && Array.isArray(lastHop.timings)
+            ? lastHop.timings.map((timing) => numberOrNull(timing && timing.rtt)).filter((v) => v !== null)
+            : [];
+        const hopAsns = uniqueValues(hops.map((hop) => {
+            const hopIP = normalizeIPAddress(hop && hop.resolvedAddress);
+            return hopIP ? loonNetworkProfile(hopIP).asn : "";
+        }).filter(Boolean));
+        return {
+            carrier: carrierByASN(cleanASN(probe.asn)),
+            asn: cleanASN(probe.asn),
+            network: cleanValue(probe.network),
+            location: uniqueValues([probe.city, probe.state, probe.country]).join(" · "),
+            status: cleanValue(result.status),
+            hopCount: hops.length,
+            reached: normalizeIPAddress(result.resolvedAddress) === normalizeIPAddress(measurement.target),
+            lastRtt: rtts.length ? round(rtts.reduce((sum, value) => sum + value, 0) / rtts.length, 2) : null,
+            routeClues: classifyASNList(hopAsns),
+        };
+    });
+    return {
+        id: cleanValue(measurement.id),
+        target: cleanValue(measurement.target),
+        status: cleanValue(measurement.status),
+        routes,
+        missing: ["电信", "联通", "移动"].filter((carrier) => !routes.some((route) => route.carrier === carrier)),
+    };
+}
+
+async function collectEnhancedRoute(ip) {
+    if (!enhancedEndpoint) return { unconfigured: true };
+    if (!/^https:\/\//i.test(enhancedEndpoint)) {
+        return { error: "增强服务地址必须使用 HTTPS" };
+    }
+    const separator = enhancedEndpoint.indexOf("?") === -1 ? "?" : "&";
+    const headers = { Accept: "application/json", "User-Agent": "paperclip-ipquality/1.0" };
+    if (enhancedToken) headers.Authorization = `Bearer ${enhancedToken}`;
+    const result = await capture(requestJson(
+        `${enhancedEndpoint}${separator}target=${encodeURIComponent(ip)}&family=4`,
+        { node: "DIRECT", timeout: 20000, headers }
+    ));
+    if (!result.ok) return { error: result.error };
+    return normalizeEnhancedResult(result.value, ip);
+}
+
+function normalizeEnhancedResult(payload, ip) {
+    if (!payload || typeof payload !== "object") return { error: "增强服务响应格式无效" };
+    const routes = Array.isArray(payload.routes) ? payload.routes : [];
+    const tests = Array.isArray(payload.tests) ? payload.tests : [];
+    return {
+        source: cleanValue(payload.source),
+        generatedAt: cleanValue(payload.generatedAt || payload.generated_at),
+        target: cleanValue(payload.target) || ip,
+        routes: routes.map((route) => {
+            const hops = Array.isArray(route.hops) ? route.hops : [];
+            const asns = uniqueValues(hops.map((hop) => cleanASN(hop && hop.asn)).filter(Boolean));
+            return {
+                carrier: cleanValue(route.carrier) || "未标注",
+                region: cleanValue(route.region),
+                protocol: cleanValue(route.protocol),
+                reached: route.reached === true,
+                hopCount: hops.length,
+                clues: classifyASNList(asns),
+            };
+        }),
+        tests: tests.map((test) => ({
+            carrier: cleanValue(test.carrier) || "未标注",
+            region: cleanValue(test.region),
+            protocol: cleanValue(test.protocol),
+            packetSize: numberOrNull(test.packetSize || test.packet_size),
+            sent: numberOrNull(test.sent),
+            received: numberOrNull(test.received),
+            loss: numberOrNull(test.loss),
+            avg: numberOrNull(test.avg || test.average),
+            jitter: numberOrNull(test.jitter),
+        })),
+    };
+}
+
+function classifyASNList(asns) {
+    const values = uniqueValues(asns || []);
+    return CHINA_ROUTE_ASNS.filter((item) => values.indexOf(item.asn) !== -1)
+        .map((item) => item.name);
+}
+
+function carrierByASN(asn) {
+    const values = { "4134": "电信", "4837": "联通", "58453": "移动" };
+    return values[asn] || (asn ? `AS${asn}` : "未知探针");
 }
 
 async function discoverIP() {
@@ -704,8 +968,20 @@ function render(ip, data, media) {
     if (sectionVisibility.bgp) {
         visibleSections.push(section("BGP 网络身份", renderBGP(data._bgp)));
     }
+    if (sectionVisibility.bgpPath) {
+        visibleSections.push(section("BGP 路径线索", renderBGPPath(data._bgp && data._bgp.pathAnalysis)));
+    }
     if (sectionVisibility.egressMatrix) {
         visibleSections.push(section("出口分流", renderEgressMatrix(data._egress, basic)));
+    }
+    if (sectionVisibility.chinaHttp) {
+        visibleSections.push(section("重点地区三网 HTTP", renderChinaHttp(data._chinaHttp)));
+    }
+    if (sectionVisibility.inboundRoute) {
+        visibleSections.push(section("三网入站路径", renderInboundRoutes(data._inboundRoutes)));
+    }
+    if (sectionVisibility.enhancedRoute) {
+        visibleSections.push(section("节点端真实回程", renderEnhancedRoute(data._enhancedRoute)));
     }
     if (sectionVisibility.types) {
         visibleSections.push(section("IP 类型属性", renderTypeList(types)));
@@ -743,7 +1019,7 @@ function render(ip, data, media) {
         '<div style="font-size:9px;line-height:9px">&nbsp;</div>',
         '<div style="color:#8e8e93;font-size:10px;line-height:1.45">'
             + '类型名称、评分分档与风险字段遵循 xykt/IPQuality 的展示口径；各库结果独立展示，不生成综合结论。'
-            + '聚合来源不可用时保留直连结果。Loon 不提供节点 TCP/DNS API，25 端口与 DNSBL 未检测。</div>',
+            + '聚合来源不可用时保留直连结果。BGP 与外部探针结果不会标记为真实回程；只有节点端增强服务返回的数据进入真实回程分区。</div>',
         '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
         '<div style="font-size:56px;line-height:56px">&nbsp;</div>',
         "</div>",
@@ -1560,6 +1836,107 @@ function renderBGP(bgp) {
         + missing;
 }
 
+function renderBGPPath(analysis) {
+    if (!analysis || !analysis.pathCount) {
+        return mutedLine("RIPE RIS 本次没有返回可分析的 AS Path");
+    }
+    const visibility = analysis.peersSeeing !== null && analysis.totalPeers !== null
+        ? `${analysis.peersSeeing} / ${analysis.totalPeers} 个 RIS 全表邻居`
+        : "未返回";
+    const clues = analysis.clues && analysis.clues.length
+        ? analysis.clues.map((item) => `${item.name}（AS${item.asn}，${item.count} 条）`).join("、")
+        : "未命中常见中国线路 ASN";
+    const paths = (analysis.uniquePaths || []).map((item, index) => {
+        return '<div style="margin:7px 0">'
+            + `<div style="color:#8e8e93;font-size:10px">样本 ${index + 1}${item.collector ? ` · ${escapeHtml(item.collector)}` : ""}</div>`
+            + `<div style="font-size:11px;line-height:1.5">${escapeHtml(item.path.map((asn) => `AS${asn}`).join(" → "))}</div>`
+            + "</div>";
+    }).join("");
+    return infoLine("RIS 可见性", visibility)
+        + infoLine("路径样本", `${analysis.pathCount} 条 · ${analysis.collectorCount} 个采集器`)
+        + infoLine("线路命中", clues)
+        + paths
+        + mutedLine("这是 RIPE RIS 采集到的公网 BGP 控制面路径，只能作为线路线索，不代表本次节点回程。CN2/9929 命中也不等于实测经过。 ");
+}
+
+function renderChinaHttp(results) {
+    const rows = Array.isArray(results) ? results : [];
+    if (!rows.length) return mutedLine("本次没有三网 HTTP 结果");
+    const success = rows.filter((item) => item.ok).length;
+    const header = infoLine("连通", `${success} / ${rows.length} 个地区门户返回 HTTP 响应`);
+    const regions = ["北京", "上海", "广东"].map((region) => {
+        const items = rows.filter((item) => item.region === region);
+        const detail = items.map((item) => {
+            const status = item.ok ? `${item.ms} ms · HTTP ${item.status}` : `失败 · ${truncateText(item.error, 24)}`;
+            const color = item.ok ? latencyColor(item.ms) : "#ff3b30";
+            return `<div style="margin-top:3px"><span style="display:inline-block;width:34px;color:#8e8e93">${escapeHtml(item.carrier)}</span>`
+                + `<span style="color:${color};font-weight:600">${escapeHtml(status)}</span></div>`;
+        }).join("");
+        return `<div style="margin:9px 0"><div style="font-size:12px;font-weight:700">${escapeHtml(region)}</div>${detail}</div>`;
+    }).join("");
+    return header + regions
+        + mutedLine("实测为手机 → 所选节点 → 运营商地区门户的 HTTP 总耗时，包含代理、DNS、TCP、CDN 与服务端处理；HTTP 错误码仍表示网络已连通，不等同于省际 RTT。 ");
+}
+
+function renderInboundRoutes(result) {
+    if (!result || result.error) return mutedLine(result && result.error || "本次没有入站路径结果");
+    const rows = Array.isArray(result.routes) ? result.routes : [];
+    const content = rows.map((route) => {
+        const identity = uniqueValues([
+            route.carrier,
+            route.asn ? `AS${route.asn}` : "",
+            route.location,
+        ]).join(" · ");
+        const status = route.reached
+            ? `到达目标 · ${route.hopCount} 跳${route.lastRtt !== null ? ` · ${route.lastRtt} ms` : ""}`
+            : `${route.status || "未完成"} · ${route.hopCount} 跳`;
+        const clues = route.routeClues && route.routeClues.length
+            ? `<div style="margin-top:2px;color:#ff9500;font-size:10px">路径关键词 · ${escapeHtml(route.routeClues.join("、"))}</div>`
+            : "";
+        return '<div style="margin:9px 0">'
+            + `<div style="font-size:12px;font-weight:700">${escapeHtml(identity)}</div>`
+            + `<div style="margin-top:2px;font-size:11px;color:${route.reached ? "#00a67d" : "#8e8e93"}">${escapeHtml(status)}</div>`
+            + clues + "</div>";
+    }).join("");
+    const missing = result.missing && result.missing.length
+        ? mutedLine(`当前无可用探针 · ${result.missing.join("、")}`) : "";
+    return content + missing
+        + mutedLine(`Globalping 测量 ${result.id || "--"}；方向为中国运营商探针 → 节点，只是入站路径，绝不作为节点回程结论。`);
+}
+
+function renderEnhancedRoute(result) {
+    if (!result) return mutedLine("本次没有增强服务结果");
+    if (result.unconfigured) {
+        return mutedLine("已开启但未填写增强服务地址；请在插件设置中配置自有 VPS 上的 HTTPS 诊断接口。 ");
+    }
+    if (result.error) return mutedLine(`增强服务失败：${result.error}`);
+    const routes = (result.routes || []).map((route) => {
+        const name = uniqueValues([route.region, route.carrier, route.protocol]).join(" · ");
+        const status = route.reached ? `已到达 · ${route.hopCount} 跳` : `未确认到达 · ${route.hopCount} 跳`;
+        const clues = route.clues && route.clues.length ? ` · ${route.clues.join("、")}` : "";
+        return infoLine(name || "回程", `${status}${clues}`);
+    }).join("");
+    const tests = (result.tests || []).map((test) => {
+        const name = uniqueValues([test.region, test.carrier, test.protocol]).join(" · ") || "大包测试";
+        const packet = test.packetSize !== null ? `${test.packetSize} B` : "包长未知";
+        const loss = test.loss !== null ? `${test.loss}% 丢包` : "丢包未知";
+        const latency = test.avg !== null ? `${test.avg} ms` : "延迟未知";
+        const jitter = test.jitter !== null ? ` · 抖动 ${test.jitter} ms` : "";
+        return infoLine(name, `${packet} · ${latency} · ${loss}${jitter}`);
+    }).join("");
+    const meta = uniqueValues([result.source, result.generatedAt]).join(" · ");
+    return (routes || mutedLine("增强服务没有返回回程路径"))
+        + (tests || mutedLine("增强服务没有返回 ICMP/TCP 大包数据"))
+        + (meta ? mutedLine(`节点端数据 · ${meta}`) : "")
+        + mutedLine("该分区仅展示用户自建节点端服务返回的源站测量；线路名称依据实际跳点 ASN 命中。 ");
+}
+
+function latencyColor(ms) {
+    if (ms < 300) return "#00a67d";
+    if (ms < 900) return "#ff9500";
+    return "#ff3b30";
+}
+
 function rpkiStatusText(status) {
     const values = {
         valid: "有效",
@@ -1870,6 +2247,21 @@ function capture(promise) {
     );
 }
 
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function readArgument(key) {
+    let value;
+    if (pluginArguments && Object.prototype.hasOwnProperty.call(pluginArguments, key)) {
+        value = pluginArguments[key];
+    }
+    if (value === null || typeof value === "undefined" || value === "") {
+        value = $persistentStore.read(key);
+    }
+    return cleanValue(value);
+}
+
 function readSwitch(key, defaultValue) {
     let value;
     if (pluginArguments && Object.prototype.hasOwnProperty.call(pluginArguments, key)) {
@@ -2036,6 +2428,12 @@ function uniqueValues(values) {
         if (clean && result.indexOf(clean) < 0) result.push(clean);
     });
     return result;
+}
+
+function uniqueConsecutive(values) {
+    return (Array.isArray(values) ? values : []).filter((value, index, list) => {
+        return index === 0 || value !== list[index - 1];
+    });
 }
 
 function mergeFallback(primary, fallback) {
