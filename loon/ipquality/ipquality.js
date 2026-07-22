@@ -7,14 +7,14 @@
  * @Reference: @Roddy-D <https://github.com/Roddy-D/Loon_plugins>
  * @Reference: @xykt <https://github.com/xykt/IPQuality>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-19
+ * @Updated: 2026-07-22
  *
  * ===== Loon =====
  * [Script]
- * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
+ * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-19.r8";
+const SCRIPT_VERSION = "2026-07-22.r12";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -30,6 +30,14 @@ const nodeName = params.node || "";
 const maskIP = readSwitch("MaskIP", false);
 const mediaEnabled = readSwitch("MediaTest", true);
 const mapNotificationEnabled = readSwitch("MapNotification", false);
+const sectionVisibility = {
+    basic: readSwitch("ShowBasic", true),
+    types: readSwitch("ShowTypes", false),
+    riskScores: readSwitch("ShowRiskScores", true),
+    riskFactors: readSwitch("ShowRiskFactors", false),
+    media: readSwitch("ShowMedia", true),
+    dataStatus: readSwitch("ShowDataStatus", false),
+};
 
 console.log(`[INFO] 节点 IP 质量检测 ${SCRIPT_VERSION}`);
 console.log(`[INFO] 节点: ${nodeName || "未获取"}`);
@@ -46,7 +54,9 @@ async function run() {
 
     const ip = discovery.ip;
     const databaseTask = collectDatabases(ip, discovery);
-    const mediaTask = mediaEnabled ? collectMedia() : Promise.resolve([]);
+    const mediaTask = mediaEnabled && sectionVisibility.media
+        ? collectMedia()
+        : Promise.resolve([]);
     const results = await Promise.all([databaseTask, mediaTask]);
     render(ip, results[0], results[1]);
 }
@@ -578,20 +588,38 @@ function render(ip, data, media) {
     const titleColor = reportColor(risks);
     const displayNodeName = truncateText(nodeName, 30);
 
+    const visibleSections = [];
+    if (sectionVisibility.basic) {
+        visibleSections.push(section("基础信息", renderBasic(basic)));
+    }
+    if (sectionVisibility.types) {
+        visibleSections.push(section("IP 类型属性", renderTypeList(types)));
+    }
+    if (sectionVisibility.riskScores) {
+        visibleSections.push(section("风险评分", renderRiskList(risks)));
+    }
+    if (sectionVisibility.riskFactors) {
+        visibleSections.push(section("风险因素", renderFactorCards(factors)));
+    }
+    if (sectionVisibility.media) {
+        visibleSections.push(section("流媒体与 AI", mediaEnabled
+            ? renderMediaList(media)
+            : mutedLine("流媒体检测已关闭")));
+    }
+    if (sectionVisibility.dataStatus) {
+        visibleSections.push(section("数据状态", renderAudit(audit, data._probe)));
+    }
+    if (!visibleSections.length) {
+        visibleSections.push(mutedLine("请在插件设置中选择报告分区"));
+    }
+
     const html = [
         '<div style="font-family:-apple-system,BlinkMacSystemFont;font-size:14px;line-height:1.5;text-align:left;overflow-wrap:anywhere">',
         '<div style="font-size:18px;line-height:18px">&nbsp;</div>',
         '<div style="font-size:20px;font-weight:700;line-height:1.25;margin-bottom:16px">节点 IP 质量检测</div>',
         `<div style="color:#8e8e93;font-size:11px;margin-bottom:10px">节点 · ${escapeHtml(displayNodeName)}</div>`,
         summaryCard(basic),
-        section("基础信息", renderBasic(basic)),
-        section("IP 类型属性", renderTypeList(types)),
-        section("风险评分", renderRiskList(risks)),
-        section("风险因素", renderFactorCards(factors)),
-        section("流媒体与 AI", mediaEnabled
-            ? renderMediaList(media)
-            : mutedLine("流媒体检测已关闭")),
-        section("数据状态", renderAudit(audit, data._probe)),
+        visibleSections.join(""),
         '<div style="font-size:9px;line-height:9px">&nbsp;</div>',
         '<div style="color:#8e8e93;font-size:10px;line-height:1.45">'
             + '类型名称、评分分档与风险字段遵循 xykt/IPQuality 的展示口径；各库结果独立展示，不生成综合结论。'
