@@ -28,6 +28,10 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 `https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.lpx`
 
+最新版 Loon 可测试按钮式参数版；它使用短参数避免超长 generic 配置行，确认真机稳定后再替换正式版：
+
+`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality-switch.lpx`
+
 ## 插件参数
 
 | 选项 | 默认值 | 说明 |
@@ -87,6 +91,7 @@ generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/hea
 
 | 日期 | 变更 |
 |---|---|
+| 2026-07-22 | r28：保留正式下拉版，新增最新版 Loon 按钮测试版；19 个 switch 使用 `a`–`s` 短参数按官方对象格式传入，JS 优先读取按钮参数并保留持久化回退 |
 | 2026-07-22 | r27：完全对齐原作者 generic 插件写法，改用中文 `#!select` 与 `$persistentStore.read()`；移除 `[Argument]`、`argument` 及多格式兼容解析 |
 | 2026-07-22 | r26：按真机兼容方案改回 `select`，所有配置项统一为第一项 `false`、第二项 `true`，插件与脚本默认值全部关闭 |
 | 2026-07-22 | r25：按 Loon 官方 `[Argument]` 协议改用 `argument=[{参数}]`，脚本直接读取 `$argument` 对象；删除会混入历史状态的持久化开关回退 |

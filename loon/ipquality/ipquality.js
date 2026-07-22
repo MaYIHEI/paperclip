@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r27";
+const SCRIPT_VERSION = "2026-07-22.r28";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -44,6 +44,16 @@ const PERSISTENT_SWITCH_KEYS = {
     ShowRegionConsistency: "显示地区一致性",
     ShowDataStatus: "显示数据状态",
 };
+const COMPACT_ARGUMENT_KEYS = [
+    "MaskIP", "MediaTest", "MapNotification", "FoldSections", "ShowBasic",
+    "ShowEgressMatrix", "ShowBGP", "ShowBGPPath", "ShowChinaHttp",
+    "ShowInboundRoute", "ShowProbePing", "ShowProbeMTR", "ShowStability",
+    "ShowTypes", "ShowRiskScores", "ShowRiskFactors", "ShowMedia",
+    "ShowRegionConsistency", "ShowDataStatus",
+];
+const argumentSwitches = readCompactArguments(
+    typeof $argument !== "undefined" ? $argument : null
+);
 const runtimeStats = {
     startedAt: Date.now(),
     requests: [],
@@ -77,7 +87,7 @@ const sectionVisibility = {
 
 console.log(`[INFO] 节点 IP 质量检测 ${SCRIPT_VERSION}`);
 console.log(`[INFO] 节点: ${nodeName || "未获取"}`);
-console.log("[INFO] 插件选项: 已从 Loon 持久化配置读取");
+console.log(`[INFO] 插件选项: ${argumentSwitches ? "按钮参数" : "持久化配置"}`);
 
 if (!nodeName) {
     finishError("未获取到节点或策略组名称");
@@ -2421,14 +2431,33 @@ function deadlineRemaining() {
 
 function readSwitch(key, defaultValue) {
     let value;
-    try {
-        const storeKey = PERSISTENT_SWITCH_KEYS[key] || key;
-        value = typeof $persistentStore !== "undefined" ? $persistentStore.read(storeKey) : null;
-    } catch (error) {
-        console.log(`[WARN] 读取插件选项 ${key} 失败: ${errorMessage(error)}`);
+    if (argumentSwitches && Object.prototype.hasOwnProperty.call(argumentSwitches, key)) {
+        value = argumentSwitches[key];
+    } else {
+        try {
+            const storeKey = PERSISTENT_SWITCH_KEYS[key] || key;
+            value = typeof $persistentStore !== "undefined" ? $persistentStore.read(storeKey) : null;
+        } catch (error) {
+            console.log(`[WARN] 读取插件选项 ${key} 失败: ${errorMessage(error)}`);
+        }
     }
     if (value === null || typeof value === "undefined" || value === "") return defaultValue;
     return !(value === false || value === 0 || value === "false" || value === "0");
+}
+
+function readCompactArguments(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const values = Array.isArray(raw)
+        ? raw
+        : COMPACT_ARGUMENT_KEYS.map((_, index) => raw[String.fromCharCode(97 + index)]);
+    if (!values.some((value) => value !== null && typeof value !== "undefined")) return null;
+    const result = {};
+    COMPACT_ARGUMENT_KEYS.forEach((key, index) => {
+        if (index < values.length && values[index] !== null && typeof values[index] !== "undefined") {
+            result[key] = values[index];
+        }
+    });
+    return result;
 }
 
 function isIPAddress(value) {
