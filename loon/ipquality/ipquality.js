@@ -14,7 +14,7 @@
  * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
  */
 
-const SCRIPT_VERSION = "2026-07-22.r23";
+const SCRIPT_VERSION = "2026-07-22.r24";
 const IPPURE_URL = "https://my.ippure.com/v1/info";
 const IPIFY_URL = "https://api4.ipify.org?format=json";
 const IPAPI_URL = "https://api.ipapi.is/";
@@ -290,15 +290,9 @@ const CHINA_ROUTE_ASNS = [
 ];
 
 const CHINA_HTTP_TARGETS = [
-    { region: "北京", carrier: "电信", url: "https://bj.189.cn/" },
-    { region: "上海", carrier: "电信", url: "https://sh.189.cn/" },
-    { region: "广东", carrier: "电信", url: "https://gd.189.cn/" },
-    { region: "北京", carrier: "联通", url: "https://bj.10010.com/" },
-    { region: "上海", carrier: "联通", url: "https://sh.10010.com/" },
-    { region: "广东", carrier: "联通", url: "https://gd.10010.com/" },
-    { region: "北京", carrier: "移动", url: "https://bj.10086.cn/" },
-    { region: "上海", carrier: "移动", url: "https://www.sh.10086.cn/" },
-    { region: "广东", carrier: "移动", url: "https://gd.10086.cn/" },
+    { carrier: "电信", url: "https://www.189.cn/" },
+    { carrier: "联通", url: "https://www.10010.com/" },
+    { carrier: "移动", url: "https://www.10086.cn/" },
 ];
 
 const GLOBALPING_LOCATIONS = [
@@ -317,13 +311,12 @@ async function collectChinaHttp() {
     const settled = await Promise.all(CHINA_HTTP_TARGETS.map(async (target) => {
         const startedAt = Date.now();
         const result = await capture(request("GET", target.url, {
-            timeout: 6500,
+            timeout: 4500,
             allowHttpErrors: true,
             headers: browserHeaders(),
         }));
         const response = result.ok ? result.value : null;
         return {
-            region: target.region,
             carrier: target.carrier,
             host: requestHost(target.url),
             ok: !!(response && response.status),
@@ -1086,7 +1079,7 @@ function render(ip, data, media) {
         visibleSections.push(section("出口分流", renderEgressMatrix(data._egress, basic)));
     }
     if (sectionVisibility.chinaHttp) {
-        visibleSections.push(section("运营商地区门户 HTTP（实验）", renderChinaHttp(data._chinaHttp)));
+        visibleSections.push(section("运营商官网 HTTPS（实验）", renderChinaHttp(data._chinaHttp)));
     }
     if (sectionVisibility.inboundRoute) {
         visibleSections.push(section("指定 ASN 外部探针入站路径", renderInboundRoutes(data._inboundRoutes)));
@@ -1880,6 +1873,7 @@ function reportStyle() {
         + '.section-static::after{display:none}'
         + 'details[open]>.section-summary::after{content:"⌄"}'
         + '.section-body{padding:2px 0 7px;contain:layout paint style}'
+        + '.section-text{margin:0;padding:2px 0 7px;white-space:pre-wrap;word-break:break-word;font:12px/1.5 -apple-system,BlinkMacSystemFont;color:inherit;contain:layout paint style}'
         + '.info-line{margin-bottom:8px;line-height:1.4}'
         + '.info-label{color:#8e8e93;font-size:12px;margin-right:8px}'
         + '.info-value{font-weight:600}'
@@ -2000,22 +1994,17 @@ function renderBGPPath(analysis) {
 
 function renderChinaHttp(results) {
     const rows = Array.isArray(results) ? results : [];
-    if (!rows.length) return mutedLine("本次没有运营商地区门户 HTTPS 结果");
+    if (!rows.length) return mutedLine("本次没有运营商官网 HTTPS 结果");
     const success = rows.filter((item) => item.ok).length;
-    const header = infoLine("连通", `${success} / ${rows.length} 个地区门户返回 HTTP 响应`);
-    const regions = ["北京", "上海", "广东"].map((region) => {
-        const items = rows.filter((item) => item.region === region);
-        const detail = items.map((item) => {
-            const status = item.ok ? `${item.ms} ms · HTTP ${item.status}` : `失败 · ${truncateText(item.error, 24)}`;
-            const color = item.ok ? latencyColor(item.ms) : "#ff3b30";
-            return `<div style="margin-top:3px"><span style="display:inline-block;width:34px;color:#8e8e93">${escapeHtml(item.carrier)}</span>`
-                + `<span style="color:${color};font-weight:600">${escapeHtml(status)}</span>`
-                + `<div style="margin-left:34px;color:#8e8e93;font-size:10px">${escapeHtml(item.host)}</div></div>`;
-        }).join("");
-        return `<div style="margin:9px 0"><div style="font-size:12px;font-weight:700">${escapeHtml(region)}</div>${detail}</div>`;
+    const header = infoLine("连通", `${success} / ${rows.length} 个全国官网返回 HTTP 响应`);
+    const detail = rows.map((item) => {
+        const status = item.ok ? `${item.ms} ms · HTTP ${item.status}` : `失败 · ${truncateText(item.error, 24)}`;
+        const color = item.ok ? latencyColor(item.ms) : "#ff3b30";
+        return `<div style="margin-top:3px"><span style="display:inline-block;width:98px;color:#8e8e93">${escapeHtml(`${item.carrier} · ${item.host}`)}</span>`
+            + `<span style="color:${color};font-weight:600">${escapeHtml(status)}</span></div>`;
     }).join("");
-    return header + regions
-        + mutedLine("实验目标是运营商品牌地区门户，可能使用 CDN、重定向或反爬，不保证服务器位于标称地区。结果仅表示手机 → 所选节点 → 该域名的 HTTPS 可达性和总耗时；单站失败不代表运营商线路失败。 ");
+    return header + detail
+        + mutedLine("轻量实验项：仅表示手机 → 所选节点 → 运营商全国官网的 HTTPS 可达性和总耗时，不代表线路或回程质量。 ");
 }
 
 function renderInboundRoutes(result) {
@@ -2308,7 +2297,29 @@ function section(title, content) {
         return `<section class="report-section">${heading}<div class="section-body">${content}</div></section>`;
     }
     return `<details class="report-section" name="ipquality-report"><summary class="section-summary">▌${escapeHtml(title)}</summary>`
-        + `<div class="section-body">${content}</div></details>`;
+        + `<pre class="section-text">${escapeHtml(htmlToPlainText(content))}</pre></details>`;
+}
+
+function htmlToPlainText(value) {
+    return decodeHtml(String(value || "")
+        .replace(/<br\s*\/?\s*>/gi, "\n")
+        .replace(/<\/span>\s*<span[^>]*>/gi, "　")
+        .replace(/<\/(?:div|p|li|section|h[1-6])>/gi, "\n")
+        .replace(/<[^>]+>/g, ""))
+        .split("\n")
+        .map((line) => line.replace(/[ \t]+/g, " ").trim())
+        .filter(Boolean)
+        .join("\n");
+}
+
+function decodeHtml(value) {
+    return String(value || "")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&#39;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&amp;/g, "&");
 }
 
 function infoLine(label, value) {

@@ -10,12 +10,12 @@
 MaskIP = switch,false,tag=隐藏 IP,desc=隐藏报告中 IP 的后半段，适合截图分享
 MediaTest = switch,true,tag=执行媒体与 AI 检测,desc=总开关；检测 TikTok、Disney+、Netflix、YouTube、Prime Video、Reddit 和 ChatGPT 探测端点
 MapNotification = switch,false,tag=地图通知,desc=完成后发送通知，点按后在 Apple 地图查看估算位置
-FoldSections = switch,true,tag=折叠报告分区,desc=默认只渲染分区标题，点开后查看完整内容；建议开启以避免超长报告滑动卡顿
+FoldSections = switch,true,tag=低负载报告,desc=使用折叠纯文本分区大幅减少页面节点；关闭后恢复完整彩色报告
 ShowBasic = switch,true,tag=显示基础信息,desc=显示出口 IP、位置、ASN、组织和坐标
 ShowEgressMatrix = switch,false,tag=显示出口分流,desc=按出口 IP 分组显示探针来源、ASN 和组织
 ShowBGP = switch,false,tag=显示 BGP 信息,desc=查询 IPv4 前缀、Origin ASN、RPKI、PTR 和注册机构
 ShowBGPPath = switch,false,tag=显示目标前缀 BGP 路径,desc=分析 RIPE RIS 到目标前缀的 AS Path、可见性和样本所含 ASN；不是节点回程
-ShowChinaHttp = switch,false,tag=测试运营商地区门户,desc=实验访问北京、上海、广东运营商品牌门户，仅表示 HTTPS 可达性和总耗时
+ShowChinaHttp = switch,false,tag=测试运营商官网,desc=轻量访问电信、联通、移动全国官网，仅表示 HTTPS 可达性和总耗时
 ShowInboundRoute = switch,false,tag=测试外部探针入站路径,desc=由 Globalping 指定 ASN 中国探针向出口 IP 执行 traceroute；方向是入站
 ShowProbePing = switch,false,tag=测试外部探针 Ping,desc=显示指定 ASN 中国探针与出口 IP 的 ICMP 往返延迟、丢包和抖动
 ShowProbeMTR = switch,false,tag=测试外部探针 MTR,desc=显示指定 ASN 中国探针到出口 IP 的入站逐跳统计；路由器限速会影响表观丢包
