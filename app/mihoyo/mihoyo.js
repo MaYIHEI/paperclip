@@ -1,5 +1,5 @@
 /**
- * 米游社 · 米游社签到原神/星穹铁道/绝区零/崩坏3
+ * 米游社 · 米游社签到原神/星穹铁道/绝区零/崩坏3/崩坏学园2/未定事件簿
  *
  * 抓取①:打开「米游社」APP → 进「我的」页,抓游戏角色列表(http-response)
  * 抓取②:进任意游戏签到页手动签一次,抓签到所需 Cookie
@@ -7,7 +7,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-27
+ * @Updated: 2026-07-27
  *
  * ===== Loon =====
  * [MITM]
@@ -54,7 +54,7 @@
 
 const $ = new Env("米游社");
 
-const SCRIPT_VERSION = "2026-06-27.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-27.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 $.delete_cookie = false;
@@ -72,6 +72,8 @@ const GAMES = {
     hkrpg_cn: { name: '星穹铁道',   act_id: 'e202304121516551', signgame: 'hkrpg', path: 'hkrpg' },
     nap_cn:   { name: '绝区零',     act_id: 'e202406242138391', signgame: 'zzz',   path: 'zzz'   },
     bh3_cn:   { name: '崩坏3',      act_id: 'e202306201626331', signgame: 'bh3',   path: 'bh3'   },
+    bh2_cn:   { name: '崩坏学园2',  act_id: 'e202203291431091', signgame: '',      path: ''      },
+    nxx_cn:   { name: '未定事件簿', act_id: 'e202202251749321', signgame: '',      path: ''      },
 };
 
 (async () => {
@@ -172,7 +174,7 @@ async function signOne(cfg, role) {
     const label = `${cfg.name}[${role.nickname || role.game_uid}]`;
     try {
         // 1. info 接口判断是否已签
-        const info = await callLuna('GET', `/event/luna/${cfg.path}/info`, cfg, role, null);
+        const info = await callLuna('GET', lunaPath(cfg, 'info'), cfg, role, null);
         if (!info) {
             $.failNum++;
             $.message.push(`【${label}】❌ 查询签到状态失败`);
@@ -203,7 +205,7 @@ async function signOne(cfg, role) {
             uid: role.game_uid,
             lang: 'zh-cn',
         };
-        const sign = await callLuna('POST', `/event/luna/${cfg.path}/sign`, cfg, role, signBody);
+        const sign = await callLuna('POST', lunaPath(cfg, 'sign'), cfg, role, signBody);
         if (!sign) {
             $.failNum++;
             $.message.push(`【${label}】❌ 签到请求失败`);
@@ -222,7 +224,7 @@ async function signOne(cfg, role) {
         }
 
         // 3. home 接口拿奖励名称(签后的当天奖励 = awards[total],签前 total)
-        const home = await callLuna('GET', `/event/luna/${cfg.path}/home`, cfg, role, null);
+        const home = await callLuna('GET', lunaPath(cfg, 'home'), cfg, role, null);
         let reward = '签到成功';
         if (home && home.retcode === 0 && home.data && Array.isArray(home.data.awards)) {
             const aw = home.data.awards[total];
@@ -242,7 +244,10 @@ function callLuna(method, path, cfg, role, body) {
         // 复用抓到的 headers,替换 cookie / signgame / Content-Type
         const h = cleanHeaders($.webHeaders);
         h['Cookie'] = $.webCookie;
-        h['x-rpc-signgame'] = cfg.signgame;
+        Object.keys(h).forEach((k) => {
+            if (k.toLowerCase() === 'x-rpc-signgame') delete h[k];
+        });
+        if (cfg.signgame) h['x-rpc-signgame'] = cfg.signgame;
         if (method === 'POST') {
             h['Content-Type'] = 'application/json;charset=utf-8';
         }
@@ -282,6 +287,10 @@ function callLuna(method, path, cfg, role, body) {
         if (method === 'POST') $.post(opts, cb);
         else $.get(opts, cb);
     });
+}
+
+function lunaPath(cfg, endpoint) {
+    return `/event/luna/${cfg.path ? `${cfg.path}/` : ''}${endpoint}`;
 }
 
 function cleanHeaders(h) {

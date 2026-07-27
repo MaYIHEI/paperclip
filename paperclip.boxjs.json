@@ -379,7 +379,7 @@
           "val": "",
           "type": "text",
           "placeholder": "留空 = 全部游戏",
-          "desc": "逗号分隔: hk4e_cn(原神) hkrpg_cn(星穹铁道) nap_cn(绝区零) bh3_cn(崩坏3)"
+          "desc": "逗号分隔: hk4e_cn(原神) hkrpg_cn(星穹铁道) nap_cn(绝区零) bh3_cn(崩坏3) bh2_cn(崩坏学园2) nxx_cn(未定事件簿)"
         },
         {
           "id": "mhy_req_interval",
