@@ -1,5 +1,5 @@
 #!name=Paperclip · Cookie 抓取合集
-#!desc=一键抓取 paperclip 仓库全部签到脚本的 Cookie（含已归档,共 25 个），每个脚本一个独立开关（默认全关，按需打开）。仅含「抓取」规则，不含 cron 签到——cron 仍按各脚本 README 单独配置。打开对应开关后，进入相应 App/小程序的签到页触发即可，收到「✅ <名称> Cookie 获取成功」通知即成功。
+#!desc=一键抓取 paperclip 仓库全部维护中签到脚本的 Cookie（共 27 个，不含已归档和待验证脚本），每个脚本一个独立开关（默认全关，按需打开）。仅含「抓取」规则，不含 cron 签到——cron 仍按各脚本 README 单独配置。打开对应开关后，进入相应 App/小程序的签到页触发即可，收到「✅ <名称> Cookie 获取成功」通知即成功。
 #!author=MaYIHEI
 #!homepage=https://github.com/MaYIHEI/paperclip
 #!icon=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
@@ -16,20 +16,23 @@ lhtj = switch,false,tag=龙湖天街(小程序),desc=打开龙湖天街小程序
 songshan = switch,false,tag=松山棉店,desc=打开松山棉店小程序进签到页触发(详见 README)
 wedome = switch,false,tag=味多美,desc=打开味多美小程序进「我的」页触发(详见 README)
 bhg = switch,false,tag=北京华联,desc=打开 BHG Mall 小程序进签到页触发(与龙德广场同会员体系,二选一)
+linli = switch,false,tag=林里,desc=打开林里小程序进签到页或鸭币商城触发(详见 README)
 weibotalk = switch,false,tag=微博超话,desc=微博 App 进超话/签到触发(详见 README)
 mihoyo = switch,false,tag=米游社,desc=米游社 App 进社区页触发(详见 README)
 tenvideo = switch,false,tag=腾讯视频,desc=微信小程序「腾讯视频」打开触发(详见 README)
 newmixc = switch,false,tag=一点万象,desc=一点万象 App 进会员页触发(详见 README)
 mishop = switch,false,tag=小米商城,desc=小米商城 App 进米金签到页触发(详见 README)
+milottery = switch,false,tag=小米抽奖,desc=小米商城 App 进「狂欢礼」抽奖活动页触发(详见 README)
 youpin = switch,false,tag=小米有品,desc=小米有品 App 进「我的/红包」触发(详见 README)
 wanda = switch,false,tag=万达电影,desc=万达电影 App 进「我的」页触发(详见 README)
 qqmusic = switch,false,tag=QQ音乐,desc=QQ 音乐 App 进绿钻会员中心触发(详见 README)
 lhtj_app = switch,false,tag=龙湖天街(App),desc=龙湖天街 App 进签到页触发(APP 端受顶象风控,详见 README)
-bibisheng = switch,false,tag=笔笔省(已归档),desc=微信支付笔笔省,已归档(7h TTL 无法续期)
-casetify = switch,false,tag=CASETiFY(已归档),desc=CASETiFY 小程序,已归档(token 续期绑 wx.login)
-topsports = switch,false,tag=滔搏运动(已归档),desc=滔搏运动小程序,已归档(双 auth 撑不过 24h)
-lvcchong = switch,false,tag=驴充充(小程序·已归档),desc=驴充充小程序版,已归档(token<38min)
-lvcchong_app = switch,false,tag=驴充充(App·已归档),desc=驴充充 App 版,已归档(refreshToken~20min)
+tingtingfm = switch,false,tag=听听FM,desc=听听FM App 进「我的/任务中心」触发(详见 README)
+wps = switch,false,tag=WPS,desc=WPS App 进任务中心或福利中心触发(详见 README)
+camscanner = switch,false,tag=扫描全能王,desc=扫描全能王 App 任意页停留几秒触发(详见 README)
+dreame = switch,false,tag=追觅,desc=追觅 App 进「商城」或「我的」页触发(详见 README)
+linghu = switch,false,tag=灵狐灵购,desc=灵狐灵购 App 进「商城」或「我的」页触发(详见 README)
+nodeseek = switch,false,tag=NodeSeek,desc=用 Safari 打开 nodeseek.com 任意页面触发(详见 README)
 
 [Script]
 http-response ^https:\/\/popvip\.paquapp\.com\/miniapp\/v2\/(svip_lite\/user_info|wechat_message\/template_info) tag=泡泡玛特 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png, enable={ppmt}
@@ -42,24 +45,23 @@ http-request ^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod
 http-request ^https:\/\/xapi\.weimob\.com\/api3\/onecrm\/mactivity\/sign\/misc\/sign\/activity\/(c\/signMainInfo|core\/c\/(getActivityInfo|sign)) tag=松山棉店 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/songshan/songshan.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/songshan.png, enable={songshan}
 http-response ^https:\/\/scrm-b\.zjian\.net\/api\/member\/(minaLogin|find) tag=味多美 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png, enable={wedome}
 http-request https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm tag=北京华联 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bhg/bhg.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png, enable={bhg}
+http-request ^https:\/\/webapi\.qmai\.cn\/web\/(cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar)|catering\/common\/common-info|mall-apiserver\/integral\/(home\/index|item\/goods(\/detail)?)) tag=林里 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png, enable={linli}
 http-request ^https:\/\/api\.weibo\.cn\/2\/(statuses\/container_timeline_topicsub|page\/button) tag=微博超话 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png, enable={weibotalk}
-http-response ^https:\/\/bbs-api\.miyoushe\.com\/(apihub|user|misc)\/ tag=米游社 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png, enable={mihoyo}
+http-response ^https:\/\/api-takumi\.(miyoushe|mihoyo)\.com\/(binding\/api\/getUserGameRolesByStoken|event\/luna\/) tag=米游社 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png, enable={mihoyo}
 http-request ^https:\/\/pbaccess\.video\.qq\.com\/ tag=腾讯视频 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png, enable={tenvideo}
 http-request ^https:\/\/app\.mixcapp\.com\/mixc\/api\/v4\/member\/getPersonalData tag=一点万象 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png, enable={newmixc}
-http-request ^https:\/\/shop-api\.retail\.mi\.com\/mtop\/mf\/act\/infinite\/(do|done) tag=小米商城 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png, enable={mishop}
+http-request ^https:\/\/shop-api\.retail\.mi\.com\/mtop\/mf\/act\/infinite\/(do|done) tag=小米商城 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.cookie.js, requires-body=0, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png, enable={mishop}
+http-request ^https:\/\/shop-api\.retail\.mi\.com\/mtop\/navi\/venue\/batch tag=小米抽奖 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/milottery/milottery.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png, enable={milottery}
 http-request ^https:\/\/m\.xiaomiyoupin\.com\/mtop\/act\/redPacketSign\/getActInfo tag=有品 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/youpin/youpin.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/youpin.png, enable={youpin}
 http-request ^https:\/\/user-api-prd-mx\.wandafilm\.com\/user\/user_info tag=万达电影 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wanda/wanda.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wanda.png, enable={wanda}
 http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable={qqmusic}
 http-request ^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$ tag=龙湖App Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lhtj/lhtj.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png, enable={lhtj_app}
-http-request ^https:\/\/discount\.wxpapp\.wechatpay\.cn\/txbbs-mall\/coupon\/(querydailygiftcoupons|claimdailygiftcoupon) tag=笔笔省 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bibisheng/bibisheng.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bibisheng.png, enable={bibisheng}
-http-response ^https:\/\/mini-app-api\.casetify\.cn\/api\/v4\/estore\/member\/checkWebToken tag=CASETiFY Cookie, requires-body=1, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/casetify/casetify.js, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/casetify.png, enable={casetify}
-http-request ^https:\/\/m\.topsports\.com\.cn\/h5\/act\/signIn\/actInfo tag=滔搏 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png, enable={topsports}
-http-request ^https:\/\/wxmall\.topsports\.com\.cn\/shopMember\/ tag=滔搏 Auth, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png, enable={topsports}
-http-response ^https:\/\/m\.topsports\.com\.cn\/ tag=滔搏 H5, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png, enable={topsports}
-http-response ^https:\/\/appapi\.lvcchong\.com\/getUnionInfo tag=驴充充 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lvcchong/lvcchong.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lvcchong.png, enable={lvcchong}
-http-response ^https:\/\/appapi\.lvcchong\.com\/accessToken\/refresh\/ tag=驴充充 Auth, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lvcchong/lvcchong.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lvcchong.png, enable={lvcchong}
-http-request ^https:\/\/appapi\.lvcchong\.com\/(accessToken\/refresh|appBaseApi\/h5\/accessEntrance) tag=驴充充 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lvcchong.png, enable={lvcchong_app}
-http-response ^https:\/\/appapi\.lvcchong\.com\/(accessToken\/refresh|appBaseApi\/h5\/accessEntrance) tag=驴充充 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lvcchong/lvcchong.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lvcchong.png, enable={lvcchong_app}
+http-request ^https:\/\/xunting\.vbegin\.com\.cn\/sns\/app tag=听听FM Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png, enable={tingtingfm}
+http-request ^https:\/\/personal-act\.wps\.cn\/activity-rubik\/activity\/page_info tag=WPS Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png, enable={wps}
+http-request ^https:\/\/api-cs\.intsig\.net\/user\/cs\/get_user_attribute tag=扫描全能王 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png, enable={camscanner}
+http-request ^https:\/\/cn-wxmall\.dreame\.tech\/main\/my\/info tag=追觅 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/dreame.png, enable={dreame}
+http-request ^https:\/\/cn-yx-wxmall\.dreame\.tech\/main\/my\/info tag=灵狐灵购 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/linghu/linghu.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linghu.png, enable={linghu}
+http-request ^https://www\.nodeseek\.com/ tag=NodeSeek Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/nodeseek/nodeseek.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/nodeseek.png, enable={nodeseek}
 
 [MITM]
-hostname = popvip.paquapp.com, api.tuhu.cn, superapp-public.kiwa-tech.com, media.meituan.com, member-center.miniso.com, a.china-smartech.com, gw2c-hw-open.longfor.com, xapi.weimob.com, scrm-b.zjian.net, api.weibo.cn, bbs-api.miyoushe.com, pbaccess.video.qq.com, app.mixcapp.com, shop-api.retail.mi.com, m.xiaomiyoupin.com, user-api-prd-mx.wandafilm.com, u6.y.qq.com, discount.wxpapp.wechatpay.cn, mini-app-api.casetify.cn, m.topsports.com.cn, wxmall.topsports.com.cn, appapi.lvcchong.com
+hostname = popvip.paquapp.com, api.tuhu.cn, superapp-public.kiwa-tech.com, media.meituan.com, member-center.miniso.com, a.china-smartech.com, gw2c-hw-open.longfor.com, xapi.weimob.com, scrm-b.zjian.net, webapi.qmai.cn, api.weibo.cn, api-takumi.miyoushe.com, api-takumi.mihoyo.com, pbaccess.video.qq.com, app.mixcapp.com, shop-api.retail.mi.com, m.xiaomiyoupin.com, user-api-prd-mx.wandafilm.com, u6.y.qq.com, xunting.vbegin.com.cn, personal-act.wps.cn, api-cs.intsig.net, cn-wxmall.dreame.tech, cn-yx-wxmall.dreame.tech, www.nodeseek.com
