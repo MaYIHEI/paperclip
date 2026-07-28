@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-17
+ * @Updated: 2026-07-28
  *
  * ===== Loon =====
  * [MITM]
@@ -60,7 +60,7 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-07-17.r13"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-28.r14"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -533,16 +533,14 @@ async function claimDailyTaskRewards(snap, uin) {
             if (favoriteSongTask && favoriteSongTask.State === 1) {
                 const song = await addTemporarySongFavorite(snap, uin);
                 if (song) {
+                    cleanups.push({
+                        name: "临时收藏歌曲",
+                        run: () => updateFavoriteSong(snap, uin, "DelSonglist", song),
+                        warning: "请到“我喜欢”检查最新一首",
+                    });
                     tasks = await refreshTasksAfterAction(tasks, favoriteSongTask, snap, uin);
-                    const advanced = taskReachedReady(tasks, favoriteSongTask);
-                    if (advanced) {
-                        cleanups.push({
-                            name: "临时收藏歌曲",
-                            run: () => updateFavoriteSong(snap, uin, "DelSonglist", song),
-                            warning: "请到“我喜欢”检查最新一首",
-                        });
-                    } else {
-                        $.messages.push("⚠️ 收藏歌曲任务状态未更新;为避免误删原收藏,本次未自动取消候选歌曲");
+                    if (!taskReachedReady(tasks, favoriteSongTask)) {
+                        $.messages.push("⚠️ 收藏歌曲任务状态未更新;已恢复本次临时收藏");
                     }
                 }
             }
@@ -1156,10 +1154,37 @@ async function addTemporarySongFavorite(snap, uin) {
     for (const song of shuffled) {
         const candidate = { songId: Number(song.songId), songType: Number(song.songType || 0) };
         if (!candidate.songId) continue;
-        if (await updateFavoriteSong(snap, uin, "AddSonglist", candidate)) return candidate;
+        if (await addFavoriteSongIfNew(snap, uin, candidate)) return candidate;
     }
     $.log("[WARN] 未找到可临时收藏的榜单歌曲,跳过收藏任务");
     return null;
+}
+
+async function addFavoriteSongIfNew(snap, uin, song) {
+    const res = await post(API_URL, JSON.stringify({
+        comm: makeComm(snap, uin),
+        req_0: {
+            module: "music.musicasset.PlaylistDetailWrite",
+            method: "AddSonglist",
+            param: {
+                dirId: 201,
+                tid: 0,
+                bFmtUtf8: true,
+                v_songInfo: [{ songId: song.songId, songType: song.songType }],
+            },
+        },
+    }));
+    debug(res, "AddSonglist");
+    const added = readSongAddStatus(res, song.songId);
+    if (added === null) {
+        $.log(`[WARN] 歌曲 ${song.songId} 新增状态未知,不登记临时收藏`);
+        return false;
+    }
+    if (!added) {
+        $.log(`[INFO] 歌曲 ${song.songId} 原本已收藏,换一个候选`);
+        return false;
+    }
+    return true;
 }
 
 async function addTemporaryAudiobookFavorite(snap, uin) {
@@ -1239,7 +1264,7 @@ async function updateFavoritePlaylist(snap, uin, add, playlist) {
 }
 
 async function addTemporarySingerFollow(snap, uin) {
-    const dynamicMIDs = await searchContentCandidates(snap, uin, 7, ["singerMID", "singer_mid", "mid"]);
+    const dynamicMIDs = await searchSingerCandidates(snap, uin);
     const candidates = uniqueValues([...SINGER_CANDIDATES, ...dynamicMIDs]).map((mid) => ({ mid: String(mid) })).filter((item) => /^[A-Za-z0-9]{10,20}$/.test(item.mid));
     for (const candidate of candidates) {
         const status = await querySingerFollowStatus(snap, uin, candidate.mid);
@@ -1286,7 +1311,11 @@ async function queryFollowStatus(snap, uin, type, id) {
     const res = await appPost(snap, uin, "QueryFollowStatus", body);
     debug(res, `Follow Status ${type}`);
     if (!appRequestSucceeded(res)) return null;
-    return readTargetStatus(res.req_0 && res.req_0.data, String(id));
+    const data = res.req_0 && res.req_0.data;
+    const direct = readTargetStatus(data, String(id));
+    return direct !== null
+        ? direct
+        : readSingleMappedStatus(data, ["m_user_status", "m_singer_status"]);
 }
 
 async function querySingerFollowStatus(snap, uin, mid) {
@@ -1304,10 +1333,23 @@ async function querySingerFollowStatus(snap, uin, mid) {
     const data = res.req_0 && res.req_0.data;
     const map = data && data.map_singer_status;
     if (map && Object.prototype.hasOwnProperty.call(map, mid)) return normalizeStatus(map[mid]);
-    return readTargetStatus(data, mid);
+    const direct = readTargetStatus(data, mid);
+    return direct !== null
+        ? direct
+        : readSingleMappedStatus(data, ["map_singer_status"]);
+}
+
+async function searchSingerCandidates(snap, uin) {
+    const data = await searchContent(snap, uin, 7);
+    return collectSingerMIDs(data, 20);
 }
 
 async function searchContentCandidates(snap, uin, searchType, keys) {
+    const data = await searchContent(snap, uin, searchType);
+    return collectValuesByKeys(data, keys, (value) => value !== "" && value !== 0, 20);
+}
+
+async function searchContent(snap, uin, searchType) {
     const body = {
         comm: makeAppComm(snap, uin, 1, 200605, "DevopsBase"),
         req_0: {
@@ -1332,8 +1374,8 @@ async function searchContentCandidates(snap, uin, searchType, keys) {
     };
     const res = await appPost(snap, uin, "DoSearchForQQMusicMobile", body);
     debug(res, `Search Candidates ${searchType}`);
-    if (!appRequestSucceeded(res)) return [];
-    return collectValuesByKeys(res.req_0 && res.req_0.data, keys, (value) => value !== "" && value !== 0, 20);
+    if (!appRequestSucceeded(res)) return null;
+    return res.req_0 && res.req_0.data;
 }
 
 async function updateFavoriteSong(snap, uin, method, song) {
@@ -1472,6 +1514,33 @@ function appRequestSucceeded(res, reqKey = "req_0") {
     return true;
 }
 
+function musicRequestSucceeded(res, reqKey = "req_0") {
+    const req = res && res[reqKey];
+    const data = req && req.data;
+    return Boolean(
+        res &&
+        res.code === 0 &&
+        req &&
+        req.code === 0 &&
+        data &&
+        Number(data.retCode) === 0
+    );
+}
+
+function readSongAddStatus(res, songID) {
+    if (!musicRequestSucceeded(res)) return null;
+    const result = res.req_0.data && res.req_0.data.result;
+    const entries = result && Array.isArray(result.songlist) ? result.songlist : [];
+    const entry = entries.find((item) =>
+        item &&
+        Number(item.songId || item.backendSongId) === Number(songID)
+    );
+    if (!entry || !Object.prototype.hasOwnProperty.call(entry, "existed")) return null;
+    if (Number(entry.existed) === 0) return true;
+    if (Number(entry.existed) === 1) return false;
+    return null;
+}
+
 function collectValuesByKeys(root, keys, predicate = () => true, limit = 50) {
     const wanted = new Set(keys.map(String));
     const result = [];
@@ -1490,6 +1559,26 @@ function collectValuesByKeys(root, keys, predicate = () => true, limit = 50) {
     };
     walk(root);
     return uniqueValues(result);
+}
+
+function collectSingerMIDs(root, limit = 20) {
+    const body = root && root.body ? root.body : root;
+    if (!body || typeof body !== "object") return [];
+
+    const singers = [];
+    const addSinger = (singer) => {
+        const mid = singer && (singer.mid || singer.singerMID || singer.singer_mid);
+        if (mid && /^[A-Za-z0-9]{10,20}$/.test(String(mid))) singers.push(String(mid));
+    };
+    const addSong = (song) => {
+        if (!song || !Array.isArray(song.singer)) return;
+        for (const singer of song.singer) addSinger(singer);
+    };
+
+    for (const song of Array.isArray(body.item_song) ? body.item_song : []) addSong(song);
+    for (const singer of Array.isArray(body.singer) ? body.singer : []) addSinger(singer);
+    for (const singer of Array.isArray(body.item_singer) ? body.item_singer : []) addSinger(singer);
+    return uniqueValues(singers).slice(0, limit);
 }
 
 function uniqueValues(values) {
@@ -1529,6 +1618,20 @@ function normalizeStatus(value) {
     if (value === true || value === 1 || value === "1" || value === "true") return true;
     if (value === false || value === 0 || value === "0" || value === "false") return false;
     return null;
+}
+
+function readSingleMappedStatus(root, mapKeys) {
+    if (!root || typeof root !== "object") return null;
+    const statuses = [];
+    for (const key of mapKeys) {
+        const map = root[key];
+        if (!map || Array.isArray(map) || typeof map !== "object") continue;
+        for (const value of Object.values(map)) {
+            const status = normalizeStatus(value);
+            if (status !== null) statuses.push(status);
+        }
+    }
+    return statuses.length === 1 ? statuses[0] : null;
 }
 
 function readTargetStatus(root, target) {
