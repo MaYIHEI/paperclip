@@ -1,5 +1,7 @@
 /**
- * QQ 音乐 · 绿钻成长值 + 金币中心签到与每日任务
+ * QQ 音乐 · 广告实验版（不接入正式配置）
+ *
+ * 仅保留给后续广告链路测试。日常使用请加载同目录 qqmusic.js。
  *
  * 抓取:打开 QQ 音乐 →「我的 / 会员 / 每日签到」或「金币中心 / 每日签到」,抓 Cookie
  * 签到:cron 自动续期后完成两套签到,并领取已完成的每日任务奖励
@@ -10,29 +12,32 @@
  *
  * ===== Loon =====
  * [MITM]
- * hostname = u6.y.qq.com, apigame.y.qq.com
+ * hostname = u6.y.qq.com, music.y.qq.com, apigame.y.qq.com
  * [Script]
- * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * http-request ^https:\/\/apigame\.y\.qq\.com\/game_tree\.Api\/ tag=QQ音乐摇钱树凭证, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * cron "0 0-59/6 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
- * cron "0 5 0,8,12,16,20,22 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
+ * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * http-request ^https:\/\/music\.y\.qq\.com\/maproxy\/getInfo tag=QQ音乐广告模板, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * http-request ^https:\/\/apigame\.y\.qq\.com\/game_tree\.Api\/ tag=QQ音乐摇钱树凭证, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * cron "0 0-59/6 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
+ * cron "0 5 0,8,12,16,20,22 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
  *
  * ===== Surge =====
  * [MITM]
- * hostname = u6.y.qq.com, apigame.y.qq.com
+ * hostname = u6.y.qq.com, music.y.qq.com, apigame.y.qq.com
  * [Script]
- * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * QQ音乐摇钱树凭证 = type=http-request,pattern=^https:\/\/apigame\.y\.qq\.com\/game_tree\.Api\/,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * QQ音乐签到 = type=cron,cronexp=20 9 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐广告模板 = type=http-request,pattern=^https:\/\/music\.y\.qq\.com\/maproxy\/getInfo,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐摇钱树凭证 = type=http-request,pattern=^https:\/\/apigame\.y\.qq\.com\/game_tree\.Api\/,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐签到 = type=cron,cronexp=20 9 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  *
  * ===== Quantumult X =====
  * [MITM]
- * hostname = u6.y.qq.com, apigame.y.qq.com
+ * hostname = u6.y.qq.com, music.y.qq.com, apigame.y.qq.com
  * [rewrite_local]
- * ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
- * ^https:\/\/apigame\.y\.qq\.com\/game_tree\.Api\/ url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
+ * ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js
+ * ^https:\/\/music\.y\.qq\.com\/maproxy\/getInfo url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js
+ * ^https:\/\/apigame\.y\.qq\.com\/game_tree\.Api\/ url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js
  * [task_local]
- * 20 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
+ * 20 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
  *
  * ===== Stash =====
  * cron:
@@ -43,10 +48,15 @@
  * http:
  *   mitm:
  *     - "u6.y.qq.com"
+ *     - "music.y.qq.com"
  *     - "apigame.y.qq.com"
  *   script:
  *     - match: ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary)
  *       name: QQ音乐 Cookie
+ *       type: request
+ *       require-body: true
+ *     - match: ^https:\/\/music\.y\.qq\.com\/maproxy\/getInfo
+ *       name: QQ音乐广告模板
  *       type: request
  *       require-body: true
  *     - match: ^https:\/\/apigame\.y\.qq\.com\/game_tree\.Api\/
@@ -54,16 +64,17 @@
  *       type: request
  * script-providers:
  *   QQ音乐签到:
- *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic-ad-test.js
  *     interval: 86400
  */
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-07-28.r17"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-28.r16-ad-test"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
+const AD_TEMPLATE_KEY = "qqmusic_ad_request";
 const MONEY_TREE_KEY = "qqmusic_money_tree"; // { openid, session_key, appid, game_opt_ver, user_agent, ts }
 // 签到走小程序免签名通道:解包 wxada7aab80ba27074 发现所有 CGI 都用
 // musicu.fcg + comm.authst(musickey) 鉴权,无私有 sign / 无 g_tk / 无 cookie。
@@ -76,6 +87,10 @@ const COIN_SIGN_SCENE_ID = "2";
 const DAILY_TASK_ACT_ID = "Z1NRf2o";
 const LOTTERY_SIGN_ACT_ID = "Z156KEu";
 const COIN_LOTTERY_PLAY_ID = "PR-Lottery-20240408-33489273491";
+const LOTTERY_AD_ACT_ID = "1DNTy6";
+const LOTTERY_AD_TASK_ID = "Z7zTYm";
+const FIXED_VIDEO_TASK_ID = "Z17TDyX";
+const HIGH_VIDEO_TASK_ID = "K4qAp";
 const RED_PACKET_RAIN_KEY = "1joIuy";
 const TIMER_TASK_MODULE_ID = "ZGp4ja";
 const MONEY_TREE_APP_ID = "30000037";
@@ -85,8 +100,31 @@ const AUDIOBOOK_CANDIDATES = [93654004];
 const PLAYLIST_CANDIDATES = [9611383852];
 const SINGER_CANDIDATES = ["0039zms40xSD5K"];
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) MicroMessenger/8.0 miniProgram";
+const AD_SOURCE_BY_CHANNEL = {
+    302004: 10010,
+    302035: 10011,
+    302017: 4001101,
+    300507: 5001101,
+    302033: 7001101,
+};
+const AD_PURCHASE_INFO_BY_CHANNEL = {
+    300506: JSON.stringify({ user_type: 3, channel: 12, tme_material_type: 5 }),
+};
+const DIRECT_REWARD_AD_CHANNELS = [302004, 302035, 302017, 300507, 302033];
+
 $.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("qqmusic_debug")) || "false";
 $.messages = [];
+$.adState = {
+    count: 0,
+    completed: 0,
+    max: Math.max(1, Math.min(Number($.getdata("qqmusic_ad_max") || 20) || 20, 30)),
+    coins: 0,
+    tickets: 0,
+    landingCoins: 0,
+    templateWarned: false,
+    nativeWarned: false,
+    externalWarned: false,
+};
 
 // ============ 抓取 ============
 
@@ -128,6 +166,35 @@ function getCookie() {
         $.log(`[INFO] 已保存 (loginType=${login_type}, refresh_key=${saved.refresh_key ? "有" : "无"}, 金币活动${saved.coin_act_id ? "已识别" : "用默认值"})`);
     } catch (e) {
         $.log(`[ERROR] 抓取异常: ${e}`);
+    }
+}
+
+function captureAdTemplate() {
+    try {
+        const headers = lowerKeys($request.headers);
+        if (headers["x-qqmusic-script"] === "1") return;
+        const body = JSON.parse($request.body || "{}");
+        const reqInfo = body.msg_ad_req_info || {};
+        const channel = Number(reqInfo.ad_channel_id);
+        if (!channel) return;
+
+        const current = normalizeAdTemplateStore($.getjson(AD_TEMPLATE_KEY, null));
+        const isNewChannel = !current.templates[String(channel)];
+        const template = {
+            body,
+            cookie: normalizeCookie(headers.cookie),
+            userAgent: headers["user-agent"] || UA,
+            ts: Date.now(),
+        };
+        current.templates[String(channel)] = template;
+        current.latest = template;
+        $.setjson(current, AD_TEMPLATE_KEY);
+        $.log(`[INFO] 广告请求模板已更新 (channel=${channel})`);
+        if (isNewChannel) {
+            $.msg($.name, "✅ 广告模板获取成功", `广告位 channel=${channel}`);
+        }
+    } catch (e) {
+        $.log(`[WARN] 广告请求模板解析失败: ${e.message || e}`);
     }
 }
 
@@ -686,7 +753,17 @@ async function claimDailyTaskRewards(snap, uin) {
 
         const timerTasks = await getTimerTasks(snap, uin);
         if (timerTasks && timerTasks.length) tasks = tasks.concat(timerTasks);
-        await claimReadyTaskRewards(tasks, snap, uin);
+        const returnedAdBatches = await claimReadyTaskRewards(tasks, snap, uin);
+        if (adTasksEnabled()) {
+            await runFixedVideoAds(tasks, snap, uin);
+            await runLotteryTicketAds(snap, uin);
+            for (const batch of returnedAdBatches) {
+                if ($.adState.count >= $.adState.max) break;
+                await runReturnedAdTasks(batch.taskList, snap, uin, batch.context);
+            }
+            noteUnsupportedNativeAdTasks(tasks);
+            appendAdSummary();
+        }
     } finally {
         for (const cleanup of cleanups.reverse()) {
             const removed = await cleanup.run();
@@ -703,6 +780,7 @@ async function claimReadyTaskRewards(tasks, snap, uin) {
         task.PrizeList.some((prize) => prize && Number(prize.Type) === 12 && Number(prize.Value || 0) > 0)
     );
     const claimed = [];
+    const returnedAdBatches = [];
     for (const task of ready) {
         const awardBody = {
             comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
@@ -719,11 +797,20 @@ async function claimReadyTaskRewards(tasks, snap, uin) {
         if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && awardData.retCode === 0) {
             const value = Number(awardData.awardValue || 0);
             claimed.push(`${task.Name || task.ID}${value ? ` +${value}` : ""}`);
+            if (adTasksEnabled() && awardData.adTaskList) returnedAdBatches.push({
+                taskList: awardData.adTaskList,
+                context: {
+                    actID: task._actID || DAILY_TASK_ACT_ID,
+                    fromID: /定时.*(?:金币|积分)/.test(task.Name || "") ? "" : "points",
+                    parentName: task.Name || task.ID,
+                },
+            });
         } else {
             $.log(`[WARN] 每日任务领奖失败 (${task.Name || task.ID}, code=${awardReq ? awardReq.code : "?"}, ret=${awardData ? awardData.retCode : "?"})`);
         }
     }
     if (claimed.length) $.messages.push(`✅ 每日任务领奖: ${claimed.join("、")}`);
+    return returnedAdBatches;
 }
 
 async function reportDailyTaskAction(snap, uin, task) {
@@ -738,6 +825,432 @@ async function reportDailyTaskAction(snap, uin, task) {
     const res = await appPost(snap, uin, "TaskActDataReport", body);
     debug(res, `Task Action ${task.ID}`);
     return appRequestSucceeded(res);
+}
+
+async function runReturnedAdTasks(taskList, snap, uin, context) {
+    let currentTasks = taskList;
+    let task = chooseScriptableAdTask(currentTasks);
+    if (!task) noteUnsupportedNativeAdTasks(taskList);
+    while (task && $.adState.count < $.adState.max) {
+        const result = await executeRewardAdTask(task, snap, uin, {
+            ...context,
+            taskList: currentTasks,
+        });
+        if (!result.success) return false;
+        currentTasks = result.data && result.data.adTaskList;
+        task = chooseScriptableAdTask(currentTasks);
+    }
+    return true;
+}
+
+async function runFixedVideoAds(tasks, snap, uin) {
+    if ($.adState.count >= $.adState.max) return;
+    let task = chooseFixedRewardVideoTask(tasks);
+    if (!task) {
+        task = await querySingleAdTask(
+            snap,
+            uin,
+            DAILY_TASK_ACT_ID,
+            FIXED_VIDEO_TASK_ID,
+            "Fixed Video Ad Task"
+        );
+    }
+    if (!task) return;
+
+    const context = {
+        actID: task._actID || DAILY_TASK_ACT_ID,
+        fromID: "points",
+        parentName: task.Name || "看视频领金币",
+        taskList: tasks,
+    };
+    const maxTimes = Math.max(1, Number(task.TaskMaxTimes || 1));
+    let finished = Math.max(0, Number(task.TaskFinishTime || 0));
+    while (finished < maxTimes && $.adState.count < $.adState.max) {
+        const result = await executeRewardAdTask(task, snap, uin, context);
+        if (!result.success) break;
+        finished++;
+        const chainSucceeded = await runReturnedAdTasks(
+            result.data && result.data.adTaskList,
+            snap,
+            uin,
+            {
+                actID: context.actID,
+                fromID: context.fromID,
+                parentName: "看视频领金币",
+            }
+        );
+        if (!chainSucceeded) break;
+    }
+}
+
+async function runLotteryTicketAds(snap, uin) {
+    if ($.adState.count >= $.adState.max) return;
+    const task = await querySingleAdTask(
+        snap,
+        uin,
+        LOTTERY_AD_ACT_ID,
+        LOTTERY_AD_TASK_ID,
+        "Lottery Ad Task"
+    );
+    if (!task) return;
+
+    const maxTimes = Math.max(1, Number(task.TaskMaxTimes || 1));
+    let finished = Math.max(0, Number(task.TaskFinishTime || 0));
+    while (finished < maxTimes && $.adState.count < $.adState.max) {
+        const result = await executeRewardAdTask(task, snap, uin, {
+            actID: LOTTERY_AD_ACT_ID,
+            fromID: "",
+            parentName: "金币抽奖次数",
+        });
+        if (!result.success) break;
+        finished++;
+    }
+}
+
+async function querySingleAdTask(snap, uin, actID, taskID, debugTitle) {
+    const body = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.activeCenter.ActTaskNewSvr",
+            method: "GetTaskInfos",
+            param: { ActID: actID, TaskIDs: [taskID] },
+        },
+    };
+    const res = await appPost(snap, uin, "GetTaskInfos", body);
+    debug(res, debugTitle);
+    const task = findTaskObject(
+        res && res.req_0 && res.req_0.data,
+        (item) => item.ID === taskID
+    );
+    if (!task || Number(task.State) !== 1) return null;
+    task._actID = actID;
+    return task;
+}
+
+async function executeRewardAdTask(task, snap, uin, context = {}) {
+    let config = getTaskAdConfig(task);
+    if (!config.channel) {
+        $.log(`[WARN] 广告任务缺少动态广告位 (${task.Name || task.ID})`);
+        return { success: false };
+    }
+
+    const ad = await fetchRewardAd(config, snap, uin);
+    if (!ad) return { success: false };
+    $.adState.count++;
+    const adUI = ad.ui || {};
+
+    const matchedTask = chooseRewardTaskForAd(context.taskList, task, ad);
+    if (matchedTask && matchedTask.ID !== task.ID) {
+        task = matchedTask;
+        config = getTaskAdConfig(task);
+        $.log(`[INFO] 广告素材匹配任务: ${task.ID} (${isEcpmTask(task) ? "ECPM" : "固定金币"})`);
+    }
+
+    const isEcpm = isEcpmTask(task);
+    const prizeType = Number((((task.PrizeList || [])[0]) || {}).Type || 0);
+    const isTicketTask = prizeType === 21 || task.ID === LOTTERY_AD_TASK_ID;
+    const isFixedVideo = Number(task.Type) === 1003 && !isEcpm && !isTicketTask;
+    const directVerifyTask = isTicketTask || isFixedVideo;
+    if (!isEcpm && !directVerifyTask) {
+        if (!$.adState.nativeWarned) {
+            $.adState.nativeWarned = true;
+            $.log(`[INFO] 暂不支持该广告任务票据 (${task.Name || task.ID})`);
+        }
+        return { success: false };
+    }
+
+    const rewardTime = Math.max(5000, Math.min(Number(adUI.reward_time || 30000), 60000));
+    await $.wait(rewardTime + 1200);
+
+    const actDataExt = isEcpm
+        ? {
+            EcpmToken: ad.base.verify_str,
+            RewardGold: String(Number(adUI.reward_gold || 0)),
+        }
+        : {
+            AdToken: ad.base.verify_str,
+        };
+    if (isFixedVideo) actDataExt.AdRewardType = "0";
+
+    // 落地页/外部 App 奖励与视频奖励是两条链。存在明确的二次金币配置时,
+    // 按服务端要求再等待停留时间并附加回传字段;无二次奖励时不伪造。
+    const extraGold = Number(adUI.second_reward_gold || 0);
+    const landingPage = ad.landing_page || ad.landingPage || {};
+    const landingRewardType = Number(
+        landingPage.landing_page_reward_type ||
+        ad.landing_page_reward_type ||
+        0
+    );
+    const landingWait = Number(
+        adUI.landing_page_reward_time ||
+        adUI.clicklp_reward_time ||
+        adUI.reward_landing_page_expose_time ||
+        0
+    );
+    if (extraGold > 0 && landingRewardType > 0 && landingWait > 0) {
+        await $.wait(Math.max(landingWait, 5000) + 800);
+        actDataExt.AdLandPage = "1";
+        actDataExt.AdLandPageRewardGold = String(extraGold);
+    }
+
+    const param = {
+        actID: context.actID || task._actID || DAILY_TASK_ACT_ID,
+        taskID: task.ID,
+        actData: 1,
+        actDataExt,
+    };
+    if (context.fromID) param.fromID = context.fromID;
+
+    const reportBody = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.activeCenter.ActTaskNewSvr",
+            method: "TaskActDataReport",
+            param,
+        },
+    };
+    const reportRes = await appPost(snap, uin, "TaskActDataReport", reportBody);
+    debug(reportRes, `Ad Reward ${task.ID}`);
+    const req = reportRes && reportRes.req_0;
+    const data = req && req.data;
+    const success = Boolean(
+        reportRes &&
+        reportRes.code === 0 &&
+        req &&
+        req.code === 0 &&
+        data &&
+        Number(data.retCode) === 0
+    );
+    if (!success) {
+        $.log(`[WARN] 广告任务未通过 (${task.Name || task.ID}, ret=${data ? data.retCode : "?"})`);
+        return { success: false, data };
+    }
+
+    const awardValue = Number(data.awardValue || (isEcpm ? adUI.reward_gold : 1) || 0);
+    $.adState.completed++;
+    if (isTicketTask) $.adState.tickets += awardValue || 1;
+    else $.adState.coins += awardValue;
+    if (actDataExt.AdLandPage === "1") $.adState.landingCoins += extraGold;
+    $.log(`[INFO] 广告任务完成: ${context.parentName || task.Name || task.ID}${awardValue ? ` +${awardValue}` : ""}`);
+    return { success: true, data };
+}
+
+async function fetchRewardAd(config, snap, uin) {
+    const store = normalizeAdTemplateStore($.getjson(AD_TEMPLATE_KEY, null));
+    const template = store.templates[String(config.channel)] || store.latest;
+    if (!template || !template.body) {
+        if (!$.adState.templateWarned) {
+            $.adState.templateWarned = true;
+            $.messages.push("⚠️ 广告任务未运行: 请开启广告抓取后在金币中心加载一次广告");
+        }
+        return null;
+    }
+
+    const adRequest = JSON.parse(JSON.stringify(template.body));
+    const now = Date.now();
+    adRequest.time = now;
+    adRequest.last_pull_time = now - 5000;
+    adRequest.cid = randomHex32();
+    adRequest.seq = randomHex32();
+    if (adRequest.user_info) adRequest.user_info.id = String(uin);
+
+    const reqInfo = adRequest.msg_ad_req_info || (adRequest.msg_ad_req_info = {});
+    reqInfo.ad_channel_id = config.channel;
+    let custom = {};
+    try {
+        custom = typeof reqInfo.custom_param === "string"
+            ? JSON.parse(reqInfo.custom_param || "{}")
+            : { ...(reqInfo.custom_param || {}) };
+    } catch (_) {}
+    delete custom.source_id;
+    if (config.sourceID) custom.source_id = config.sourceID;
+    if ([302004, 300506, 302029].includes(config.channel)) {
+        if (!Object.prototype.hasOwnProperty.call(custom, "pkg_name_resources")) custom.pkg_name_resources = "";
+        if (!Object.prototype.hasOwnProperty.call(custom, "ad_purchase_info")) {
+            custom.ad_purchase_info = AD_PURCHASE_INFO_BY_CHANNEL[config.channel] || "";
+        }
+    } else {
+        delete custom.pkg_name_resources;
+        delete custom.ad_purchase_info;
+    }
+    reqInfo.custom_param = JSON.stringify(custom);
+
+    const adRes = await post("https://music.y.qq.com/maproxy/getInfo", JSON.stringify(adRequest), {
+        "content-type": "application/json;charset=UTF-8",
+        Cookie: template.cookie || "",
+        "User-Agent": template.userAgent || UA,
+        "X-QQMusic-Script": "1",
+    }, false);
+    const ads = ((adRes && adRes.rpt_msg_pos_ad_info) || [])
+        .flatMap((position) => position.rpt_msg_ad_info || [])
+        .filter((item) => item && item.base && item.base.verify_str);
+    const ad = ads.find((item) =>
+        !config.nativeID || String(item.base.pos_id || "") === String(config.nativeID)
+    ) || ads[0];
+    debug({
+        ret: adRes && adRes.ret,
+        channel: config.channel,
+        adCount: ads.length,
+        selected: ad && {
+            posID: ad.base.pos_id,
+            productType: ad.base.product_type,
+            rewardTime: ad.ui && ad.ui.reward_time,
+            rewardGold: ad.ui && ad.ui.reward_gold,
+            secondRewardGold: ad.ui && ad.ui.second_reward_gold,
+        },
+    }, "Reward Ad getInfo");
+    if (!ad) {
+        $.log(`[WARN] 广告位 ${config.channel} 当前无广告(可能已达频控)`);
+        return null;
+    }
+
+    if (adRes && adRes.cookie) {
+        template.body.cookie = adRes.cookie;
+        template.ts = Date.now();
+        store.templates[String(config.channel)] = template;
+        store.latest = template;
+        $.setjson(store, AD_TEMPLATE_KEY);
+    }
+    return ad;
+}
+
+function getTaskAdConfig(task) {
+    let actExt = {};
+    try {
+        actExt = JSON.parse(((task.Ext || {}).ActExt) || "{}");
+    } catch (_) {}
+    const adPos = actExt.adPos || {};
+    const ios = adPos.ios;
+    const dynamicID = typeof ios === "object"
+        ? ios.dynamicAdId || ios.dynamic_ad_id || ios.id
+        : ios;
+    const nativeID = typeof ios === "object" ? ios.id : "";
+    const channel = Math.floor(Number(dynamicID || 0) / 100);
+    const sourceID = Number(
+        adPos.source_id ||
+        actExt.source_id ||
+        AD_SOURCE_BY_CHANNEL[channel] ||
+        0
+    );
+    return { channel, sourceID, nativeID, dynamicID };
+}
+
+function chooseScriptableAdTask(taskList) {
+    const ecpm = findTaskObject(taskList, (task) =>
+        task &&
+        Number(task.State) === 1 &&
+        Number(task.Type) === 1003 &&
+        isEcpmTask(task)
+    );
+    return ecpm || chooseFixedRewardVideoTask(taskList);
+}
+
+function chooseFixedRewardVideoTask(taskList) {
+    const tasks = findTaskObjects(taskList, (task) =>
+        task &&
+        Number(task.State) === 1 &&
+        Number(task.Type) === 1003 &&
+        !isEcpmTask(task) &&
+        (
+            task.ID === FIXED_VIDEO_TASK_ID ||
+            DIRECT_REWARD_AD_CHANNELS.includes(getTaskAdConfig(task).channel)
+        )
+    );
+    return tasks.sort((a, b) => fixedRewardVideoPriority(b) - fixedRewardVideoPriority(a))[0] || null;
+}
+
+function fixedRewardVideoPriority(task) {
+    const channel = getTaskAdConfig(task).channel;
+    if (task.ID === HIGH_VIDEO_TASK_ID || channel === 302035) return 100;
+    if (task.ID === FIXED_VIDEO_TASK_ID || channel === 302004) return 90;
+    return 10;
+}
+
+function chooseRewardTaskForAd(taskList, fallback, ad) {
+    const rewardGold = Number(((ad || {}).ui || {}).reward_gold || 0);
+    const wantEcpm = rewardGold > 0;
+    const fallbackConfig = getTaskAdConfig(fallback);
+    const matched = findTaskObject(taskList, (task) => {
+        if (
+            !task ||
+            Number(task.State) !== 1 ||
+            Number(task.Type) !== 1003 ||
+            isEcpmTask(task) !== wantEcpm
+        ) return false;
+        const config = getTaskAdConfig(task);
+        return !fallbackConfig.channel || !config.channel || config.channel === fallbackConfig.channel;
+    });
+    return matched || fallback;
+}
+
+function isEcpmTask(task) {
+    return String(((task || {}).Ext || {}).Ecpm || "") === "1";
+}
+
+function findTaskObject(root, predicate) {
+    return findTaskObjects(root, predicate)[0] || null;
+}
+
+function findTaskObjects(root, predicate) {
+    const found = [];
+    const walk = (value) => {
+        if (!value || typeof value !== "object") return;
+        if (!Array.isArray(value) && value.ID && predicate(value)) {
+            found.push(value);
+            return;
+        }
+        for (const item of Array.isArray(value) ? value : Object.values(value)) walk(item);
+    };
+    walk(root);
+    return found;
+}
+
+function normalizeAdTemplateStore(value) {
+    if (value && value.templates && typeof value.templates === "object") {
+        return { templates: value.templates, latest: value.latest || null };
+    }
+    if (value && value.body) {
+        const channel = Number((((value || {}).body || {}).msg_ad_req_info || {}).ad_channel_id || 0);
+        return {
+            templates: channel ? { [String(channel)]: value } : {},
+            latest: value,
+        };
+    }
+    return { templates: {}, latest: null };
+}
+
+function noteUnsupportedNativeAdTasks(tasks) {
+    const task = findTaskObject(tasks, (item) =>
+        item &&
+        Number(item.State) === 1 &&
+        (
+            (
+                Number(item.Type) === 1003 &&
+                !isEcpmTask(item) &&
+                !chooseFixedRewardVideoTask([item])
+            ) ||
+            [8003, 8005, 8012].includes(Number(item.Type))
+        )
+    );
+    if (!task) return;
+    if ([8003, 8005, 8012].includes(Number(task.Type))) {
+        if (!$.adState.externalWarned) {
+            $.adState.externalWarned = true;
+            $.log(`[INFO] ${task.Name || task.ID}: 外跳任务等待原生打开/返回回调突破`);
+        }
+    } else if (!$.adState.nativeWarned) {
+        $.adState.nativeWarned = true;
+        $.log(`[INFO] ${task.Name || task.ID}: 等待原生广告完成态票据突破`);
+    }
+}
+
+function appendAdSummary() {
+    if (!$.adState.completed) return;
+    const parts = [`完成 ${$.adState.completed} 个`];
+    if ($.adState.coins) parts.push(`金币 +${$.adState.coins}`);
+    if ($.adState.tickets) parts.push(`抽奖次数 +${$.adState.tickets}`);
+    if ($.adState.landingCoins) parts.push(`含跳转奖励 +${$.adState.landingCoins}`);
+    $.messages.push(`✅ 广告任务: ${parts.join("，")}`);
 }
 
 async function refreshTasksAfterAction(tasks, target, snap, uin) {
@@ -1432,6 +1945,10 @@ function taskOff(key) {
     return value === false || value === 0 || value === "false" || value === "0";
 }
 
+function adTasksEnabled() {
+    return !taskOff("qqmusic_task_ad");
+}
+
 function randomHex32() {
     let value = "";
     while (value.length < 32) value += Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, "0");
@@ -1664,7 +2181,7 @@ function debug(content, title = "debug") {
 
 function redactSensitive(text) {
     return String(text || "")
-        .replace(/("(?:authst|musickey|refresh_key|session_key|uin|musicid|str_musicid|cookie|openid|unionid|encryptUin|userip|phoneNo|encryptedPhoneNo)"\s*:\s*")[^"]*/gi, "$1<redacted>")
+        .replace(/("(?:authst|musickey|refresh_key|session_key|uin|musicid|str_musicid|cookie|verify_str|EcpmToken|AdToken|openid|unionid|encryptUin|userip|phoneNo|encryptedPhoneNo)"\s*:\s*")[^"]*/gi, "$1<redacted>")
         .replace(/("(?:uin|musicid)"\s*:\s*)\d+/gi, "$1<redacted>")
         .replace(/(qm_keyst=)[^;\s]+/gi, "$1<redacted>")
         .replace(/(refresh_key=)[^;\s]+/gi, "$1<redacted>")
@@ -1690,11 +2207,13 @@ async function sendMsg(message) {
 
 if (typeof $request !== "undefined") {
     if (/\/game_tree\.Api\//.test($request.url || "")) captureMoneyTreeSession();
+    else if (/\/maproxy\/getInfo(?:\?|$)/.test($request.url || "")) captureAdTemplate();
     else getCookie();
     $.done();
 } else if (JSON.parse($.getdata("qqmusic_clear") || "false")) {
     // BoxJS 一键清除 Cookie:清完自动复位开关
     $.setdata("", CK_KEY);
+    $.setdata("", AD_TEMPLATE_KEY);
     $.setdata("", MONEY_TREE_KEY);
     $.setdata("false", "qqmusic_clear");
     $.msg($.name, "", "✅ Cookie 已清除,请重新抓取");

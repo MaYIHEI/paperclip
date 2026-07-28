@@ -656,8 +656,6 @@
         "qqmusic_clear",
         "qqmusic_task_favorite",
         "qqmusic_task_activity",
-        "qqmusic_task_ad",
-        "qqmusic_ad_max",
         "qqmusic_debug"
       ],
       "settings": [
@@ -701,30 +699,6 @@
             }
           ],
           "desc": "执行金币抽奖签到、使用剩余抽奖次数、红包雨、浮动宝箱、摇钱树和可直接上报的活动任务"
-        },
-        {
-          "id": "qqmusic_task_ad",
-          "name": "广告任务",
-          "val": "true",
-          "type": "selects",
-          "items": [
-            {
-              "key": "true",
-              "label": "开启"
-            },
-            {
-              "key": "false",
-              "label": "关闭"
-            }
-          ],
-          "desc": "执行固定/动态看视频金币、任务领奖后的 ECPM 广告翻倍和看广告领抽奖次数；首次需在金币中心加载一次广告"
-        },
-        {
-          "id": "qqmusic_ad_max",
-          "name": "单次广告上限",
-          "val": "20",
-          "type": "text",
-          "desc": "单次 cron 最多尝试的广告数，范围 1–30；每个广告会按服务端要求等待约 30 秒"
         },
         {
           "id": "qqmusic_debug",
