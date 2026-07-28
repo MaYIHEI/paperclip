@@ -60,7 +60,7 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-07-28.r14"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-07-28.r15"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -480,8 +480,8 @@ async function runRedPacketRain(snap, uin) {
         },
     });
     debug(stateRes, "Red Packet Rain State");
-    if (!appRequestSucceeded(stateRes)) return;
-    const restChance = Number(findFirstValue(stateRes.req_0.data, ["restChance"]) || 0);
+    if (!redPacketRequestSucceeded(stateRes)) return;
+    const restChance = readRedPacketRestChance(stateRes.req_0.data);
     if (restChance <= 0) return;
 
     let completed = 0;
@@ -496,7 +496,7 @@ async function runRedPacketRain(snap, uin) {
             },
         });
         debug(chanceRes, `Red Packet Chance ${i + 1}`);
-        if (!appRequestSucceeded(chanceRes)) break;
+        if (!redPacketRequestSucceeded(chanceRes)) break;
         await $.wait(800);
 
         const drawRes = await appPost(snap, uin, "DrawPrizes", {
@@ -508,7 +508,7 @@ async function runRedPacketRain(snap, uin) {
             },
         });
         debug(drawRes, `Red Packet Draw ${i + 1}`);
-        if (!appRequestSucceeded(drawRes)) break;
+        if (!redPacketRequestSucceeded(drawRes)) break;
         completed++;
         coins += Number(findFirstValue(drawRes.req_0.data, ["awardValue", "RewardGold", "rewardGold", "coinNum", "coin"]) || 0);
     }
@@ -1525,6 +1525,35 @@ function musicRequestSucceeded(res, reqKey = "req_0") {
         data &&
         Number(data.retCode) === 0
     );
+}
+
+function redPacketRequestSucceeded(res) {
+    if (!appRequestSucceeded(res)) return false;
+    const data = res.req_0 && res.req_0.data;
+    if (!data || !Object.prototype.hasOwnProperty.call(data, "Code")) return true;
+    return [0, 10000].includes(Number(data.Code));
+}
+
+function readRedPacketRestChance(data, now = Math.floor(Date.now() / 1000)) {
+    if (!data || typeof data !== "object") return 0;
+    let config = data.BaseConfig;
+    if (typeof config === "string") {
+        try {
+            config = JSON.parse(config);
+        } catch (_) {
+            return 0;
+        }
+    }
+    const session = config && config.session;
+    const segments = session && Array.isArray(session.timeSegment) ? session.timeSegment : [];
+    const active = segments.find((item) => item && Number(item.status) === 2)
+        || segments.find((item) => {
+            const range = item && item.timeRangeTs;
+            return Array.isArray(range) &&
+                Number(range[0]) <= now &&
+                now <= Number(range[1]);
+        });
+    return active ? Math.max(0, Number(active.restChance) || 0) : 0;
 }
 
 function readSongAddStatus(res, songID) {
