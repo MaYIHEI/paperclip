@@ -4,10 +4,10 @@
  * 由 Safari 本地报告页按需调用；$argument 是固定模块名，不依赖插件参数插值。
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
- * @Updated: 2026-08-03
+ * @Updated: 2026-08-04
  */
 
-const TEST_VERSION = "2026-08-03.poc6";
+const TEST_VERSION = "2026-08-04.poc11";
 const SOURCE_URL = "https://raw.githubusercontent.com/MaYIHEI/paperclip/eaa04fe0a9f37ccfafdd11930d28fd5ff3f04718/loon/ipquality/ipquality.js";
 const SESSION_KEY = "paperclip.ipquality.web.session";
 const SESSION_TTL_MS = 30 * 60 * 1000;
@@ -21,7 +21,7 @@ const MODULES = {
     bgp: { title: "BGP 信息", enabled: ["显示 BGP 信息"] },
     bgppath: { title: "BGP 路径", enabled: ["显示目标前缀 BGP 路径"] },
     inbound: { title: "外部探针入站路径", enabled: ["测试外部探针入站路径"] },
-    ping: { title: "外部探针 Ping", enabled: ["测试外部探针 Ping"] },
+    ping: { title: "三网探针延迟", enabled: ["测试外部探针 Ping"] },
     mtr: { title: "外部探针 MTR", enabled: ["测试外部探针 MTR"] },
     stability: { title: "HTTPS 稳定性", enabled: ["测试 HTTPS 稳定性"] },
     media: {
@@ -37,6 +37,7 @@ const MODULES = {
 
 const moduleName = normalizeModule(typeof $argument !== "undefined" ? $argument : "");
 const moduleConfig = MODULES[moduleName];
+const maskIP = queryValue($request && $request.url, "mask") === "1";
 
 if (!moduleConfig) {
     respondJson(400, { ok: false, error: "未知检测模块" });
@@ -67,6 +68,7 @@ function runModule(session) {
 
         const optionStore = {
             read(label) {
+                if (String(label || "") === "隐藏 IP") return maskIP ? "true" : "false";
                 return moduleConfig.enabled.indexOf(String(label || "")) >= 0 ? "true" : "false";
             },
             write() {
@@ -101,7 +103,7 @@ function runModule(session) {
                     title: moduleConfig.title,
                     node: session.node,
                     elapsedMs: Date.now() - startedAt,
-                    html: String(result.htmlMessage),
+                    html: enhanceModuleHtml(String(result.htmlMessage), moduleName),
                     version: TEST_VERSION,
                 });
             }, optionStore, targetEnvironment);
@@ -137,6 +139,45 @@ function queryValue(url, key) {
 
 function normalizeModule(value) {
     return String(value || "").trim().replace(/^['"]|['"]$/g, "").toLowerCase();
+}
+
+function enhanceModuleHtml(html, name) {
+    const layoutFix = '<style>'
+        + '.report-section{content-visibility:visible!important;contain:none!important}'
+        + '.section-body,.summary-card{contain:none!important}'
+        + '.map-row{margin-top:7px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}'
+        + '.map-link{color:#0A84FF;font-size:12px;font-weight:600;text-decoration:none}'
+        + '.map-note{color:#8e8e93;font-size:10px}'
+        + '</style>';
+    if (name !== "basic") return html + layoutFix;
+
+    const coordinateRow = String(html).match(/(<div class="info-line"><span class="info-label">坐标<\/span><span class="info-value">([^<]+)<\/span><\/div>)/);
+    const coordinates = coordinateRow ? parseDMS(coordinateRow[2]) : null;
+    if (!coordinateRow || !coordinates) return html + layoutFix;
+
+    const mapURL = `https://maps.apple.com/?ll=${coordinates.latitude},${coordinates.longitude}`
+        + `&q=${encodeURIComponent("节点 IP 出口")}&z=15&t=m`;
+    const mapRow = '<div class="map-row">'
+        + `<a class="map-link" href="${mapURL}" target="_blank" rel="noopener noreferrer">在 Apple 地图中查看</a>`
+        + '<span class="map-note">IP 数据库估算位置</span></div>';
+    return html.replace(coordinateRow[1], coordinateRow[1] + mapRow) + layoutFix;
+}
+
+function parseDMS(value) {
+    const match = String(value || "").match(/(\d+)°(\d+)′([\d.]+)″([NS]).*?(\d+)°(\d+)′([\d.]+)″([EW])/);
+    if (!match) return null;
+    const latitude = dmsToDecimal(match[1], match[2], match[3], match[4]);
+    const longitude = dmsToDecimal(match[5], match[6], match[7], match[8]);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+    return {
+        latitude: Number(latitude.toFixed(6)),
+        longitude: Number(longitude.toFixed(6)),
+    };
+}
+
+function dmsToDecimal(degrees, minutes, seconds, direction) {
+    const value = Number(degrees) + Number(minutes) / 60 + Number(seconds) / 3600;
+    return /[SW]/.test(String(direction || "")) ? -value : value;
 }
 
 function respondJson(status, value) {
