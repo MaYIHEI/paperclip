@@ -6,7 +6,7 @@
  * @Updated: 2026-08-03
  */
 
-const TEST_VERSION = "2026-08-03.poc6";
+const TEST_VERSION = "2026-08-03.poc7";
 const VIEWER_URL = "http://paperclip.test/ipquality";
 const SESSION_KEY = "paperclip.ipquality.web.session";
 const params = typeof $environment !== "undefined" && $environment.params
@@ -42,7 +42,12 @@ if (!nodeName) {
             "点按进入检测页面",
             { openUrl }
         );
-        $done();
+        $done({
+            title: "检测页面已准备",
+            content: "请点按上方通知进入 Safari，选择需要的检测项目。",
+            icon: "safari",
+            "title-color": "#0A84FF",
+        });
     }
 }
 
