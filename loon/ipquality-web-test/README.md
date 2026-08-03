@@ -8,14 +8,14 @@
 
 导入测试插件：
 
-`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc4`
+`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc5`
 
 在节点或策略组页面运行“节点 IP 质量检测 · 模块化网页测试”，再点击通知进入 Safari。网页内选择需要的项目并开始检测。
 
 ## 实现
 
 - 启动器只保存本次检测 ID、目标节点与时间，不执行检测。
-- 报告外壳使用 Rewrite v2 `response.body.mock_file("html", ...)`，不连接真实报告服务器。
+- 报告外壳使用 Rewrite v2 内联 `response.body.mock("html", ...)`，避免远程 `.lpx` 无法载入同目录 `mock_file` 资源；不连接真实报告服务器。
 - 15 个检测项目对应 15 个本地 GET 接口；固定 `argument="模块名"`，不依赖插件参数插值。
 - 每个接口恢复节点页保存的目标节点，复用固定 r32 检测逻辑，并由其 `$httpClient` 显式绑定该节点。
 - 网页最多并发两个模块，关闭的项目完全不请求；每项独立显示成功、失败、耗时和完整报告。

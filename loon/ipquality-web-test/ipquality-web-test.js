@@ -6,7 +6,7 @@
  * @Updated: 2026-08-03
  */
 
-const TEST_VERSION = "2026-08-03.poc4";
+const TEST_VERSION = "2026-08-03.poc5";
 const VIEWER_URL = "http://paperclip.test/ipquality";
 const SESSION_KEY = "paperclip.ipquality.web.session";
 const params = typeof $environment !== "undefined" && $environment.params
