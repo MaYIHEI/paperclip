@@ -8,7 +8,7 @@
 
 导入测试插件：
 
-`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc9`
+`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc10`
 
 节点或策略组页面提供四个入口：基础信息、风险、流媒体与 AI 三项快捷检测直接显示 Loon 原生结果；“IP 自选检测 · 网页”通过通知进入 Safari，可选择一项或多项。
 
@@ -22,6 +22,7 @@
 - “节点 HTTPS 轻量测速”通过目标节点访问 Cloudflare 官方 HTTPS/443 测速端点；下载按实际接收字节计算，上传仅在服务端成功响应后显示，整体最多约 14 秒。
 - “三网连通性”并行探测电信、联通、移动各两个公开测速点，只测可达性、响应耗时和 64 KB 小样本下载，不执行上传，也不把结果描述为运营商带宽。
 - 网页最多并发两个模块，关闭的项目完全不请求；检测过程保留独立状态，完成内容合并在一张连续报告中。
+- 外层网页与各模块 iframe 都跟随 iOS 深色模式，报告背景和文字颜色保持一致。
 - 选中状态只保存在 Safari 本地，30 分钟后检测会话失效。
 
 ## 当前边界

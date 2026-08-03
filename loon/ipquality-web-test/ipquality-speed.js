@@ -7,7 +7,7 @@
  * @Updated: 2026-08-03
  */
 
-const SPEED_VERSION = "2026-08-03.poc9";
+const SPEED_VERSION = "2026-08-04.poc10";
 const SESSION_KEY = "paperclip.ipquality.web.session";
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const TOTAL_BUDGET_MS = 14000;
@@ -189,7 +189,7 @@ function renderReport(result) {
         + '</style><div class="report-root"><div class="report-title">节点 HTTPS 轻量测速</div>'
         + `<div class="node-label">Cloudflare Speed · ${SPEED_VERSION}</div><section class="report-section"><div class="section-summary">▌节点 HTTPS 轻量测速</div><div class="section-body"><div class="speed-card">`
         + `<div class="metric"><span>目标</span><b>Cloudflare Edge<small>HTTPS · 443</small></b></div>`
-        + `<div class="metric"><span>延迟</span>${latency}</div><div class="metric"><span>下载</span>${download}</div><div class="metric"><span>上传</span>${upload}</div>${notes}<div class="method-note">Cloudflare HTTPS 单连接小样本，适合快速判断节点当前速度；不是 Ookla 或 VPS 本机带宽。</div></div></div></section>`
+        + `<div class="metric"><span>HTTPS 响应</span>${latency}</div><div class="metric"><span>下载</span>${download}</div><div class="metric"><span>上传</span>${upload}</div>${notes}<div class="method-note">Cloudflare HTTPS 单连接小样本，适合快速判断节点当前速度；不是 Ookla 或 VPS 本机带宽。</div></div></div></section>`
         + '<div class="report-note">数据来自目标节点的真实 HTTPS 收发字节与端到端耗时。它适合快速判断节点当前可用速度，不等同于 Ookla 多连接测速或 VPS 本机带宽。</div></div>';
 }
 
