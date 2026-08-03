@@ -1,33 +1,26 @@
-# 节点 IP 质量检测 · Rewrite v2 网页测试
+# 节点 IP 质量检测 · 模块化网页测试
 
-> 🧪 待验证 · 仅支持 Loon 3.5.1(979)+
+> 🧪 待真机验证 · Loon 3.5.1(979)+
 
-独立验证“完整检测结果通过 Rewrite v2 本地 Mock 网页，并在 Safari 展示”的可行性。现有 `loon/ipquality` 不受影响。
+独立验证“节点页启动器 + Rewrite v2 本地网页 + 按需检测接口”的方案。现有 `loon/ipquality` 不受影响。
 
 ## 使用
 
 导入测试插件：
 
-`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc3`
+`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc4`
 
-在插件设置中开启需要的报告分区，然后在节点页面运行“节点 IP 质量检测 · 网页测试”。检测完成后，点击通知进入 Safari 查看完整报告。
+在节点或策略组页面运行“节点 IP 质量检测 · 模块化网页测试”，再点击通知进入 Safari。网页内选择需要的项目并开始检测。
 
-## 实现范围
+## 实现
 
-- 检测选项使用已在 generic 脚本中验证可靠的 `#!select + $persistentStore`；避免 `[Argument]` 开关在当前 Loon 中无法传给 generic 脚本。
-- 本地页面使用 Rewrite v2 的 `response if … then response.body.mock("html", …)`。
-- 同一条 Rewrite 追加 Content-Type、Cache-Control、CSP 和 nosniff Header Action。
-- 检测结果经 UTF-8、LZW 和 Base64URL 压缩后放在 URL Fragment；Fragment 不会发送给 HTTP 请求。
-- 页面载入后把数据保存在当前 Safari 会话，并立即从地址栏移除 Fragment。
-- 虚拟地址为 `http://paperclip.test/ipquality`，Mock 在请求发往上游前生成响应，不连接真实报告服务器。
+- 启动器只保存本次检测 ID、目标节点与时间，不执行检测。
+- 报告外壳使用 Rewrite v2 `response.body.mock_file("html", ...)`，不连接真实报告服务器。
+- 15 个检测项目对应 15 个本地 GET 接口；固定 `argument="模块名"`，不依赖插件参数插值。
+- 每个接口恢复节点页保存的目标节点，复用固定 r32 检测逻辑，并由其 `$httpClient` 显式绑定该节点。
+- 网页最多并发两个模块，关闭的项目完全不请求；每项独立显示成功、失败、耗时和完整报告。
+- 选中状态只保存在 Safari 本地，30 分钟后检测会话失效。
 
-检测逻辑固定复用 `loon/ipquality` r32 提交 `eaa04fe0a9f37ccfafdd11930d28fd5ff3f04718`，本 PoC 不作为正式插件发布。
+## 当前边界
 
-## 测试重点
-
-- 19 个选项是否能通过 Loon 持久化配置正确传入 generic 脚本。
-- 通知能否正常打开 Safari。
-- Rewrite v2 是否稳定 Mock HTML，且请求没有发往外部网络。
-- 报告能否正确解压，完整字段与样式是否正常。
-- 完整报告的滚动是否比 Loon 长弹窗顺畅。
-- 浅色、深色模式和折叠分区是否正常。
+这是架构 PoC。每个模块暂时独立执行一次 r32，因此同时开启很多项目会重复请求基础来源；真机确认方案可行后，再拆出共享基础数据和模块专用探测，减少重复请求与 API 限流。
