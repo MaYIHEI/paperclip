@@ -4,32 +4,30 @@
 #!author=MaYIHEI[https://github.com/MaYIHEI]
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/loon/ipquality-web-test
 #!loon_version=3.5.1(979)
+#!select = 网页测试·隐藏 IP,false,true
+#!select = 网页测试·执行媒体与 AI 检测,false,true
+#!select = 网页测试·地图通知,false,true
+#!select = 网页测试·低负载报告,false,true
+#!select = 网页测试·显示基础信息,false,true
+#!select = 网页测试·显示出口分流,false,true
+#!select = 网页测试·显示 BGP 信息,false,true
+#!select = 网页测试·显示目标前缀 BGP 路径,false,true
+#!select = 网页测试·测试三网真实测速,false,true
+#!select = 网页测试·测试外部探针入站路径,false,true
+#!select = 网页测试·测试外部探针 Ping,false,true
+#!select = 网页测试·测试外部探针 MTR,false,true
+#!select = 网页测试·测试 HTTPS 稳定性,false,true
+#!select = 网页测试·显示 IP 类型,false,true
+#!select = 网页测试·显示风险评分,false,true
+#!select = 网页测试·显示风险因素,false,true
+#!select = 网页测试·显示媒体与 AI 结果,false,true
+#!select = 网页测试·显示地区一致性,false,true
+#!select = 网页测试·显示数据状态,false,true
 #!tag=节点,IP,Rewrite v2,网页测试
-#!date=2026-08-03 21:00:00
-
-[Argument]
-mask = switch,false,tag=隐藏 IP,desc=隐藏报告中 IP 的后半段
-media = switch,false,tag=执行媒体与 AI 检测,desc=媒体与 AI 检测总开关
-map = switch,false,tag=地图通知,desc=保留 Apple 地图位置通知
-fold = switch,false,tag=低负载报告,desc=使用折叠纯文本分区
-basic = switch,false,tag=显示基础信息
-egress = switch,false,tag=显示出口分流
-bgp = switch,false,tag=显示 BGP 信息
-bgppath = switch,false,tag=显示目标前缀 BGP 路径
-speed = switch,false,tag=测试三网真实测速
-inbound = switch,false,tag=测试外部探针入站路径
-ping = switch,false,tag=测试外部探针 Ping
-mtr = switch,false,tag=测试外部探针 MTR
-stability = switch,false,tag=测试 HTTPS 稳定性
-types = switch,false,tag=显示 IP 类型
-scores = switch,false,tag=显示风险评分
-factors = switch,false,tag=显示风险因素
-mediaout = switch,false,tag=显示媒体与 AI 结果
-regions = switch,false,tag=显示地区一致性
-status = switch,false,tag=显示数据状态
+#!date=2026-08-03 22:00:00
 
 [Rewrite]
 response if ${url} ~= /^http:\/\/paperclip\.test\/ipquality$/ then response.body.mock("html", `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light dark"><title>节点 IP 质量报告</title><style>:root{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;background:#f2f2f7;color:#1c1c1e}body{margin:0;min-height:100vh;background:#f2f2f7;-webkit-font-smoothing:antialiased}.viewer{box-sizing:border-box;width:min(100%,720px);min-height:100vh;margin:0 auto;padding:18px 22px 30px;background:#fff;box-shadow:0 0 32px rgba(0,0,0,.06)}.notice{box-sizing:border-box;width:min(calc(100% - 28px),692px);margin:14px auto 0;padding:10px 13px;border-radius:12px;background:#e8f3ff;color:#0666c2;font-size:12px;line-height:1.45}.empty{box-sizing:border-box;max-width:520px;margin:18vh auto 0;padding:30px;text-align:center}.empty h1{font-size:22px}.empty p{color:#8e8e93;line-height:1.6}footer{box-sizing:border-box;width:min(100%,720px);margin:0 auto;padding:22px;color:#8e8e93;text-align:center;font-size:11px;background:#fff}@media(max-width:520px){.viewer{padding:14px 18px 28px;box-shadow:none}.notice{margin-top:10px}}@media(prefers-color-scheme:dark){:root,body{background:#000;color:#f2f2f7}.viewer,footer{background:#111113}.notice{background:#102b45;color:#64b5ff}}</style></head><body><div id="notice" class="notice">正在读取本地检测结果…</div><main id="report" class="viewer"></main><footer>报告由 Loon Rewrite v2 在本机生成 · 未连接外部报告服务器</footer><script>(function(){var report=document.getElementById("report"),notice=document.getElementById("notice");try{var payload=location.hash.slice(1)||sessionStorage.getItem("paperclip-ipquality-report")||"";if(!payload||payload.indexOf("v1.")!==0)throw new Error("未找到检测结果，请返回 Loon 重新运行网页测试");sessionStorage.setItem("paperclip-ipquality-report",payload);history.replaceState(null,"",location.pathname);var record=JSON.parse(decodeReport(payload.slice(3)));report.innerHTML=record.html;notice.textContent="本地报告 · "+new Date(record.createdAt).toLocaleString("zh-CN",{hour12:false})+" · "+(record.version||"");}catch(error){notice.style.display="none";report.className="empty";report.innerHTML="<h1>报告读取失败</h1><p>"+escapeText(error&&error.message||"未知错误")+"</p>";}function decodeReport(value){var packed=base64UrlDecode(value),codes=[];for(var i=0;i+1<packed.length;i+=2)codes.push((packed.charCodeAt(i)<<8)|packed.charCodeAt(i+1));var binary=lzwDecompress(codes),bytes=new Uint8Array(binary.length);for(var j=0;j<binary.length;j++)bytes[j]=binary.charCodeAt(j)&255;return new TextDecoder("utf-8").decode(bytes);}function base64UrlDecode(value){var input=value.replace(/-/g,"+").replace(/_/g,"/");while(input.length%4)input+="=";return atob(input);}function lzwDecompress(codes){if(!codes.length)return"";var dictionary=[],nextCode=256,previous=String.fromCharCode(codes[0]),output=previous;for(var i=1;i<codes.length;i++){var code=codes[i],phrase;if(code<256)phrase=String.fromCharCode(code);else if(typeof dictionary[code]!=="undefined")phrase=dictionary[code];else if(code===nextCode)phrase=previous+previous.charAt(0);else throw new Error("报告压缩数据无效");output+=phrase;if(nextCode<=65535)dictionary[nextCode++]=previous+phrase.charAt(0);previous=phrase;}return output;}function escapeText(value){return String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}})();</script></body></html>`, 200) | response.header.set("Content-Type", "text/html; charset=utf-8") | response.header.set("Cache-Control", "no-store, no-cache, must-revalidate") | response.header.set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:") | response.header.set("X-Content-Type-Options", "nosniff")
 
 [Script]
-generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.js?ver=poc2, tag=节点 IP 质量检测 · 网页测试, timeout=65, img-url=safari.system, argument=[{mask},{media},{map},{fold},{basic},{egress},{bgp},{bgppath},{speed},{inbound},{ping},{mtr},{stability},{types},{scores},{factors},{mediaout},{regions},{status}], enable=true
+generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.js?ver=poc3, tag=节点 IP 质量检测 · 网页测试, timeout=65, img-url=safari.system, enable=true

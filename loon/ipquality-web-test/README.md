@@ -8,13 +8,13 @@
 
 导入测试插件：
 
-`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc2`
+`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc3`
 
 在插件设置中开启需要的报告分区，然后在节点页面运行“节点 IP 质量检测 · 网页测试”。检测完成后，点击通知进入 Safari 查看完整报告。
 
 ## 实现范围
 
-- 插件选项使用最新版 `[Argument]`、`switch` 和 `argument=[{参数}]`。
+- 检测选项使用已在 generic 脚本中验证可靠的 `#!select + $persistentStore`；避免 `[Argument]` 开关在当前 Loon 中无法传给 generic 脚本。
 - 本地页面使用 Rewrite v2 的 `response if … then response.body.mock("html", …)`。
 - 同一条 Rewrite 追加 Content-Type、Cache-Control、CSP 和 nosniff Header Action。
 - 检测结果经 UTF-8、LZW 和 Base64URL 压缩后放在 URL Fragment；Fragment 不会发送给 HTTP 请求。
@@ -25,7 +25,7 @@
 
 ## 测试重点
 
-- 19 个 `switch` 参数是否正确传入 generic 脚本。
+- 19 个选项是否能通过 Loon 持久化配置正确传入 generic 脚本。
 - 通知能否正常打开 Safari。
 - Rewrite v2 是否稳定 Mock HTML，且请求没有发往外部网络。
 - 报告能否正确解压，完整字段与样式是否正常。

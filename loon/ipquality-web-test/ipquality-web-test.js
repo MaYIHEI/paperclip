@@ -9,38 +9,37 @@
  *
  * ===== Loon =====
  * [Script]
- * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.js?ver=poc2, tag=节点 IP 质量检测 · 网页测试, timeout=65, img-url=safari.system, argument=[{mask},{media},{map},{fold},{basic},{egress},{bgp},{bgppath},{speed},{inbound},{ping},{mtr},{stability},{types},{scores},{factors},{mediaout},{regions},{status}], enable=true
+ * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.js?ver=poc3, tag=节点 IP 质量检测 · 网页测试, timeout=65, img-url=safari.system, enable=true
  */
 
-const TEST_VERSION = "2026-08-03.poc2";
+const TEST_VERSION = "2026-08-03.poc3";
 const SOURCE_URL = "https://raw.githubusercontent.com/MaYIHEI/paperclip/eaa04fe0a9f37ccfafdd11930d28fd5ff3f04718/loon/ipquality/ipquality.js";
 const VIEWER_URL = "http://paperclip.test/ipquality";
 const MAX_VIEWER_URL_LENGTH = 180000;
 const nativeDone = $done;
-const runtimeArguments = typeof $argument !== "undefined" && $argument ? $argument : {};
 
-const ARGUMENT_BY_LABEL = {
-    "隐藏 IP": "mask",
-    "执行媒体与 AI 检测": "media",
-    "地图通知": "map",
-    "低负载报告": "fold",
-    "显示基础信息": "basic",
-    "显示出口分流": "egress",
-    "显示 BGP 信息": "bgp",
-    "显示目标前缀 BGP 路径": "bgppath",
-    "测试三网真实测速": "speed",
-    "测试三网地区测速": "speed",
-    "测试运营商官网": "speed",
-    "测试外部探针入站路径": "inbound",
-    "测试外部探针 Ping": "ping",
-    "测试外部探针 MTR": "mtr",
-    "测试 HTTPS 稳定性": "stability",
-    "显示 IP 类型": "types",
-    "显示风险评分": "scores",
-    "显示风险因素": "factors",
-    "显示媒体与 AI 结果": "mediaout",
-    "显示地区一致性": "regions",
-    "显示数据状态": "status",
+const OPTION_BY_LABEL = {
+    "隐藏 IP": "网页测试·隐藏 IP",
+    "执行媒体与 AI 检测": "网页测试·执行媒体与 AI 检测",
+    "地图通知": "网页测试·地图通知",
+    "低负载报告": "网页测试·低负载报告",
+    "显示基础信息": "网页测试·显示基础信息",
+    "显示出口分流": "网页测试·显示出口分流",
+    "显示 BGP 信息": "网页测试·显示 BGP 信息",
+    "显示目标前缀 BGP 路径": "网页测试·显示目标前缀 BGP 路径",
+    "测试三网真实测速": "网页测试·测试三网真实测速",
+    "测试三网地区测速": "网页测试·测试三网真实测速",
+    "测试运营商官网": "网页测试·测试三网真实测速",
+    "测试外部探针入站路径": "网页测试·测试外部探针入站路径",
+    "测试外部探针 Ping": "网页测试·测试外部探针 Ping",
+    "测试外部探针 MTR": "网页测试·测试外部探针 MTR",
+    "测试 HTTPS 稳定性": "网页测试·测试 HTTPS 稳定性",
+    "显示 IP 类型": "网页测试·显示 IP 类型",
+    "显示风险评分": "网页测试·显示风险评分",
+    "显示风险因素": "网页测试·显示风险因素",
+    "显示媒体与 AI 结果": "网页测试·显示媒体与 AI 结果",
+    "显示地区一致性": "网页测试·显示地区一致性",
+    "显示数据状态": "网页测试·显示数据状态",
 };
 
 runDetector();
@@ -55,8 +54,10 @@ function runDetector() {
 
         const argumentStore = {
             read(label) {
-                const key = ARGUMENT_BY_LABEL[String(label || "")];
-                return key ? readArgument(key) : null;
+                const key = OPTION_BY_LABEL[String(label || "")];
+                return key && typeof $persistentStore !== "undefined"
+                    ? $persistentStore.read(key)
+                    : null;
             },
             write() {
                 return false;
@@ -114,12 +115,6 @@ function captureDetectorResult(result) {
         icon: "safari",
         "title-color": result["title-color"] || "#0A84FF",
     });
-}
-
-function readArgument(key) {
-    const value = runtimeArguments && runtimeArguments[key];
-    if (value === null || typeof value === "undefined" || value === "") return false;
-    return !(value === false || value === 0 || value === "false" || value === "0");
 }
 
 function encodeReport(text) {
