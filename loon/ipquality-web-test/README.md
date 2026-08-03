@@ -1,24 +1,25 @@
-# 节点 IP 质量检测 · 模块化网页测试
+# 节点 IP 质量检测 · 混合模式测试
 
 > 🧪 待真机验证 · Loon 3.5.1(979)+
 
-独立验证“节点页启动器 + Rewrite v2 本地网页 + 按需检测接口”的方案。现有 `loon/ipquality` 不受影响。
+独立验证“常用单项原生快捷结果 + 多项自选网页报告”的混合方案。现有 `loon/ipquality` 不受影响。
 
 ## 使用
 
 导入测试插件：
 
-`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc5`
+`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc6`
 
-在节点或策略组页面运行“节点 IP 质量检测 · 模块化网页测试”，再点击通知进入 Safari。网页内选择需要的项目并开始检测。
+节点或策略组页面提供四个入口：基础信息、风险、流媒体与 AI 三项快捷检测直接显示 Loon 原生结果；“IP 自选检测 · 网页”通过通知进入 Safari，可选择一项或多项。
 
 ## 实现
 
-- 启动器只保存本次检测 ID、目标节点与时间，不执行检测。
+- 三个快捷入口固定传入模块名，直接复用 r32 生成原生报告。
+- 自选入口只保存本次检测 ID、目标节点与时间，成功后仅发送通知，不再显示重复弹窗。
 - 报告外壳使用 Rewrite v2 内联 `response.body.mock("html", ...)`，避免远程 `.lpx` 无法载入同目录 `mock_file` 资源；不连接真实报告服务器。
 - 15 个检测项目对应 15 个本地 GET 接口；固定 `argument="模块名"`，不依赖插件参数插值。
 - 每个接口恢复节点页保存的目标节点，复用固定 r32 检测逻辑，并由其 `$httpClient` 显式绑定该节点。
-- 网页最多并发两个模块，关闭的项目完全不请求；每项独立显示成功、失败、耗时和完整报告。
+- 网页最多并发两个模块，关闭的项目完全不请求；检测过程保留独立状态，完成内容合并在一张连续报告中。
 - 选中状态只保存在 Safari 本地，30 分钟后检测会话失效。
 
 ## 当前边界

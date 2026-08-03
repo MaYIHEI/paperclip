@@ -6,7 +6,7 @@
  * @Updated: 2026-08-03
  */
 
-const TEST_VERSION = "2026-08-03.poc5";
+const TEST_VERSION = "2026-08-03.poc6";
 const VIEWER_URL = "http://paperclip.test/ipquality";
 const SESSION_KEY = "paperclip.ipquality.web.session";
 const params = typeof $environment !== "undefined" && $environment.params
@@ -37,17 +37,12 @@ if (!nodeName) {
     } else {
         const openUrl = `${VIEWER_URL}?run=${encodeURIComponent(session.id)}`;
         $notification.post(
-            "模块化 IP 检测已准备",
+            "节点 IP 自选检测",
             truncate(nodeName, 36),
-            "点击打开 Safari，按需选择检测项目",
+            "点按进入检测页面",
             { openUrl }
         );
-        $done({
-            title: "节点 IP 质量检测 · 模块化网页测试",
-            content: "网页控制台已生成，请点击刚刚发送的通知。",
-            icon: "safari",
-            "title-color": "#0A84FF",
-        });
+        $done();
     }
 }
 
