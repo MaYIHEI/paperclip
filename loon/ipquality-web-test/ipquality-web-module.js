@@ -20,10 +20,6 @@ const MODULES = {
     egress: { title: "出口分流", enabled: ["显示出口分流"] },
     bgp: { title: "BGP 信息", enabled: ["显示 BGP 信息"] },
     bgppath: { title: "BGP 路径", enabled: ["显示目标前缀 BGP 路径"] },
-    speed: {
-        title: "三网真实测速",
-        enabled: ["测试三网真实测速", "测试三网地区测速", "测试运营商官网"],
-    },
     inbound: { title: "外部探针入站路径", enabled: ["测试外部探针入站路径"] },
     ping: { title: "外部探针 Ping", enabled: ["测试外部探针 Ping"] },
     mtr: { title: "外部探针 MTR", enabled: ["测试外部探针 MTR"] },
