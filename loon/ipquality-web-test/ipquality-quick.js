@@ -1,13 +1,13 @@
 /**
- * 节点 IP 质量检测 V2 · 原生快捷入口
+ * 节点 IP 质量检测 · 原生快捷入口
  *
  * $argument 固定为 basic、risk 或 media，不依赖插件参数插值。
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
- * @Updated: 2026-08-03
+ * @Updated: 2026-08-04
  */
 
-const QUICK_VERSION = "2026-08-04.v2-test1";
+const QUICK_VERSION = "2026-08-04.poc12";
 const SOURCE_URL = "https://raw.githubusercontent.com/MaYIHEI/paperclip/eaa04fe0a9f37ccfafdd11930d28fd5ff3f04718/loon/ipquality/ipquality.js";
 const params = typeof $environment !== "undefined" && $environment.params
     ? $environment.params
@@ -17,15 +17,15 @@ const nativeDone = $done;
 
 const QUICK_MODULES = {
     basic: {
-        title: "V2 快速 IP 信息",
+        title: "快速 IP 信息",
         enabled: ["显示基础信息"],
     },
     risk: {
-        title: "V2 快速风险检测",
+        title: "快速风险检测",
         enabled: ["显示 IP 类型", "显示风险评分", "显示风险因素"],
     },
     media: {
-        title: "V2 快速流媒体与 AI",
+        title: "快速流媒体与 AI",
         enabled: ["执行媒体与 AI 检测", "显示媒体与 AI 结果", "显示地区一致性"],
     },
 };
@@ -85,7 +85,7 @@ function normalizeName(value) {
 
 function finishError(message) {
     nativeDone({
-        title: quickConfig && quickConfig.title || "IP V2 快捷检测",
+        title: quickConfig && quickConfig.title || "IP 快捷检测",
         content: message,
         icon: "network.slash",
     });
