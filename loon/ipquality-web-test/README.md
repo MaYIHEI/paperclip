@@ -1,14 +1,14 @@
-# 节点 IP 质量检测 · 混合模式测试
+# 节点 IP 质量检测 · 混合模式
 
-> 🧪 待真机验证 · Loon 3.5.1(980)+
+> ✅ 维护中 · Loon 3.5.1(980)+
 
-独立验证“常用单项原生快捷结果 + 多项自选网页报告”的混合方案。现有 `loon/ipquality` 不受影响。
+“常用单项原生快捷结果 + 多项自选网页报告”的独立混合模式版本。它与现有 `loon/ipquality` 同时存在，不覆盖、不替换原版。
 
 ## 使用
 
-导入测试插件：
+导入插件：
 
-`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc12`
+`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc12`
 
 节点或策略组页面提供四个入口：基础信息、风险、流媒体与 AI 三项快捷检测直接显示 Loon 原生结果；“IP 自选检测 · 网页”通过通知进入 Safari，可选择一项或多项。
 
@@ -28,6 +28,6 @@
 
 ## 当前边界
 
-这是架构 PoC。除 HTTPS 轻量测速外，其余模块暂时独立执行一次 r32，因此同时开启很多项目会重复请求基础来源；真机确认方案可行后，再拆出共享基础数据和更多模块专用探测，减少重复请求与 API 限流。
+除 HTTPS 轻量测速外，其余模块暂时独立执行一次 r32，因此同时开启很多项目会重复请求基础来源；后续会继续拆分共享基础数据和模块专用探测，减少重复请求与 API 限流。
 
 HTTPS 轻量测速是目标节点到 Cloudflare Edge 的端到端小样本估算；三网探针延迟是外部探针到出口 IP 的入站往返测量，出口不响应 ICMP 时可能失败。两者都不等同于 xykt NetQuality 在 VPS 本机调用 Ookla CLI 的多服务器测速；xykt IPQuality 本身不包含三网带宽测试。
