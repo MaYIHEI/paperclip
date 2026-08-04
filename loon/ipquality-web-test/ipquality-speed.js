@@ -4,10 +4,10 @@
  * 通过目标节点访问 Cloudflare 官方测速端点，测量端到端延迟与轻量吞吐。
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
- * @Updated: 2026-08-03
+ * @Updated: 2026-08-04
  */
 
-const SPEED_VERSION = "2026-08-04.poc10";
+const SPEED_VERSION = "2026-08-04.poc12";
 const SESSION_KEY = "paperclip.ipquality.web.session";
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const TOTAL_BUDGET_MS = 14000;

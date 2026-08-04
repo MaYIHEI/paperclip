@@ -3,10 +3,10 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-08-03
+ * @Updated: 2026-08-04
  */
 
-const TEST_VERSION = "2026-08-03.poc7";
+const TEST_VERSION = "2026-08-04.poc12";
 const VIEWER_URL = "http://paperclip.test/ipquality";
 const SESSION_KEY = "paperclip.ipquality.web.session";
 const params = typeof $environment !== "undefined" && $environment.params

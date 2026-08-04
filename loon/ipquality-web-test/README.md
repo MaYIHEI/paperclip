@@ -1,6 +1,6 @@
 # 节点 IP 质量检测 · 混合模式测试
 
-> 🧪 待真机验证 · Loon 3.5.1(979)+
+> 🧪 待真机验证 · Loon 3.5.1(980)+
 
 独立验证“常用单项原生快捷结果 + 多项自选网页报告”的混合方案。现有 `loon/ipquality` 不受影响。
 
@@ -8,7 +8,7 @@
 
 导入测试插件：
 
-`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc11`
+`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc12`
 
 节点或策略组页面提供四个入口：基础信息、风险、流媒体与 AI 三项快捷检测直接显示 Loon 原生结果；“IP 自选检测 · 网页”通过通知进入 Safari，可选择一项或多项。
 
@@ -16,7 +16,7 @@
 
 - 三个快捷入口固定传入模块名，直接复用 r32 生成原生报告。
 - 自选入口保存本次检测 ID、目标节点与时间并发送通知；Loon 强制显示 generic 结果弹窗，因此返回简短的“检测页面已准备”提示，避免 `empty content`。
-- 报告外壳使用 Rewrite v2 内联 `response.body.mock("html", ...)`，避免远程 `.lpx` 无法载入同目录 `mock_file` 资源；不连接真实报告服务器。
+- 报告外壳使用 Rewrite v2 内联 `response.body.mock("html", ...)`，响应 Header 使用 3.5.1(980) 批量数组参数；不连接真实报告服务器。
 - 15 个检测项目对应 15 个本地 GET 接口；常规模块固定 `argument="模块名"`，不依赖插件参数插值。
 - 每个接口恢复节点页保存的目标节点，并由 `$httpClient` 显式绑定该节点。
 - “节点 HTTPS 轻量测速”通过目标节点访问 Cloudflare 官方 HTTPS/443 测速端点；下载按实际接收字节计算，上传仅在服务端成功响应后显示，整体最多约 14 秒。
