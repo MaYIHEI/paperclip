@@ -32,7 +32,7 @@ cron "0 0-59/6 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI
 cron "0 5 0,8,12,16,20,22 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
 ```
 
-最终只保留上面两条 cron,不要再添加旧的 `20 9 * * *`。第一条在 9–10 点每 6 分钟运行一次:普通定时金币每天最多 10 次,浮动宝箱每天最多 15 次,多出的运行会因任务已完成而自动跳过;第二条在红包雨六个时段开始后各运行一次。脚本本身不能在退出后等待数小时再自行启动。
+最终只保留上面两条 cron,不要再添加旧的 `20 9 * * *`。第一条在 9–10 点每 6 分钟运行一次:两类定时金币当前服务端上限均为每天 10 次,脚本始终以任务返回的 `TaskMaxTimes` 为准;达到上限后,当天后续 cron 不再查询。第二条在红包雨六个时段开始后各运行一次,每个时段只请求一次。每日签到与普通任务只在当天首次运行时执行,不会被密集 cron 重复请求。脚本本身不能在退出后等待数小时再自行启动。
 
 ## Surge
 
@@ -112,6 +112,7 @@ script-providers:
 
 | 日期 | 变更 |
 |---|---|
+| 2026-08-05 | r19 按每日、定时任务批次和红包雨时段分流,增加本地防重复锁,密集 cron 不再运行整套流程 |
 | 2026-08-05 | r18 移除摇钱树游戏凭证与自动玩法,保留每日任务卡直接完成;统一四个平台的两条 cron 配置 |
 | 2026-07-28 | r17 正式版移除广告抓取与执行链,实验代码移出仓库并仅作本地归档 |
 | 2026-07-28 | r16 调整歌单收藏任务通道并增加活动进度回退;接入独立浮动宝箱、摇钱树浏览奖励及无广告种树流程 |

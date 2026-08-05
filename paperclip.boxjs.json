@@ -652,6 +652,7 @@
       "name": "QQ音乐",
       "keys": [
         "qqmusic_data",
+        "qqmusic_run_state",
         "qqmusic_clear",
         "qqmusic_task_favorite",
         "qqmusic_task_activity",

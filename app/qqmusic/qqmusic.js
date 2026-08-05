@@ -61,10 +61,11 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-08-05.r18"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-08-05.r19"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
+const RUN_STATE_KEY = "qqmusic_run_state"; // 当日流程、定时任务批次和红包雨时段防重复
 // 签到走小程序免签名通道:解包 wxada7aab80ba27074 发现所有 CGI 都用
 // musicu.fcg + comm.authst(musickey) 鉴权,无私有 sign / 无 g_tk / 无 cookie。
 // 实测 App 抓的 qm_keyst 直接当 authst 即可(跨通道通用)。
@@ -142,22 +143,46 @@ async function checkin() {
     }
 
     const uin = String(snap.uin).replace(/^0+/, "") || String(snap.uin);
+    const now = new Date();
+    const runState = getRunState(now);
+    const activityEnabled = !taskOff("qqmusic_task_activity");
+    const dailyPending = !runState.dailyAttempted;
+    const timerBucket = getTimerBucket(now);
+    const timerPending = activityEnabled && timerBucket && !runState.timerDone && !runState.timerBuckets.includes(timerBucket);
+    const redPacketSlot = getRedPacketSlot(now);
+    const redPacketPending = activityEnabled && redPacketSlot && !runState.redPacketSlots.includes(redPacketSlot);
 
-    // 1) 续期:musickey 仅 3 天有效,先用长期不变的 refresh_key 换一把新的(滚动续命)。
-    //    续期失败不致命(库存 musickey 可能还没过期),继续尝试签到。
-    await refreshKey(snap, uin);
+    if (!dailyPending && !timerPending && !redPacketPending) {
+        $.log("[INFO] 当前批次已处理或无对应任务,跳过网络请求");
+        return;
+    }
 
-    // 2) 两套签到都走小程序免签名通道,共用刚刷新的 authst。
-    await checkLvzScore(snap, uin);
-    await checkCoinSignIn(snap, uin);
+    // 每日流程先落本地锁,避免重复 cron 或并发运行反复提交写请求。
+    if (dailyPending) {
+        runState.dailyAttempted = true;
+        saveRunState(runState);
+        await refreshKey(snap, uin);
+        await checkLvzScore(snap, uin);
+        await checkCoinSignIn(snap, uin);
+        await claimDailyTaskRewards(snap, uin);
+        if (activityEnabled) {
+            await checkLotterySignIn(snap, uin);
+            await drawCoinLottery(snap, uin);
+        }
+    }
 
-    // 3) App 每日任务:完成可安全回滚的收藏/关注任务,并领取到点或已完成的奖励。
-    await claimDailyTaskRewards(snap, uin);
+    if (timerPending) {
+        runState.timerBuckets.push(timerBucket);
+        saveRunState(runState);
+        if (await claimTimedTaskRewards(snap, uin)) {
+            runState.timerDone = true;
+            saveRunState(runState);
+        }
+    }
 
-    // 4) 金币中心附属活动。活动配置失效时只跳过,不影响两套主签到。
-    if (!taskOff("qqmusic_task_activity")) {
-        await checkLotterySignIn(snap, uin);
-        await drawCoinLottery(snap, uin);
+    if (redPacketPending) {
+        runState.redPacketSlots.push(redPacketSlot);
+        saveRunState(runState);
         await runRedPacketRain(snap, uin);
     }
 }
@@ -550,15 +575,26 @@ async function claimDailyTaskRewards(snap, uin) {
             }
         }
 
-        const timerTasks = await getTimerTasks(snap, uin);
-        if (timerTasks && timerTasks.length) tasks = tasks.concat(timerTasks);
-        await claimReadyTaskRewards(tasks, snap, uin);
+        await claimReadyTaskRewards(tasks.filter((task) => !isTimedFloorTask(task)), snap, uin);
     } finally {
         for (const cleanup of cleanups.reverse()) {
             const removed = await cleanup.run();
             if (!removed) $.messages.push(`⚠️ ${cleanup.name}清理失败,${cleanup.warning}`);
         }
     }
+}
+
+async function claimTimedTaskRewards(snap, uin) {
+    const floorTasks = await getDailyTasks(snap, uin, false) || [];
+    const moduleTasks = await getTimerTasks(snap, uin) || [];
+    const timedTasks = uniqueTasks([
+        ...floorTasks.filter(isTimedFloorTask),
+        ...moduleTasks,
+    ]);
+    if (!timedTasks.length) return false;
+
+    await claimReadyTaskRewards(timedTasks, snap, uin);
+    return timedTasks.every(isTaskFinishedForDay);
 }
 
 async function claimReadyTaskRewards(tasks, snap, uin) {
@@ -585,6 +621,9 @@ async function claimReadyTaskRewards(tasks, snap, uin) {
         if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && awardData.retCode === 0) {
             const value = Number(awardData.awardValue || 0);
             claimed.push(`${task.Name || task.ID}${value ? ` +${value}` : ""}`);
+            if (awardData.taskStatusInfo && typeof awardData.taskStatusInfo === "object") {
+                Object.assign(task, awardData.taskStatusInfo);
+            }
         } else {
             $.log(`[WARN] 每日任务领奖失败 (${task.Name || task.ID}, code=${awardReq ? awardReq.code : "?"}, ret=${awardData ? awardData.retCode : "?"})`);
         }
@@ -678,6 +717,31 @@ async function getTimerTasks(snap, uin) {
         }
     }
     return tasks;
+}
+
+function isTimedFloorTask(task) {
+    return Boolean(task && (
+        task.ID === "26EIHk" ||
+        Number(task.Type) === 600 ||
+        /定时领金币/.test(task.Name || "")
+    ));
+}
+
+function isTaskFinishedForDay(task) {
+    if (!task) return false;
+    if (Number(task.State) === 3) return true;
+    const maxTimes = Number(task.TaskMaxTimes || 0);
+    return maxTimes > 0 && Number(task.TaskFinishTime || 0) >= maxTimes;
+}
+
+function uniqueTasks(tasks) {
+    const seen = new Set();
+    return tasks.filter((task) => {
+        const key = `${task && task._actID || ""}:${task && task.ID || ""}`;
+        if (!task || !task.ID || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
 }
 
 async function addTemporarySongFavorite(snap, uin) {
@@ -1269,6 +1333,41 @@ function taskOff(key) {
     return value === false || value === 0 || value === "false" || value === "0";
 }
 
+function getRunState(now = new Date()) {
+    const day = localDayKey(now);
+    const saved = $.getjson(RUN_STATE_KEY, {}) || {};
+    if (saved.day !== day) {
+        return { day, dailyAttempted: false, timerDone: false, timerBuckets: [], redPacketSlots: [] };
+    }
+    return {
+        day,
+        dailyAttempted: Boolean(saved.dailyAttempted),
+        timerDone: Boolean(saved.timerDone),
+        timerBuckets: Array.isArray(saved.timerBuckets) ? saved.timerBuckets.map(String) : [],
+        redPacketSlots: Array.isArray(saved.redPacketSlots) ? saved.redPacketSlots.map(String) : [],
+    };
+}
+
+function saveRunState(state) {
+    $.setjson(state, RUN_STATE_KEY);
+}
+
+function localDayKey(date) {
+    const pad = (value) => String(value).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function getTimerBucket(date) {
+    const hour = date.getHours();
+    if (hour !== 9 && hour !== 10) return "";
+    return `${hour}:${Math.floor(date.getMinutes() / 5)}`;
+}
+
+function getRedPacketSlot(date) {
+    const hour = date.getHours();
+    return [0, 8, 12, 16, 20, 22].includes(hour) ? String(hour) : "";
+}
+
 function randomHex32() {
     let value = "";
     while (value.length < 32) value += Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, "0");
@@ -1443,6 +1542,7 @@ if (typeof $request !== "undefined") {
 } else if (JSON.parse($.getdata("qqmusic_clear") || "false")) {
     // BoxJS 一键清除 Cookie:清完自动复位开关
     $.setdata("", CK_KEY);
+    $.setdata("", RUN_STATE_KEY);
     $.setdata("false", "qqmusic_clear");
     $.msg($.name, "", "✅ Cookie 已清除,请重新抓取");
     $.done();
