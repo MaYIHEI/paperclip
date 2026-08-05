@@ -13,7 +13,7 @@
  * hostname = u6.y.qq.com
  * [Script]
  * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * cron "0 0-59/6 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
+ * cron "0 * 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
  * cron "0 5 0,8,12,16,20,22 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
  *
  * ===== Surge =====
@@ -21,7 +21,7 @@
  * hostname = u6.y.qq.com
  * [Script]
  * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * QQ音乐定时金币 = type=cron,cronexp=0-59/6 9-10 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐定时金币 = type=cron,cronexp=* 9-10 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  * QQ音乐红包雨 = type=cron,cronexp=5 0,8,12,16,20,22 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  *
  * ===== Quantumult X =====
@@ -30,14 +30,14 @@
  * [rewrite_local]
  * ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
  * [task_local]
- * 0-59/6 9-10 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
+ * * 9-10 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
  * 5 0,8,12,16,20,22 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
  *
  * ===== Stash =====
  * cron:
  *   script:
  *     - name: QQ音乐定时金币
- *       cron: '0-59/6 9-10 * * *'
+ *       cron: '* 9-10 * * *'
  *       timeout: 1200
  *     - name: QQ音乐红包雨
  *       cron: '5 0,8,12,16,20,22 * * *'
@@ -61,7 +61,7 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-08-05.r19"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-08-05.r20"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -147,8 +147,8 @@ async function checkin() {
     const runState = getRunState(now);
     const activityEnabled = !taskOff("qqmusic_task_activity");
     const dailyPending = !runState.dailyAttempted;
-    const timerBucket = getTimerBucket(now);
-    const timerPending = activityEnabled && timerBucket && !runState.timerDone && !runState.timerBuckets.includes(timerBucket);
+    const timedSources = activityEnabled && isTimerWindow(now) ? getDueTimedSources(runState, now) : [];
+    const timerPending = timedSources.length > 0;
     const redPacketSlot = getRedPacketSlot(now);
     const redPacketPending = activityEnabled && redPacketSlot && !runState.redPacketSlots.includes(redPacketSlot);
 
@@ -172,12 +172,11 @@ async function checkin() {
     }
 
     if (timerPending) {
-        runState.timerBuckets.push(timerBucket);
+        const lockUntil = Date.now() + 10 * 60 * 1000;
+        for (const source of timedSources) runState.timerSources[source].nextAt = lockUntil;
         saveRunState(runState);
-        if (await claimTimedTaskRewards(snap, uin)) {
-            runState.timerDone = true;
-            saveRunState(runState);
-        }
+        await claimTimedTaskRewards(snap, uin, runState, timedSources);
+        saveRunState(runState);
     }
 
     if (redPacketPending) {
@@ -584,17 +583,24 @@ async function claimDailyTaskRewards(snap, uin) {
     }
 }
 
-async function claimTimedTaskRewards(snap, uin) {
-    const floorTasks = await getDailyTasks(snap, uin, false) || [];
-    const moduleTasks = await getTimerTasks(snap, uin) || [];
-    const timedTasks = uniqueTasks([
-        ...floorTasks.filter(isTimedFloorTask),
-        ...moduleTasks,
-    ]);
-    if (!timedTasks.length) return false;
+async function claimTimedTaskRewards(snap, uin, runState, sources) {
+    for (const source of sources) {
+        const queried = source === "floor"
+            ? await queryDailyTasks(snap, uin, "18NtBy", [193], false)
+            : await getTimerTasks(snap, uin);
+        const timedTasks = uniqueTasks((queried || []).filter((task) => source !== "floor" || isTimedFloorTask(task)));
+        const sourceState = runState.timerSources[source];
+        if (!timedTasks.length) {
+            sourceState.done = true;
+            sourceState.nextAt = 0;
+            $.log(`[INFO] ${timedSourceName(source)}未下发任务或查询失败,当天停止查询`);
+            continue;
+        }
 
-    await claimReadyTaskRewards(timedTasks, snap, uin);
-    return timedTasks.every(isTaskFinishedForDay);
+        await claimReadyTaskRewards(timedTasks, snap, uin);
+        sourceState.done = timedTasks.every(isTaskFinishedForDay);
+        sourceState.nextAt = sourceState.done ? 0 : getNextTimedCheckAt(timedTasks);
+    }
 }
 
 async function claimReadyTaskRewards(tasks, snap, uin) {
@@ -732,6 +738,23 @@ function isTaskFinishedForDay(task) {
     if (Number(task.State) === 3) return true;
     const maxTimes = Number(task.TaskMaxTimes || 0);
     return maxTimes > 0 && Number(task.TaskFinishTime || 0) >= maxTimes;
+}
+
+function getNextTimedCheckAt(tasks, now = Date.now()) {
+    const delays = tasks
+        .filter((task) => !isTaskFinishedForDay(task))
+        .map((task) => {
+            const target = Math.max(0, Number(task.TargetNum || 0));
+            const progress = Math.max(0, Number(task.Progress || 0));
+            if (Number(task.State) === 2) return Math.max(300, target || 0);
+            return Math.max(60, target > 0 ? target - progress : 300);
+        });
+    const seconds = delays.length ? Math.min(...delays) : 300;
+    return now + (seconds + 15) * 1000;
+}
+
+function timedSourceName(source) {
+    return source === "floor" ? "金币中心定时任务" : "独立宝箱任务";
 }
 
 function uniqueTasks(tasks) {
@@ -1337,14 +1360,30 @@ function getRunState(now = new Date()) {
     const day = localDayKey(now);
     const saved = $.getjson(RUN_STATE_KEY, {}) || {};
     if (saved.day !== day) {
-        return { day, dailyAttempted: false, timerDone: false, timerBuckets: [], redPacketSlots: [] };
+        return {
+            day,
+            dailyAttempted: false,
+            timerSources: makeTimerSources(),
+            redPacketSlots: [],
+        };
     }
+    const oldTimerDone = Boolean(saved.timerDone);
     return {
         day,
         dailyAttempted: Boolean(saved.dailyAttempted),
-        timerDone: Boolean(saved.timerDone),
-        timerBuckets: Array.isArray(saved.timerBuckets) ? saved.timerBuckets.map(String) : [],
+        timerSources: makeTimerSources(saved.timerSources, oldTimerDone),
         redPacketSlots: Array.isArray(saved.redPacketSlots) ? saved.redPacketSlots.map(String) : [],
+    };
+}
+
+function makeTimerSources(saved = {}, oldTimerDone = false) {
+    const normalize = (source) => ({
+        done: oldTimerDone || Boolean(source && source.done),
+        nextAt: Math.max(0, Number(source && source.nextAt || 0)),
+    });
+    return {
+        floor: normalize(saved.floor),
+        treasure: normalize(saved.treasure),
     };
 }
 
@@ -1357,10 +1396,16 @@ function localDayKey(date) {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function getTimerBucket(date) {
+function isTimerWindow(date) {
     const hour = date.getHours();
-    if (hour !== 9 && hour !== 10) return "";
-    return `${hour}:${Math.floor(date.getMinutes() / 5)}`;
+    return hour === 9 || hour === 10;
+}
+
+function getDueTimedSources(runState, date = new Date()) {
+    const now = date.getTime();
+    return Object.entries(runState.timerSources)
+        .filter(([, state]) => !state.done && now >= Number(state.nextAt || 0))
+        .map(([source]) => source);
 }
 
 function getRedPacketSlot(date) {

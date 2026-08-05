@@ -28,11 +28,11 @@ hostname = u6.y.qq.com
 [Script]
 http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
 
-cron "0 0-59/6 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
+cron "0 * 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
 cron "0 5 0,8,12,16,20,22 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
 ```
 
-最终只保留上面两条 cron,不要再添加旧的 `20 9 * * *`。第一条在 9–10 点每 6 分钟运行一次:两类定时金币当前服务端上限均为每天 10 次,脚本始终以任务返回的 `TaskMaxTimes` 为准;达到上限后,当天后续 cron 不再查询。第二条在红包雨六个时段开始后各运行一次,每个时段只请求一次。每日签到与普通任务只在当天首次运行时执行,不会被密集 cron 重复请求。脚本本身不能在退出后等待数小时再自行启动。
+最终只保留上面两条 cron,不要再添加旧的 `20 9 * * *`。第一条在 9–10 点每分钟唤醒一次,普通定时金币与独立宝箱分别按各自返回的 `TargetNum / Progress / TaskMaxTimes / State` 维护下次查询时间;未到任一任务时间时只在本地退出,不发网络请求。某一类任务未下发或达到当天上限后,只关闭该类任务。第二条在红包雨六个时段开始后各运行一次,红包雨按自己的 `timeSegment / restChance` 判断,每个时段只请求一次。每日签到与普通任务只在当天首次运行时执行;没有新奖励的批次也不会发送通知。脚本本身不能在退出后等待数小时再自行启动。
 
 ## Surge
 
@@ -42,7 +42,7 @@ hostname = u6.y.qq.com
 
 [Script]
 QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
-QQ音乐定时金币 = type=cron,cronexp=0-59/6 9-10 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+QQ音乐定时金币 = type=cron,cronexp=* 9-10 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
 QQ音乐红包雨 = type=cron,cronexp=5 0,8,12,16,20,22 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
 ```
 
@@ -56,7 +56,7 @@ hostname = u6.y.qq.com
 ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
 
 [task_local]
-0-59/6 9-10 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
+* 9-10 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
 5 0,8,12,16,20,22 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
 ```
 
@@ -66,7 +66,7 @@ hostname = u6.y.qq.com
 cron:
   script:
     - name: QQ音乐定时金币
-      cron: '0-59/6 9-10 * * *'
+      cron: '* 9-10 * * *'
       timeout: 1200
     - name: QQ音乐红包雨
       cron: '5 0,8,12,16,20,22 * * *'
@@ -103,7 +103,7 @@ script-providers:
 
 - **`refresh_key` 长期寿命未知**:实测长期不变、可无限续期,但最终会不会过期需长期观察。一旦失效,续期会失败、签到报错,重进签到页重抓即可。
 - **手机关机 / 断代理超过 3 天**:可能需要重抓。日常挂着代理 + 每日 cron 不会触发。
-- **每日任务**:会完成可安全恢复的收藏/关注任务并领取所有已完成奖励。“定时领金币”和右下角浮动宝箱都是每隔 5 分钟可领一次的独立任务;听歌时长和分享歌曲仍要求真实 App 行为,脚本不会伪造分享。
+- **每日任务**:会完成可安全恢复的收藏/关注任务并领取所有已完成奖励。“定时领金币”和右下角浮动宝箱是两个独立任务,分别以服务端返回的间隔和进度调度,不假定二者间隔相同;听歌时长和分享歌曲仍要求真实 App 行为,脚本不会伪造分享。
 - **红包雨时段**:每天 `00:00–08:00`、`08:00–12:00`、`12:00–16:00`、`16:00–20:00`、`20:00–22:00`、`22:00–24:00`,每段 6 次。脚本退出后不能自行唤醒;要覆盖全部时段,需由 Loon 等调度器在每段各运行一次。
 - **摇钱树任务卡**:脚本会直接上报并领取“种摇钱树领免费绿钻”每日任务奖励,无需额外凭证;不会进入游戏执行签到、浇水、摇树或阶段领奖。
 - **广告任务**:正式脚本不抓广告 ID、不请求广告素材,也不执行看视频、广告翻倍或广告换水。旧实验实现仅在本地测试目录归档,不发布到仓库。
@@ -112,6 +112,7 @@ script-providers:
 
 | 日期 | 变更 |
 |---|---|
+| 2026-08-05 | r20 普通定时金币与独立宝箱按各自服务端间隔独立调度;每分钟仅本地检查到期状态,未到时间不联网,未下发或达到上限后关闭对应来源,无奖励批次保持静默 |
 | 2026-08-05 | r19 按每日、定时任务批次和红包雨时段分流,增加本地防重复锁,密集 cron 不再运行整套流程 |
 | 2026-08-05 | r18 移除摇钱树游戏凭证与自动玩法,保留每日任务卡直接完成;统一四个平台的两条 cron 配置 |
 | 2026-07-28 | r17 正式版移除广告抓取与执行链,实验代码移出仓库并仅作本地归档 |
