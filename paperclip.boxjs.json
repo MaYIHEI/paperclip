@@ -652,7 +652,6 @@
       "name": "QQ音乐",
       "keys": [
         "qqmusic_data",
-        "qqmusic_money_tree",
         "qqmusic_clear",
         "qqmusic_task_favorite",
         "qqmusic_task_activity",
@@ -698,7 +697,7 @@
               "label": "关闭"
             }
           ],
-          "desc": "执行金币抽奖签到、使用剩余抽奖次数、红包雨、浮动宝箱、摇钱树和可直接上报的活动任务"
+          "desc": "执行金币抽奖签到、使用剩余抽奖次数、红包雨、浮动宝箱和可直接上报的活动任务（含种摇钱树领免费绿钻任务卡）"
         },
         {
           "id": "qqmusic_debug",

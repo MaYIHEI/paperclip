@@ -6,65 +6,65 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-28
+ * @Updated: 2026-08-05
  *
  * ===== Loon =====
  * [MITM]
- * hostname = u6.y.qq.com, apigame.y.qq.com
+ * hostname = u6.y.qq.com
  * [Script]
  * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * http-request ^https:\/\/apigame\.y\.qq\.com\/game_tree\.Api\/ tag=QQ音乐摇钱树凭证, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  * cron "0 0-59/6 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
  * cron "0 5 0,8,12,16,20,22 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
  *
  * ===== Surge =====
  * [MITM]
- * hostname = u6.y.qq.com, apigame.y.qq.com
+ * hostname = u6.y.qq.com
  * [Script]
  * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * QQ音乐摇钱树凭证 = type=http-request,pattern=^https:\/\/apigame\.y\.qq\.com\/game_tree\.Api\/,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * QQ音乐签到 = type=cron,cronexp=20 9 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐定时金币 = type=cron,cronexp=0-59/6 9-10 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐红包雨 = type=cron,cronexp=5 0,8,12,16,20,22 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  *
  * ===== Quantumult X =====
  * [MITM]
- * hostname = u6.y.qq.com, apigame.y.qq.com
+ * hostname = u6.y.qq.com
  * [rewrite_local]
  * ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
- * ^https:\/\/apigame\.y\.qq\.com\/game_tree\.Api\/ url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
  * [task_local]
- * 20 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
+ * 0-59/6 9-10 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
+ * 5 0,8,12,16,20,22 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
  *
  * ===== Stash =====
  * cron:
  *   script:
- *     - name: QQ音乐签到
- *       cron: '20 9 * * *'
+ *     - name: QQ音乐定时金币
+ *       cron: '0-59/6 9-10 * * *'
+ *       timeout: 1200
+ *     - name: QQ音乐红包雨
+ *       cron: '5 0,8,12,16,20,22 * * *'
  *       timeout: 1200
  * http:
  *   mitm:
  *     - "u6.y.qq.com"
- *     - "apigame.y.qq.com"
  *   script:
  *     - match: ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary)
  *       name: QQ音乐 Cookie
  *       type: request
  *       require-body: true
- *     - match: ^https:\/\/apigame\.y\.qq\.com\/game_tree\.Api\/
- *       name: QQ音乐摇钱树凭证
- *       type: request
  * script-providers:
- *   QQ音乐签到:
+ *   QQ音乐定时金币:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
+ *     interval: 86400
+ *   QQ音乐红包雨:
  *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
  *     interval: 86400
  */
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-07-28.r17"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-08-05.r18"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
-const MONEY_TREE_KEY = "qqmusic_money_tree"; // { openid, session_key, appid, game_opt_ver, user_agent, ts }
 // 签到走小程序免签名通道:解包 wxada7aab80ba27074 发现所有 CGI 都用
 // musicu.fcg + comm.authst(musickey) 鉴权,无私有 sign / 无 g_tk / 无 cookie。
 // 实测 App 抓的 qm_keyst 直接当 authst 即可(跨通道通用)。
@@ -78,8 +78,6 @@ const LOTTERY_SIGN_ACT_ID = "Z156KEu";
 const COIN_LOTTERY_PLAY_ID = "PR-Lottery-20240408-33489273491";
 const RED_PACKET_RAIN_KEY = "1joIuy";
 const TIMER_TASK_MODULE_ID = "ZGp4ja";
-const MONEY_TREE_APP_ID = "30000037";
-const MONEY_TREE_API_URL = "https://apigame.y.qq.com/game_tree.Api";
 const AUDIOBOOK_CATEGORY_ID = "42800344";
 const AUDIOBOOK_CANDIDATES = [93654004];
 const PLAYLIST_CANDIDATES = [9611383852];
@@ -131,33 +129,6 @@ function getCookie() {
     }
 }
 
-function captureMoneyTreeSession() {
-    try {
-        const headers = lowerKeys($request.headers);
-        const openid = headers["x-gopen-id"] || "";
-        const sessionKey = headers["x-gopen-session-key"] || "";
-        if (!openid || !sessionKey) {
-            $.log("[WARN] 摇钱树请求缺少登录凭证,跳过");
-            return;
-        }
-        const previous = $.getjson(MONEY_TREE_KEY, null);
-        $.setjson({
-            openid,
-            session_key: sessionKey,
-            appid: headers["x-gopen-app-id"] || MONEY_TREE_APP_ID,
-            game_opt_ver: headers["x-gopen-game-opt-ver"] || "",
-            user_agent: headers["user-agent"] || UA,
-            ts: Date.now(),
-        }, MONEY_TREE_KEY);
-        if (!previous || previous.openid !== openid || previous.session_key !== sessionKey) {
-            $.msg($.name, "✅ 摇钱树凭证获取成功", "凭证约 7 天有效,重新进入摇钱树会自动更新");
-        }
-        $.log("[INFO] 摇钱树凭证已更新");
-    } catch (e) {
-        $.log(`[WARN] 摇钱树凭证解析失败: ${e.message || e}`);
-    }
-}
-
 // ============ 签到 ============
 
 async function checkin() {
@@ -188,7 +159,6 @@ async function checkin() {
         await checkLotterySignIn(snap, uin);
         await drawCoinLottery(snap, uin);
         await runRedPacketRain(snap, uin);
-        await runMoneyTree();
     }
 }
 
@@ -492,110 +462,6 @@ async function runRedPacketRain(snap, uin) {
         coins += Number(findFirstValue(drawRes.req_0.data, ["awardValue", "RewardGold", "rewardGold", "coinNum", "coin"]) || 0);
     }
     if (completed) $.messages.push(`✅ 红包雨 ${completed} 次${coins ? `: +${coins} 金币` : ""}`);
-}
-
-async function runMoneyTree() {
-    const session = $.getjson(MONEY_TREE_KEY, null);
-    if (!session || !session.openid || !session.session_key) {
-        $.log("[INFO] 摇钱树未抓凭证,进入一次“种摇钱树领免费绿钻”后即可自动处理");
-        return;
-    }
-    if (Date.now() - Number(session.ts || 0) > 8 * 86400 * 1000) {
-        $.log("[WARN] 摇钱树凭证可能已过期,请重新进入活动页更新");
-    }
-
-    const rewards = [];
-    const checkState = await moneyTreePost(session, "CheckInDetail", {});
-    debug(checkState, "Money Tree CheckIn State");
-    if (checkState && Number(checkState.waitState) === 1) {
-        const weekDay = new Date().getDay() || 7;
-        const today = (checkState.checkInList || []).find((item) => Number(item.weekDay) === weekDay);
-        if (today && Number(today.checkInState) === 0) {
-            const checkRes = await moneyTreePost(session, "CheckIn", { weekDay, type: 1, ad: null });
-            debug(checkRes, "Money Tree CheckIn");
-            for (const reward of (checkRes && checkRes.rewardList) || []) {
-                rewards.push(formatMoneyTreeReward(reward));
-            }
-        }
-    }
-
-    const state = await moneyTreePost(session, "StateDetail", { logic_version: 2 });
-    debug(state, "Money Tree State");
-    let shakeCount = Number(state && state.day && state.day.shake && state.day.shake.shakeCnt || 0);
-    const user = await moneyTreePost(session, "UserInfo", { logic_version: 2 });
-    debug(user, "Money Tree User");
-    const waterAsset = ((user && user.assets) || []).find((item) => String(item.assetId) === "800");
-    let water = Math.max(0, Number(waterAsset && waterAsset.assetNum || 0));
-    let noviceGuide = Number(user && user.noviceGuide || 0) === 0 ? 1 : 0;
-    let watered = 0;
-    let latestStage = state && state.day && state.day.stage;
-
-    for (let attempt = 0; water >= 10 && attempt < 30; attempt++) {
-        const amount = Math.min(30, Math.floor(water / 10) * 10);
-        const ticket = await moneyTreePost(session, "Ticket", {});
-        if (!ticket || !ticket.tid) break;
-        const watering = await moneyTreePost(session, "WateringSelf", {
-            tid: ticket.tid,
-            water_every: amount,
-            novice_guide: noviceGuide,
-            logic_version: 2,
-        });
-        debug(watering, `Money Tree Watering ${attempt + 1}`);
-        const used = Number(watering && watering.waterUseCnt || 0);
-        if (used <= 0) break;
-        noviceGuide = 0;
-        water -= used;
-        watered += used;
-        latestStage = watering.stage || latestStage;
-        shakeCount = Math.max(shakeCount, Number(watering.shake && watering.shake.shakeCnt || 0));
-        for (const pool of [watering.upgradePool, watering.maxPool]) {
-            if (pool) rewards.push(formatMoneyTreeReward(pool));
-        }
-        await $.wait(250);
-    }
-
-    const shakesToUse = Math.min(shakeCount, 10);
-    for (let attempt = 0; attempt < shakesToUse; attempt++) {
-        const ticket = await moneyTreePost(session, "Ticket", {});
-        if (!ticket || !ticket.tid) break;
-        const shake = await moneyTreePost(session, "Shake", { tid: ticket.tid });
-        debug(shake, `Money Tree Shake ${attempt + 1}`);
-        if (!shake) break;
-        if (shake.pool) rewards.push(formatMoneyTreeReward(shake.pool));
-        shakeCount = Number(shake.shake && shake.shake.shakeCnt || shakeCount - 1);
-        await $.wait(250);
-    }
-
-    if (latestStage && moneyTreeStageReady(latestStage)) {
-        const stage = await moneyTreePost(session, "StageGet", {});
-        debug(stage, "Money Tree Stage Award");
-        if (stage && Array.isArray(stage.getStageIds) && stage.getStageIds.length) {
-            rewards.push(`阶段水滴 ${stage.getStageIds.length} 档`);
-        }
-    }
-
-    const parts = [];
-    if (watered) parts.push(`浇水 ${watered}g`);
-    const validRewards = rewards.filter(Boolean);
-    if (validRewards.length) parts.push(validRewards.join("、"));
-    if (parts.length) $.messages.push(`✅ 摇钱树: ${parts.join(", ")}`);
-}
-
-function moneyTreeStageReady(stage) {
-    const claimed = Number(stage.stageId || 0);
-    const water = Number(stage.waterCnt || 0);
-    const thresholds = [50, 250, 700, 1500, 3000];
-    return thresholds.some((value, index) => index + 1 > claimed && water >= value);
-}
-
-function formatMoneyTreeReward(reward) {
-    const id = String(reward && (reward.rewardId || reward.rewardID) || "");
-    const count = Number(reward && (reward.rewardCount || reward.rewardCnt) || 0);
-    if (!id || !count) return "";
-    if (id === "2488") return `金币 +${count}`;
-    if (id === "2489") return `水滴 +${count}`;
-    if (id === "2676") return `豪华绿钻 ${count} 天`;
-    return `奖励 ${id} ×${count}`;
 }
 
 async function claimDailyTaskRewards(snap, uin) {
@@ -1100,35 +966,6 @@ function appPost(snap, uin, cgiKey, payload) {
     });
 }
 
-function moneyTreePost(session, method, payload) {
-    const body = JSON.stringify(payload || {});
-    const url = `${MONEY_TREE_API_URL}/${method}?t=${Date.now()}`;
-    const headers = {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "X-GOpen-App-Id": String(session.appid || MONEY_TREE_APP_ID),
-        "X-GOpen-Id": String(session.openid),
-        "X-GOpen-Ts": String(Math.round(Date.now() / 1000)),
-        "X-GOpen-Session-Key": String(session.session_key),
-    };
-    if (session.game_opt_ver) headers["X-GOpen-Game-Opt-Ver"] = String(session.game_opt_ver);
-    const signedHeaders = Object.keys(headers)
-        .filter((key) => key.toLowerCase().startsWith("x-gopen-"))
-        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-        .map((key) => `${key.toLowerCase()}:${headers[key]}`)
-        .join("\n");
-    const path = url.slice(MONEY_TREE_API_URL.length);
-    const canonical = [
-        `POST\n${headers.Accept}\n${headers["Content-Type"]}`,
-        body,
-        signedHeaders,
-        `/game_tree.Api${path}`,
-    ].filter(Boolean).join("\n");
-    headers["X-GOpen-Sign"] = hmacSha256Base64KeyHex(canonical, session.session_key);
-    headers["User-Agent"] = session.user_agent || UA;
-    return post(url, body, headers);
-}
-
 // 用 refresh_key 换新 musickey。实测(2026-06-15):
 //   - musickey(qm_keyst)keyExpiresIn=259200 秒 = 3 天,每次续期换全新值 → 必须滚动存
 //   - refresh_key 长期不变(needRefreshKeyIn=0),是续期的根凭据
@@ -1444,93 +1281,6 @@ function hash33(text) {
     return hash & 0x7fffffff;
 }
 
-function utf8Bytes(text) {
-    const encoded = unescape(encodeURIComponent(String(text)));
-    const out = [];
-    for (let i = 0; i < encoded.length; i++) out.push(encoded.charCodeAt(i));
-    return out;
-}
-
-function base64ToBytes(text) {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    const clean = String(text || "").replace(/[^A-Za-z0-9+/]/g, "");
-    const out = [];
-    let buffer = 0;
-    let bits = 0;
-    for (const char of clean) {
-        const value = chars.indexOf(char);
-        if (value < 0) continue;
-        buffer = buffer << 6 | value;
-        bits += 6;
-        if (bits >= 8) {
-            bits -= 8;
-            out.push(buffer >> bits & 0xff);
-        }
-    }
-    return out;
-}
-
-function sha256Bytes(bytes) {
-    const k = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-        0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-        0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-        0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-        0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
-    const h = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
-    const message = bytes.slice();
-    const originalLength = message.length;
-    message.push(0x80);
-    while (message.length % 64 !== 56) message.push(0);
-    const bitLength = originalLength * 8;
-    for (let i = 7; i >= 0; i--) message.push(Math.floor(bitLength / Math.pow(2, 8 * i)) & 0xff);
-    const rotateRight = (value, bits) => value >>> bits | value << 32 - bits;
-
-    for (let offset = 0; offset < message.length; offset += 64) {
-        const w = [];
-        for (let i = 0; i < 16; i++) {
-            w[i] = (message[offset + i * 4] << 24 | message[offset + i * 4 + 1] << 16 |
-                message[offset + i * 4 + 2] << 8 | message[offset + i * 4 + 3]) >>> 0;
-        }
-        for (let i = 16; i < 64; i++) {
-            const s0 = (rotateRight(w[i - 15], 7) ^ rotateRight(w[i - 15], 18) ^ w[i - 15] >>> 3) >>> 0;
-            const s1 = (rotateRight(w[i - 2], 17) ^ rotateRight(w[i - 2], 19) ^ w[i - 2] >>> 10) >>> 0;
-            w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
-        }
-        let [a, b, c, d, e, f, g, hh] = h;
-        for (let i = 0; i < 64; i++) {
-            const s1 = (rotateRight(e, 6) ^ rotateRight(e, 11) ^ rotateRight(e, 25)) >>> 0;
-            const choice = (e & f ^ ~e & g) >>> 0;
-            const t1 = (hh + s1 + choice + k[i] + w[i]) >>> 0;
-            const s0 = (rotateRight(a, 2) ^ rotateRight(a, 13) ^ rotateRight(a, 22)) >>> 0;
-            const majority = (a & b ^ a & c ^ b & c) >>> 0;
-            const t2 = (s0 + majority) >>> 0;
-            hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
-        }
-        h[0] = (h[0] + a) >>> 0; h[1] = (h[1] + b) >>> 0; h[2] = (h[2] + c) >>> 0; h[3] = (h[3] + d) >>> 0;
-        h[4] = (h[4] + e) >>> 0; h[5] = (h[5] + f) >>> 0; h[6] = (h[6] + g) >>> 0; h[7] = (h[7] + hh) >>> 0;
-    }
-    const out = [];
-    for (const value of h) out.push(value >>> 24 & 0xff, value >>> 16 & 0xff, value >>> 8 & 0xff, value & 0xff);
-    return out;
-}
-
-function hmacSha256Base64KeyHex(message, keyText) {
-    let key = base64ToBytes(keyText);
-    if (key.length > 64) key = sha256Bytes(key);
-    while (key.length < 64) key.push(0);
-    const outer = [];
-    const inner = [];
-    for (let i = 0; i < 64; i++) {
-        outer.push(key[i] ^ 0x5c);
-        inner.push(key[i] ^ 0x36);
-    }
-    const digest = sha256Bytes(inner.concat(utf8Bytes(message)));
-    return sha256Bytes(outer.concat(digest)).map((value) => value.toString(16).padStart(2, "0")).join("");
-}
-
 function zzcSign(payload) {
     const hash = sha1Hex(payload).toUpperCase();
     const part1Indexes = [23, 14, 6, 36, 16, 7, 19];
@@ -1668,7 +1418,6 @@ function redactSensitive(text) {
         .replace(/("(?:uin|musicid)"\s*:\s*)\d+/gi, "$1<redacted>")
         .replace(/(qm_keyst=)[^;\s]+/gi, "$1<redacted>")
         .replace(/(refresh_key=)[^;\s]+/gi, "$1<redacted>")
-        .replace(/(x-gopen-(?:id|session-key|sign):)[^\s]+/gi, "$1<redacted>")
         .replace(/(sign=)[^&\s]+/gi, "$1<redacted>");
 }
 
@@ -1689,13 +1438,11 @@ async function sendMsg(message) {
 // ============ 入口 ============
 
 if (typeof $request !== "undefined") {
-    if (/\/game_tree\.Api\//.test($request.url || "")) captureMoneyTreeSession();
-    else getCookie();
+    getCookie();
     $.done();
 } else if (JSON.parse($.getdata("qqmusic_clear") || "false")) {
     // BoxJS 一键清除 Cookie:清完自动复位开关
     $.setdata("", CK_KEY);
-    $.setdata("", MONEY_TREE_KEY);
     $.setdata("false", "qqmusic_clear");
     $.msg($.name, "", "✅ Cookie 已清除,请重新抓取");
     $.done();
