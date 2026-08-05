@@ -28,11 +28,12 @@ hostname = u6.y.qq.com
 [Script]
 http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
 
+cron "0 30 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐每日任务, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
 cron "0 * 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
 cron "0 5 0,8,12,16,20,22 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
 ```
 
-最终只保留上面两条 cron,不要再添加旧的 `20 9 * * *`。第一条在 9–10 点每分钟唤醒一次,普通定时金币与独立宝箱分别按各自返回的 `TargetNum / Progress / TaskMaxTimes / State` 维护下次查询时间;未到任一任务时间时只在本地退出,不发网络请求。某一类任务未下发或达到当天上限后,只关闭该类任务。第二条在红包雨六个时段开始后各运行一次,红包雨按自己的 `timeSegment / restChance` 判断,每个时段只请求一次。每日签到与普通任务只在当天首次运行时执行;没有新奖励的批次也不会发送通知。脚本本身不能在退出后等待数小时再自行启动。
+最终只保留上面三条 cron,不要再添加旧的 `20 9 * * *`。第一条 07:30 负责续期、两套签到、普通每日任务和免费抽奖;若当时未运行,当天后续 cron 会补跑一次。第二条在 9–10 点每分钟唤醒,普通定时金币与独立宝箱分别按各自返回的 `TargetNum / Progress / TaskMaxTimes / State` 维护下次查询时间;未到任一任务时间时只在本地退出,不发网络请求。某一类任务未下发或达到当天上限后,只关闭该类任务。第三条在红包雨六个时段开始后各运行一次,红包雨按自己的 `timeSegment / restChance` 判断,每个时段只请求一次。每次 cron 的结果最多汇总为一条通知,没有新结果时不通知。
 
 ## Surge
 
@@ -42,6 +43,7 @@ hostname = u6.y.qq.com
 
 [Script]
 QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+QQ音乐每日任务 = type=cron,cronexp=30 7 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
 QQ音乐定时金币 = type=cron,cronexp=* 9-10 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
 QQ音乐红包雨 = type=cron,cronexp=5 0,8,12,16,20,22 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
 ```
@@ -56,6 +58,7 @@ hostname = u6.y.qq.com
 ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
 
 [task_local]
+30 7 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐每日任务, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
 * 9-10 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
 5 0,8,12,16,20,22 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
 ```
@@ -65,6 +68,9 @@ hostname = u6.y.qq.com
 ```yaml
 cron:
   script:
+    - name: QQ音乐每日任务
+      cron: '30 7 * * *'
+      timeout: 1200
     - name: QQ音乐定时金币
       cron: '* 9-10 * * *'
       timeout: 1200
@@ -82,6 +88,9 @@ http:
       require-body: true
 
 script-providers:
+  QQ音乐每日任务:
+    url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
+    interval: 86400
   QQ音乐定时金币:
     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
     interval: 86400
@@ -112,6 +121,7 @@ script-providers:
 
 | 日期 | 变更 |
 |---|---|
+| 2026-08-05 | r21 每日一次性流程拆为 07:30 独立 cron,错过后由当天后续 cron 补跑;定时金币与红包雨保持独立调度 |
 | 2026-08-05 | r20 普通定时金币与独立宝箱按各自服务端间隔独立调度;每分钟仅本地检查到期状态,未到时间不联网,未下发或达到上限后关闭对应来源,无奖励批次保持静默 |
 | 2026-08-05 | r19 按每日、定时任务批次和红包雨时段分流,增加本地防重复锁,密集 cron 不再运行整套流程 |
 | 2026-08-05 | r18 移除摇钱树游戏凭证与自动玩法,保留每日任务卡直接完成;统一四个平台的两条 cron 配置 |

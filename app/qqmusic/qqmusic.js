@@ -13,6 +13,7 @@
  * hostname = u6.y.qq.com
  * [Script]
  * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * cron "0 30 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐每日任务, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
  * cron "0 * 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
  * cron "0 5 0,8,12,16,20,22 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
  *
@@ -21,6 +22,7 @@
  * hostname = u6.y.qq.com
  * [Script]
  * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐每日任务 = type=cron,cronexp=30 7 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  * QQ音乐定时金币 = type=cron,cronexp=* 9-10 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  * QQ音乐红包雨 = type=cron,cronexp=5 0,8,12,16,20,22 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  *
@@ -30,12 +32,16 @@
  * [rewrite_local]
  * ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
  * [task_local]
+ * 30 7 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐每日任务, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
  * * 9-10 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
  * 5 0,8,12,16,20,22 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
  *
  * ===== Stash =====
  * cron:
  *   script:
+ *     - name: QQ音乐每日任务
+ *       cron: '30 7 * * *'
+ *       timeout: 1200
  *     - name: QQ音乐定时金币
  *       cron: '* 9-10 * * *'
  *       timeout: 1200
@@ -51,6 +57,9 @@
  *       type: request
  *       require-body: true
  * script-providers:
+ *   QQ音乐每日任务:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
+ *     interval: 86400
  *   QQ音乐定时金币:
  *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/qqmusic/qqmusic.js
  *     interval: 86400
@@ -61,7 +70,7 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-08-05.r20"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-08-05.r21"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -146,7 +155,7 @@ async function checkin() {
     const now = new Date();
     const runState = getRunState(now);
     const activityEnabled = !taskOff("qqmusic_task_activity");
-    const dailyPending = !runState.dailyAttempted;
+    const dailyPending = !runState.dailyAttempted && isDailyFlowDue(now);
     const timedSources = activityEnabled && isTimerWindow(now) ? getDueTimedSources(runState, now) : [];
     const timerPending = timedSources.length > 0;
     const redPacketSlot = getRedPacketSlot(now);
@@ -1399,6 +1408,11 @@ function localDayKey(date) {
 function isTimerWindow(date) {
     const hour = date.getHours();
     return hour === 9 || hour === 10;
+}
+
+function isDailyFlowDue(date) {
+    const hour = date.getHours();
+    return hour > 7 || (hour === 7 && date.getMinutes() >= 30);
 }
 
 function getDueTimedSources(runState, date = new Date()) {
