@@ -6,48 +6,9 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-22
+ * @Updated: 2026-08-13
  *
- * ===== Loon =====
- * [MITM]
- * hostname = csc-service.sgcc.com.cn
- * [Script]
- * http-request ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/ tag=网上国网 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
- * cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js, tag=网上国网签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enable=true
- *
- * ===== Surge =====
- * [MITM]
- * hostname = csc-service.sgcc.com.cn
- * [Script]
- * 网上国网 Cookie = type=http-request,pattern=^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
- * 网上国网签到 = type=cron,cronexp=30 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
- *
- * ===== Quantumult X =====
- * [MITM]
- * hostname = csc-service.sgcc.com.cn
- * [rewrite_local]
- * ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/ url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.cookie.js
- * [task_local]
- * 30 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js, tag=网上国网签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enabled=true
- *
- * ===== Stash =====
- * cron:
- *   script:
- *     - name: 网上国网签到
- *       cron: '30 8 * * *'
- *       timeout: 60
- * http:
- *   mitm:
- *     - "csc-service.sgcc.com.cn"
- *   script:
- *     - match: ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/
- *       name: 网上国网 Cookie
- *       type: request
- *       require-body: true
- * script-providers:
- *   网上国网签到:
- *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js
- *     interval: 86400
+ * 平台配置与首次抓取步骤见同目录 README.md；Loon 建议直接导入 sgcc.plugin。
  */
 
 // ----- SM3(sm-crypto,用于重算 sign)-----
@@ -58,7 +19,7 @@ var sm3=(typeof __SM3==='function')?__SM3:(__SM3.sm3||__SM3.default||__SM3);
 
 
 const $ = new Env("网上国网");
-const SCRIPT_VERSION = "2026-06-22.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-08-13.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const KEY_HDR = "sgcc_data";    // Cookie:t + 设备头
@@ -66,7 +27,26 @@ const KEY_ENV = "sgcc_signin";  // 签到请求体 {data,skey,path}
 const MAX_RETRY = 3;
 const DEBUG = JSON.parse($.getdata("sgcc_debug") || "false");
 
-const AUTH_KEYS = ["t","userid","device_token","devicetokentx","devicetokentxtime","appguid","appguidnew","wtoken","appcode","os","version","ip","province","language","wsgwtype","accessmethod","user-agent"];
+function getJitterMax() {
+  if (typeof $argument === "undefined" || $argument == null) return 0;
+  let value = $argument;
+  if (Array.isArray(value)) value = value[0];
+  else if (typeof value === "object") value = value.jitterMax != null ? value.jitterMax : value[0];
+  else if (typeof value === "string") {
+    const text = value.trim();
+    try {
+      const parsed = JSON.parse(text);
+      value = Array.isArray(parsed) ? parsed[0] : (parsed && parsed.jitterMax != null ? parsed.jitterMax : parsed);
+    } catch (e) {
+      const matched = text.match(/(?:jitterMax\s*[=:]\s*)?(\d+)/i);
+      value = matched ? matched[1] : 0;
+    }
+  }
+  const seconds = Number(value);
+  return Number.isFinite(seconds) ? Math.max(0, Math.min(600, Math.floor(seconds))) : 0;
+}
+
+const AUTH_KEYS = ["authorization","t","userid","device_token","devicetokentx","devicetokentxtime","appguid","appguidnew","wtoken","appcode","os","version","ip","province","language","wsgwtype","accessmethod","user-agent"];
 
 !(function main(){
   // 清除 Cookie(BoxJS 开关):清空已抓 Cookie + 签到请求,开关自动复位
@@ -75,10 +55,16 @@ const AUTH_KEYS = ["t","userid","device_token","devicetokentx","devicetokentxtim
     $.msg("网上国网签到", "", "✅ Cookie 已清除,请重新开 App 进积分签到页抓取"); return $.done();
   }
   const rawH = $.getdata(KEY_HDR), rawE = $.getdata(KEY_ENV);
-  if (!rawH || !rawE) { $.msg("⚠️ 网上国网签到", "缺少 Cookie 或签到请求", "打开 App 进积分签到页抓取(收到两条通知即可)"); return $.done(); }
+  if (!rawH || !rawE) {
+    const missing = [!rawH ? "鉴权" : "", !rawE ? "签到请求" : ""].filter(Boolean).join(" + ");
+    const hint = !rawH
+      ? "开启抓取后进 App 积分页；仍缺签到请求时需在未签到当天进入签到页"
+      : "鉴权已保存；需在未签到当天进入签到页，抓到真实提交请求";
+    $.msg("⚠️ 网上国网签到", "缺少" + missing, hint); return $.done();
+  }
   let hdr, env0;
-  try { hdr = JSON.parse(rawH); env0 = JSON.parse(rawE); } catch (e) { $.msg("⚠️ 网上国网签到", "Cookie 解析失败,请重抓", ""); return $.done(); }
-  if (!hdr.t || !hdr.userid || !env0.data || !env0.skey) { $.msg("⚠️ 网上国网签到", "Cookie/签到请求字段缺失,请重抓", ""); return $.done(); }
+  try { hdr = JSON.parse(rawH); env0 = JSON.parse(rawE); } catch (e) { $.msg("⚠️ 网上国网签到", "本地数据解析失败,请清除后重抓", ""); return $.done(); }
+  if (!hdr.t || !hdr.userid || !env0.data || !env0.skey) { $.msg("⚠️ 网上国网签到", "鉴权/签到请求字段缺失,请重抓", ""); return $.done(); }
 
   const path = env0.path || "/osg-omgmt1042/member/m1/0103514";
   const headers = { "content-type": "application/json", "accept": "application/json;charset=UTF-8" };
@@ -95,16 +81,22 @@ const AUTH_KEYS = ["t","userid","device_token","devicetokentx","devicetokentxtim
         if (n < MAX_RETRY) { setTimeout(() => attempt(n + 1), 3000); return; }
         $.msg("⚠️ 网上国网签到", "网络错误,重试" + MAX_RETRY + "次失败", String(err).slice(0, 80)); return $.done();
       }
-      let ok = false, msg = String(data || "").slice(0, 140);
-      try { const j = JSON.parse(data); ok = !!j.encryptData; if (!ok) msg = (j.message || "") + " [" + (j.code || "") + "]"; } catch (e) {}
-      // 有 encryptData = 成功
-      if (ok) { $.msg("✅ 网上国网签到", "今日签到完成 ✓", ""); return $.done(); }
-      // 服务器对所有失败都只回"系统正忙",无法靠码区分;重试应对偶发,持久失败即判 Cookie 失效
-      if (n < MAX_RETRY) { setTimeout(() => attempt(n + 1), 3000); return; }
-      $.msg("⚠️ 网上国网签到", "签到失败(重试" + MAX_RETRY + "次)· Cookie 多半失效", "开 App 进积分签到页重抓;若 App 也异常则服务器问题 | " + msg); $.done();
+      let accepted = false, msg = String(data || "").slice(0, 140);
+      try { const j = JSON.parse(data); accepted = !!j.encryptData; if (!accepted) msg = (j.message || "") + " [" + (j.code || "") + "]"; } catch (e) {}
+      // encryptData 只能证明网关返回了加密业务响应；未解密前不能据此断言签到成功。
+      if (accepted) {
+        $.msg("✅ 网上国网签到", "请求已被服务器受理", "业务结果为加密响应，请在 App 积分页核对是否签到/加分"); return $.done();
+      }
+      // 仅对网络错误和明确 5xx 做重试；鉴权/业务拒绝盲目重试只会放大风控。
+      const status = Number(resp && (resp.status || resp.statusCode)) || 0;
+      if (status >= 500 && n < MAX_RETRY) { setTimeout(() => attempt(n + 1), 3000); return; }
+      $.msg("⚠️ 网上国网签到", "服务器未受理请求" + (status ? " · HTTP " + status : ""), "可能是鉴权/签到请求失效；请重新抓取 | " + msg); $.done();
     });
   };
-  attempt(1);
+  const jitterMax = getJitterMax();
+  const delayMs = jitterMax > 0 ? Math.floor(Math.random() * (jitterMax + 1)) * 1000 : 0;
+  if (delayMs > 0) $.log("[INFO] 定时随机延迟 " + Math.floor(delayMs / 1000) + " 秒");
+  if (delayMs > 0) setTimeout(() => attempt(1), delayMs); else attempt(1);
 })();
 
 
