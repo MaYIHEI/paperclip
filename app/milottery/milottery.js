@@ -1,12 +1,12 @@
 /**
- * 小米抽奖 · 自动完成活动任务并抽奖
+ * 小米抽奖 · 自动完成签到、活动任务并抽奖
  *
  * 抓取:打开小米商城 APP → 狂欢礼 → 进入抽奖活动页,抓 Cookie 与活动配置
- * 签到:cron 自动完成分享/浏览任务并用完抽奖次数
+ * 签到:cron 自动完成签到/分享/浏览任务并用完抽奖次数
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-13
+ * @Updated: 2026-08-16
  *
  * ===== Loon =====
  * [MITM]
@@ -15,7 +15,7 @@
  * [Script]
  * http-request ^https:\/\/shop-api\.retail\.mi\.com\/mtop\/navi\/venue\/batch tag=小米抽奖 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/milottery/milottery.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png
  *
- * cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/milottery/milottery.js, tag=小米抽奖签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png, timeout=240, enable=true
+ * cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/milottery/milottery.js, tag=小米抽奖签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png, timeout=360, enable=true
  *
  * ===== Surge =====
  * [MITM]
@@ -24,7 +24,7 @@
  * [Script]
  * 小米抽奖 Cookie = type=http-request,pattern=^https:\/\/shop-api\.retail\.mi\.com\/mtop\/navi\/venue\/batch,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/milottery/milottery.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png
  *
- * 小米抽奖签到 = type=cron,cronexp=30 8 * * *,timeout=240,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/milottery/milottery.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png
+ * 小米抽奖签到 = type=cron,cronexp=30 8 * * *,timeout=360,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/milottery/milottery.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png
  *
  * ===== Quantumult X =====
  * [MITM]
@@ -41,7 +41,7 @@
  *   script:
  *     - name: 小米抽奖签到
  *       cron: '30 8 * * *'
- *       timeout: 240
+ *       timeout: 360
  *
  * http:
  *   mitm:
@@ -60,14 +60,15 @@
 
 const $ = new Env("小米抽奖");
 
-const SCRIPT_VERSION = "2026-07-13.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-08-16.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "milottery_data";
 const API = "https://shop-api.retail.mi.com";
 const ACT_API = "https://act-api.retail.mi.com";
 const BATCH_PATH = "/mtop/navi/venue/batch";
-const SUPPORTED_TASK_TYPES = [101, 200];
+const SUPPORTED_TASK_TYPES = [101, 110, 200];
+const MAX_DETAIL_QUERIES = 8;
 
 if (typeof $request !== "undefined") {
     capture();
@@ -83,7 +84,7 @@ if (typeof $request !== "undefined") {
 function capture() {
     $.log(`[INFO] 抓取钩子命中 ${$request.url}`);
     const body = $request.body || "";
-    const query = mainTaskQuery(body);
+    const query = taskQuery(body);
     if (!query) {
         $.done();
         return;
@@ -98,37 +99,57 @@ function capture() {
     }
 
     setHeader(headers, "cookie", cookie);
-    const current = {
-        url: ($request.url || API + BATCH_PATH).replace(/\?.*$/, ""),
-        headers,
-        body,
-        actId: query.actId,
-        capturedAt: Date.now(),
-    };
-
-    let data = current;
-    let notify = true;
+    const capturedAt = Date.now();
+    const url = ($request.url || API + BATCH_PATH).replace(/\?.*$/, "");
+    let saved = null;
     try {
-        const saved = JSON.parse($.getdata(CK_KEY) || "null");
-        const sameActivity = saved && saved.actId === current.actId;
-        const currentNative = !!header(current.headers, "mishop-client-id");
-        if (sameActivity && !currentNative) {
-            data = saved;
-            setHeader(data.headers, "cookie", cookie);
-            data.capturedAt = current.capturedAt;
-            notify = false;
-        } else if (sameActivity && currentNative) {
-            notify = false;
-        }
+        saved = JSON.parse($.getdata(CK_KEY) || "null");
     } catch (e) {
         debug(`saved data parse error: ${e.message || e}`);
     }
 
+    if (!query.isMain) {
+        if (!saved || !saved.body || query.actId === saved.actId) {
+            $.done();
+            return;
+        }
+        if (header(headers, "mishop-client-id") || !saved.headers) saved.headers = headers;
+        else setHeader(saved.headers, "cookie", cookie);
+        saved.url = url;
+        saved.capturedAt = capturedAt;
+        saved.detailQueries = upsertDetailQuery(saved.detailQueries, query, body, capturedAt);
+        $.setdata(JSON.stringify(saved), CK_KEY);
+        $.done();
+        return;
+    }
+
+    const current = {
+        url,
+        headers,
+        body,
+        actId: query.actId,
+        capturedAt,
+        detailQueries: saved && saved.actId === query.actId ? saved.detailQueries || [] : [],
+    };
+
+    let data = current;
+    let notify = true;
+    const sameActivity = saved && saved.actId === current.actId;
+    const currentNative = !!header(current.headers, "mishop-client-id");
+    if (sameActivity && !currentNative) {
+        data = saved;
+        setHeader(data.headers, "cookie", cookie);
+        data.capturedAt = current.capturedAt;
+        notify = false;
+    } else if (sameActivity && currentNative) {
+        notify = false;
+    }
+
     const ok = $.setdata(JSON.stringify(data), CK_KEY);
-    const saved = $.getdata(CK_KEY);
-    if (ok && saved && notify) {
+    const persisted = $.getdata(CK_KEY);
+    if (ok && persisted && notify) {
         $.msg($.name, "", "✅ 小米抽奖 Cookie 获取成功");
-    } else if (!ok || !saved) {
+    } else if (!ok || !persisted) {
         $.msg($.name, "❌ Cookie 保存失败", "请查看脚本日志后重试");
     }
     $.done();
@@ -155,7 +176,8 @@ async function run() {
 
     const first = await queryTasks(auth);
     if (!first) return;
-    let tasks = extractTasks(first);
+    const detailResults = await queryDetailTasks(auth);
+    let tasks = mergeTasks([extractTasks(first), ...detailResults.map(extractTasks)]);
     const lottery = tasks.find((task) => Number(task.taskType) === 128);
     if (!lottery) {
         $.msg($.name, "⚠️ 未找到抽奖活动", "活动配置可能已更新，请重进活动页抓取");
@@ -171,7 +193,14 @@ async function run() {
 
     const taskResult = { done: 0, skipped: 0, failed: [] };
     let actionCount = 0;
-    for (const task of tasks.filter((item) => SUPPORTED_TASK_TYPES.includes(Number(item.taskType)))) {
+    const actionable = tasks
+        .filter((item) => SUPPORTED_TASK_TYPES.includes(Number(item.taskType)))
+        .sort((a, b) => taskPriority(a) - taskPriority(b));
+    for (const task of actionable) {
+        if (!isTaskActive(task)) {
+            taskResult.skipped++;
+            continue;
+        }
         const remaining = Math.max(0, Number(task.totalNumber || 0) - Number(task.finishedNumber || 0));
         if (!remaining) {
             taskResult.skipped++;
@@ -238,19 +267,29 @@ async function run() {
     $.msg($.name, ok ? "✅ 执行完成" : "⚠️ 部分完成", lines.join("\n"));
 }
 
-async function queryTasks(auth) {
-    const result = await request(auth.url || API + BATCH_PATH, auth.headers, auth.body);
+async function queryTasks(auth, body = auth.body, quiet = false) {
+    const result = await request(auth.url || API + BATCH_PATH, auth.headers, body);
     if (!result) {
-        $.msg($.name, "❌ 查询任务失败", "网络无响应，请稍后重试");
+        if (!quiet) $.msg($.name, "❌ 查询任务失败", "网络无响应，请稍后重试");
         return null;
     }
     if (Number(result.code) !== 0) {
         const message = result.message || result.msg || "未知错误";
-        $.msg($.name, "❌ 查询任务失败", `${message}；若提示未登录，请重进活动页抓取`);
+        if (!quiet) $.msg($.name, "❌ 查询任务失败", `${message}；若提示未登录，请重进活动页抓取`);
         debug(`query raw: ${JSON.stringify(result).slice(0, 500)}`);
         return null;
     }
     return result;
+}
+
+async function queryDetailTasks(auth) {
+    const results = [];
+    for (const item of auth.detailQueries || []) {
+        if (!item || !item.body) continue;
+        const result = await queryTasks(auth, item.body, true);
+        if (result) results.push(result);
+    }
+    return results;
 }
 
 async function completeTask(auth, task) {
@@ -354,7 +393,19 @@ function extractTasks(root) {
     return Array.from(tasks.values());
 }
 
-function mainTaskQuery(body) {
+function mergeTasks(groups) {
+    const tasks = new Map();
+    groups.forEach((group) => (group || []).forEach((task) => {
+        if (!task || !task.taskId) return;
+        const previous = tasks.get(task.taskId);
+        if (!previous || Number(task.serverTime || 0) >= Number(previous.serverTime || 0)) {
+            tasks.set(task.taskId, task);
+        }
+    }));
+    return Array.from(tasks.values());
+}
+
+function taskQuery(body) {
     if (!body || !/infinite-task/.test(body)) return null;
     try {
         const parsed = JSON.parse(body);
@@ -362,18 +413,33 @@ function mainTaskQuery(body) {
         for (const item of list) {
             if (!item || item.resolver !== "infinite-task") continue;
             const parameter = typeof item.parameter === "string" ? JSON.parse(item.parameter) : item.parameter;
-            const types = (parameter && parameter.taskTypeList) || [];
-            const taskIds = parameter && parameter.taskIdList;
-            const filtered = Array.isArray(taskIds) ? taskIds.length > 0 : !!taskIds;
-            if (!parameter || !parameter.actId || filtered) continue;
-            if ([101, 128, 200].every((type) => types.map(Number).includes(type))) {
-                return { actId: String(parameter.actId) };
-            }
+            if (!parameter || !parameter.actId) continue;
+            const taskIds = Array.isArray(parameter.taskIdList) ? parameter.taskIdList.map(String) : [];
+            const types = (parameter.taskTypeList || []).map(Number);
+            const isMain = !taskIds.length && [128, 200].every((type) => types.includes(type));
+            if (isMain || taskIds.length) return { actId: String(parameter.actId), taskIds, isMain };
         }
         return null;
     } catch (e) {
         return null;
     }
+}
+
+function upsertDetailQuery(items, query, body, capturedAt) {
+    const key = `${query.actId}:${query.taskIds.join(",")}`;
+    const result = (items || []).filter((item) => item && item.key !== key);
+    result.push({ key, body, capturedAt });
+    return result.slice(-MAX_DETAIL_QUERIES);
+}
+
+function taskPriority(task) {
+    const priority = { 110: 0, 101: 1, 200: 2 }[Number(task.taskType)];
+    return priority === undefined ? 9 : priority;
+}
+
+function isTaskActive(task) {
+    const now = Number(task.serverTime || Date.now());
+    return !(task.startTime && now < Number(task.startTime)) && !(task.endTime && now > Number(task.endTime));
 }
 
 function cleanHeaders(source) {
