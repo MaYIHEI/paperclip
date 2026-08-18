@@ -652,7 +652,10 @@
       "name": "QQ音乐",
       "keys": [
         "qqmusic_data",
+        "qqmusic_run_state",
         "qqmusic_clear",
+        "qqmusic_task_favorite",
+        "qqmusic_task_activity",
         "qqmusic_debug"
       ],
       "settings": [
@@ -662,6 +665,40 @@
           "val": false,
           "type": "boolean",
           "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        },
+        {
+          "id": "qqmusic_task_favorite",
+          "name": "收藏任务",
+          "val": "true",
+          "type": "selects",
+          "items": [
+            {
+              "key": "true",
+              "label": "开启"
+            },
+            {
+              "key": "false",
+              "label": "关闭"
+            }
+          ],
+          "desc": "临时收藏歌曲、歌单、有声书并关注歌手，领取任务金币后自动恢复原状态"
+        },
+        {
+          "id": "qqmusic_task_activity",
+          "name": "附属活动任务",
+          "val": "true",
+          "type": "selects",
+          "items": [
+            {
+              "key": "true",
+              "label": "开启"
+            },
+            {
+              "key": "false",
+              "label": "关闭"
+            }
+          ],
+          "desc": "执行金币抽奖签到、使用剩余抽奖次数、红包雨、浮动宝箱和可直接上报的活动任务（含种摇钱树领免费绿钻任务卡）"
         },
         {
           "id": "qqmusic_debug",
@@ -678,7 +715,7 @@
               "label": "开启"
             }
           ],
-          "desc": "开启后打印续期/签到请求与响应"
+          "desc": "开启后打印续期、签到与每日任务诊断日志，不输出 Cookie"
         }
       ],
       "author": "@MaYIHEI",

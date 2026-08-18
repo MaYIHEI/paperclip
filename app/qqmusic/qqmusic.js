@@ -1,75 +1,104 @@
 /**
- * QQ 音乐 · 绿钻成长值每日签到(QQ 音乐 App「我的-会员-每日签到」)
+ * QQ 音乐 · 绿钻成长值 + 金币中心签到与每日任务
  *
- * 抓取:打开 QQ 音乐 →「我的 / 会员 / 每日签到」进签到页,抓 Cookie
- * 签到:cron 自动续期后签到,挂着代理永不用再开 App
+ * 抓取:打开 QQ 音乐 →「我的 / 会员 / 每日签到」或「金币中心 / 每日签到」,抓 Cookie
+ * 签到:cron 自动续期后完成两套签到,并领取已完成的每日任务奖励
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-15
+ * @Updated: 2026-08-05
  *
  * ===== Loon =====
  * [MITM]
  * hostname = u6.y.qq.com
  * [Script]
- * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * cron "20 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
+ * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * cron "0 30 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐每日任务, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
+ * cron "0 * 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
+ * cron "0 5 0,8,12,16,20,22 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
  *
  * ===== Surge =====
  * [MITM]
  * hostname = u6.y.qq.com
  * [Script]
- * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * QQ音乐签到 = type=cron,cronexp=20 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐 Cookie = type=http-request,pattern=^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐每日任务 = type=cron,cronexp=30 7 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐定时金币 = type=cron,cronexp=* 9-10 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+ * QQ音乐红包雨 = type=cron,cronexp=5 0,8,12,16,20,22 * * *,timeout=1200,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
  *
  * ===== Quantumult X =====
  * [MITM]
  * hostname = u6.y.qq.com
  * [rewrite_local]
- * ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js
+ * ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js
  * [task_local]
- * 20 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
+ * 30 7 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐每日任务, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
+ * * 9-10 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
+ * 5 0,8,12,16,20,22 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enabled=true
  *
  * ===== Stash =====
  * cron:
  *   script:
- *     - name: QQ音乐签到
- *       cron: '20 9 * * *'
- *       timeout: 60
+ *     - name: QQ音乐每日任务
+ *       cron: '30 7 * * *'
+ *       timeout: 1200
+ *     - name: QQ音乐定时金币
+ *       cron: '* 9-10 * * *'
+ *       timeout: 1200
+ *     - name: QQ音乐红包雨
+ *       cron: '5 0,8,12,16,20,22 * * *'
+ *       timeout: 1200
  * http:
  *   mitm:
  *     - "u6.y.qq.com"
  *   script:
- *     - match: ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*EveryDaySignLvzScore
+ *     - match: ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary)
  *       name: QQ音乐 Cookie
  *       type: request
- *       require-body: false
+ *       require-body: true
  * script-providers:
- *   QQ音乐签到:
+ *   QQ音乐每日任务:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js
+ *     interval: 86400
+ *   QQ音乐定时金币:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js
+ *     interval: 86400
+ *   QQ音乐红包雨:
  *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js
  *     interval: 86400
  */
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-06-15.r5"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-08-05.r21"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
-const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, ts }
+const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
+const RUN_STATE_KEY = "qqmusic_run_state"; // 当日流程、定时任务批次和红包雨时段防重复
 // 签到走小程序免签名通道:解包 wxada7aab80ba27074 发现所有 CGI 都用
 // musicu.fcg + comm.authst(musickey) 鉴权,无私有 sign / 无 g_tk / 无 cookie。
 // 实测 App 抓的 qm_keyst 直接当 authst 即可(跨通道通用)。
 const API_URL = "https://u.y.qq.com/cgi-bin/musicu.fcg";
+const APP_API_URL = "https://u6.y.qq.com/cgi-bin/musics.fcg";
 const MINA_APPID = "wxada7aab80ba27074"; // QQ 音乐微信小程序 appid(comm.appid)
+const COIN_SIGN_ACT_ID = "Z25hHGi"; // 金币签到活动,抓到新值时自动覆盖
+const COIN_SIGN_SCENE_ID = "2";
+const DAILY_TASK_ACT_ID = "Z1NRf2o";
+const LOTTERY_SIGN_ACT_ID = "Z156KEu";
+const COIN_LOTTERY_PLAY_ID = "PR-Lottery-20240408-33489273491";
+const RED_PACKET_RAIN_KEY = "1joIuy";
+const TIMER_TASK_MODULE_ID = "ZGp4ja";
+const AUDIOBOOK_CATEGORY_ID = "42800344";
+const AUDIOBOOK_CANDIDATES = [93654004];
+const PLAYLIST_CANDIDATES = [9611383852];
+const SINGER_CANDIDATES = ["0039zms40xSD5K"];
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) MicroMessenger/8.0 miniProgram";
-
 $.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata("qqmusic_debug")) || "false";
 $.messages = [];
 
 // ============ 抓取 ============
 
-// 进会员中心/签到页时触发(musics.fcg 的 query 含 EveryDaySignLvzScore,含首页合并请求),
-// 只需从 Cookie 里取 uin + qm_keyst + refresh_key,不需要请求体。
+// 会员签到页或金币签到页触发。Cookie 提取长期登录材料,金币页 body 额外提取动态活动 ID。
 function getCookie() {
     try {
         const headers = lowerKeys($request.headers);
@@ -90,9 +119,21 @@ function getCookie() {
             $.log("[WARN] Cookie 缺 refresh_key,将无法自动续期(只能撑 ~3 天)");
         }
 
-        $.setjson({ uin, authst, refresh_key, login_type, ts: Date.now() }, CK_KEY);
+        const old = $.getjson(CK_KEY, {}) || {};
+        const coin = getCoinSignConfig($request.body);
+        const saved = {
+            ...old,
+            uin,
+            authst,
+            refresh_key: refresh_key || old.refresh_key || "",
+            login_type,
+            coin_act_id: coin.actID || old.coin_act_id || "",
+            coin_scene_id: coin.sceneID || old.coin_scene_id || "",
+            ts: Date.now(),
+        };
+        $.setjson(saved, CK_KEY);
         $.msg($.name, "✅ QQ音乐 Cookie 获取成功", "可关闭抓包,主脚本会自动续期并签到");
-        $.log(`[INFO] 已保存 (uin=${uin}, authst…${authst.slice(-6)}, refresh_key${refresh_key ? "…" + refresh_key.slice(-6) : "(无)"}, loginType=${login_type})`);
+        $.log(`[INFO] 已保存 (loginType=${login_type}, refresh_key=${saved.refresh_key ? "有" : "无"}, 金币活动${saved.coin_act_id ? "已识别" : "用默认值"})`);
     } catch (e) {
         $.log(`[ERROR] 抓取异常: ${e}`);
     }
@@ -105,20 +146,58 @@ async function checkin() {
     if (!snap || !snap.authst || !snap.uin) {
         $.messages.push(
             "🚫 未抓到 Cookie\n" +
-            "👉 打开 QQ 音乐 →「我的 / 会员 / 每日签到」进签到页一次"
+            "👉 打开 QQ 音乐 →「我的 / 会员 / 每日签到」或「金币中心 / 每日签到」一次"
         );
         return;
     }
 
     const uin = String(snap.uin).replace(/^0+/, "") || String(snap.uin);
+    const now = new Date();
+    const runState = getRunState(now);
+    const activityEnabled = !taskOff("qqmusic_task_activity");
+    const dailyPending = !runState.dailyAttempted && isDailyFlowDue(now);
+    const timedSources = activityEnabled && isTimerWindow(now) ? getDueTimedSources(runState, now) : [];
+    const timerPending = timedSources.length > 0;
+    const redPacketSlot = getRedPacketSlot(now);
+    const redPacketPending = activityEnabled && redPacketSlot && !runState.redPacketSlots.includes(redPacketSlot);
 
-    // 1) 续期:musickey 仅 3 天有效,先用长期不变的 refresh_key 换一把新的(滚动续命)。
-    //    续期失败不致命(库存 musickey 可能还没过期),继续尝试签到。
-    await refreshKey(snap, uin);
+    if (!dailyPending && !timerPending && !redPacketPending) {
+        $.log("[INFO] 当前批次已处理或无对应任务,跳过网络请求");
+        return;
+    }
 
-    // 2) 签到:用(刚刷新的)authst
+    // 每日流程先落本地锁,避免重复 cron 或并发运行反复提交写请求。
+    if (dailyPending) {
+        runState.dailyAttempted = true;
+        saveRunState(runState);
+        await refreshKey(snap, uin);
+        await checkLvzScore(snap, uin);
+        await checkCoinSignIn(snap, uin);
+        await claimDailyTaskRewards(snap, uin);
+        if (activityEnabled) {
+            await checkLotterySignIn(snap, uin);
+            await drawCoinLottery(snap, uin);
+        }
+    }
+
+    if (timerPending) {
+        const lockUntil = Date.now() + 10 * 60 * 1000;
+        for (const source of timedSources) runState.timerSources[source].nextAt = lockUntil;
+        saveRunState(runState);
+        await claimTimedTaskRewards(snap, uin, runState, timedSources);
+        saveRunState(runState);
+    }
+
+    if (redPacketPending) {
+        runState.redPacketSlots.push(redPacketSlot);
+        saveRunState(runState);
+        await runRedPacketRain(snap, uin);
+    }
+}
+
+async function checkLvzScore(snap, uin) {
     const body = {
-        comm: { uin: Number(uin), authst: snap.authst, mina: 1, appid: MINA_APPID, ct: 29, cv: 0, format: "json" },
+        comm: makeComm(snap, uin),
         req_0: {
             module: "music.lvz.MuFest13TaskSvr",
             method: "EveryDaySignLvzScore",
@@ -130,7 +209,7 @@ async function checkin() {
     debug(res, "EveryDaySignLvzScore");
 
     if (!res) {
-        $.messages.push("❌ 签到无响应(详情见日志)");
+        $.messages.push("❌ 绿钻成长值签到无响应(详情见日志)");
         return;
     }
     const r0 = res.req_0 || {};
@@ -139,7 +218,7 @@ async function checkin() {
     // 外层鉴权失败(authst 失效)→ code!=0,需重抓
     if (res.code !== 0 || (r0.code !== 0 && r0.code !== undefined && data.Ret === undefined)) {
         $.messages.push(
-            `❌ 签到失败 (code=${res.code}, req_0.code=${r0.code})\n` +
+            `❌ 绿钻成长值签到失败 (code=${res.code}, req_0.code=${r0.code})\n` +
             "续期可能也失败(refresh_key 失效或离线 >3 天),请重进「每日签到」页重抓"
         );
         $.log(`[DEBUG] 响应前300: ${$.toStr(res).slice(0, 300)}`);
@@ -150,11 +229,837 @@ async function checkin() {
         const score = (data.Info && data.Info.Score) || 0;
         $.messages.push(`✅ 绿钻成长值签到成功${score ? `: 今日 +${score}` : ""}`);
     } else if (data.Ret === 20019 || /已.*领取|已签|重复/.test(data.Msg || "")) {
-        $.messages.push(`✨ 今日已签到${data.Msg ? `(${data.Msg})` : ""}`);
+        $.messages.push(`✨ 绿钻成长值今日已签到${data.Msg ? `(${data.Msg})` : ""}`);
     } else {
-        $.messages.push(`⚠️ 已处理 (Ret=${data.Ret})${data.Msg ? `: ${data.Msg}` : ""}`);
+        $.messages.push(`⚠️ 绿钻成长值已处理 (Ret=${data.Ret})${data.Msg ? `: ${data.Msg}` : ""}`);
         $.log(`[DEBUG] 响应前300: ${$.toStr(res).slice(0, 300)}`);
     }
+}
+
+async function checkCoinSignIn(snap, uin) {
+    const actID = snap.coin_act_id || COIN_SIGN_ACT_ID;
+    const sceneID = snap.coin_scene_id || COIN_SIGN_SCENE_ID;
+    let state = await getCoinSignState(snap, uin, actID, sceneID);
+    if (!state) return;
+
+    let signedNow = false;
+    if (!state.info.IsSignIn) {
+        const signRes = await post(API_URL, JSON.stringify({
+            comm: makeComm(snap, uin),
+            req_0: {
+                module: "music.actCenter.ActCenterSignNewSvr",
+                method: "SignIn",
+                param: { ActID: actID, ScenesID: sceneID },
+            },
+        }));
+        debug(signRes, "Coin SignIn");
+        const signReq = signRes && signRes.req_0;
+        const signData = signReq && signReq.data;
+        if (!signRes || signRes.code !== 0 || !signReq || signReq.code !== 0 || !signData || signData.retCode !== 0 || !signData.Info || !signData.Info.IsSignIn) {
+            const code = signReq ? signReq.code : "?";
+            const ret = signData ? signData.retCode : "?";
+            $.messages.push(`❌ 金币中心签到失败 (code=${code}, ret=${ret})`);
+            $.log(`[DEBUG] 金币签到响应前300: ${$.toStr(signRes).slice(0, 300)}`);
+            return;
+        }
+        signedNow = true;
+        state = await getCoinSignState(snap, uin, actID, sceneID);
+        if (!state) return;
+    }
+
+    const day = Number(state.info.ContinueSignInCount || 0);
+    const taskMap = state.taskList || {};
+    const task = Object.values(taskMap).find((item) => item && item.State === 2) || taskMap[String(day)];
+    const reward = formatCoinReward(task);
+
+    if (task && task.State === 2) {
+        const awardRes = await post(API_URL, JSON.stringify({
+            comm: makeComm(snap, uin),
+            req_0: {
+                module: "music.actCenter.ActCenterSignNewSvr",
+                method: "AwardPrize",
+                param: { ActID: actID, TaskID: task.ID },
+            },
+        }));
+        debug(awardRes, "Coin AwardPrize");
+        const awardReq = awardRes && awardRes.req_0;
+        const awardData = awardReq && awardReq.data;
+        if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && (awardData.retCode === 0 || awardData.retCode === 100004)) {
+            $.messages.push(`${signedNow ? "✅ 金币中心签到成功" : "✅ 金币中心奖励已领取"}${reward}`);
+        } else {
+            const code = awardReq ? awardReq.code : "?";
+            const ret = awardData ? awardData.retCode : "?";
+            $.messages.push(`⚠️ 金币中心已签到,领奖失败 (code=${code}, ret=${ret})`);
+            $.log(`[DEBUG] 金币领奖响应前300: ${$.toStr(awardRes).slice(0, 300)}`);
+        }
+    } else if (state.info.IsSignIn) {
+        $.messages.push(`✨ 金币中心今日已签到${reward}`);
+    } else {
+        $.messages.push("⚠️ 金币中心签到状态未确认(详情见日志)");
+    }
+}
+
+async function getCoinSignState(snap, uin, actID, sceneID) {
+    const res = await post(API_URL, JSON.stringify({
+        comm: makeComm(snap, uin),
+        req_0: {
+            module: "music.actCenter.ActCenterSignNewSvr",
+            method: "GetSignInSummary",
+            param: { ActID: actID },
+        },
+        req_1: {
+            module: "music.actCenter.ActCenterSignNewSvr",
+            method: "GetSignInTaskList",
+            param: { ActID: actID, ScenesID: sceneID },
+        },
+    }));
+    debug(res, "Coin Sign State");
+    const summary = res && res.req_0;
+    const tasks = res && res.req_1;
+    const summaryData = summary && summary.data;
+    const taskData = tasks && tasks.data;
+    if (!res || res.code !== 0 || !summary || summary.code !== 0 || !tasks || tasks.code !== 0 || !summaryData || summaryData.retCode !== 0 || !taskData || taskData.retCode !== 0) {
+        $.messages.push(`❌ 金币中心状态查询失败 (summary=${summary ? summary.code : "?"}, tasks=${tasks ? tasks.code : "?"})`);
+        $.log(`[DEBUG] 金币状态响应前300: ${$.toStr(res).slice(0, 300)}`);
+        return null;
+    }
+    return {
+        info: taskData.Info || summaryData.Info || {},
+        taskList: (((taskData.TaskListInfo || {}).TaskList || {}).ContinueTaskList) || {},
+    };
+}
+
+function makeComm(snap, uin) {
+    return {
+        uin: Number(uin),
+        authst: snap.authst,
+        mina: 1,
+        appid: MINA_APPID,
+        ct: 29,
+        cv: 0,
+        format: "json",
+    };
+}
+
+function formatCoinReward(task) {
+    const prize = task && Array.isArray(task.PrizeList) ? task.PrizeList[0] : null;
+    if (!prize) return "";
+    if (prize.Name) return ` (${prize.Name})`;
+    if (prize.Value) return ` (+${prize.Value} 金币)`;
+    return "";
+}
+
+async function checkLotterySignIn(snap, uin) {
+    let state = await getLotterySignState(snap, uin);
+    if (!state) return;
+
+    let signedNow = false;
+    if (!state.info.IsSignIn) {
+        const signRes = await appPost(snap, uin, "SignIn", {
+            comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+            req_0: {
+                module: "music.actCenter.ActCenterSignNewSvr",
+                method: "SignIn",
+                param: { ActID: LOTTERY_SIGN_ACT_ID },
+            },
+        });
+        debug(signRes, "Lottery SignIn");
+        if (!appRequestSucceeded(signRes)) {
+            $.log("[WARN] 金币抽奖签到失败,跳过附属签到");
+            return;
+        }
+        signedNow = true;
+        state = await getLotterySignState(snap, uin);
+        if (!state) return;
+    }
+
+    const task = Object.values(state.taskList || {}).find((item) => item && item.State === 2);
+    if (task) {
+        const awardRes = await appPost(snap, uin, "AwardPrize", {
+            comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+            req_0: {
+                module: "music.actCenter.ActCenterSignNewSvr",
+                method: "AwardPrize",
+                param: { ActID: LOTTERY_SIGN_ACT_ID, TaskID: task.ID },
+            },
+        });
+        debug(awardRes, "Lottery Sign Award");
+        if (appRequestSucceeded(awardRes)) {
+            $.messages.push(`✅ 金币抽奖签到${formatCoinReward(task)}`);
+        } else {
+            $.log("[WARN] 金币抽奖签到已完成,领奖失败");
+        }
+    } else if (signedNow) {
+        $.messages.push("✅ 金币抽奖签到已完成");
+    }
+}
+
+async function getLotterySignState(snap, uin) {
+    const res = await appPost(snap, uin, "GetSignInSummary", {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+        req_0: {
+            module: "music.actCenter.ActCenterSignNewSvr",
+            method: "GetSignInSummary",
+            param: { ActID: LOTTERY_SIGN_ACT_ID },
+        },
+        req_1: {
+            module: "music.actCenter.ActCenterSignNewSvr",
+            method: "GetSignInTaskList",
+            param: { ActID: LOTTERY_SIGN_ACT_ID },
+        },
+    });
+    debug(res, "Lottery Sign State");
+    if (!appRequestSucceeded(res, "req_0") || !appRequestSucceeded(res, "req_1")) return null;
+    const summaryData = res.req_0.data || {};
+    const taskData = res.req_1.data || {};
+    return {
+        info: taskData.Info || summaryData.Info || {},
+        taskList: (((taskData.TaskListInfo || {}).TaskList || {}).ContinueTaskList) || {},
+    };
+}
+
+async function drawCoinLottery(snap, uin) {
+    const query = () => appPost(snap, uin, "GetCoinUserInfo", {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+        req_0: {
+            module: "music.actCenter.CoinLotterySvr",
+            method: "GetCoinUserInfo",
+            param: { Param: 1, Playid: COIN_LOTTERY_PLAY_ID },
+        },
+    });
+    const infoRes = await query();
+    debug(infoRes, "Coin Lottery Info");
+    if (!appRequestSucceeded(infoRes)) return;
+
+    const remain = Number(findFirstValue(infoRes.req_0.data, ["lotteryRemain"]) || 0);
+    if (remain <= 0) return;
+
+    const gifts = [];
+    for (let i = 0; i < Math.min(remain, 10); i++) {
+        const drawRes = await appPost(snap, uin, "UserCoinLottery", {
+            comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+            req_0: {
+                module: "music.actCenter.CoinLotterySvr",
+                method: "UserCoinLottery",
+                param: { Param: 1, Playid: COIN_LOTTERY_PLAY_ID },
+            },
+        });
+        debug(drawRes, `Coin Lottery ${i + 1}`);
+        if (!appRequestSucceeded(drawRes)) break;
+        gifts.push(formatLotteryGift(drawRes.req_0.data));
+        await $.wait(350);
+    }
+    if (gifts.length) $.messages.push(`✅ 金币抽奖 ${gifts.length} 次: ${gifts.join("、")}`);
+}
+
+async function runRedPacketRain(snap, uin) {
+    const stateRes = await appPost(snap, uin, "Raining", {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+        req_0: {
+            module: "music.actCenter.RedPacketRainSvr",
+            method: "Raining",
+            param: { RainKey: RED_PACKET_RAIN_KEY },
+        },
+    });
+    debug(stateRes, "Red Packet Rain State");
+    if (!redPacketRequestSucceeded(stateRes)) return;
+    const restChance = readRedPacketRestChance(stateRes.req_0.data);
+    if (restChance <= 0) return;
+
+    let completed = 0;
+    let coins = 0;
+    for (let i = 0; i < Math.min(restChance, 6); i++) {
+        const chanceRes = await appPost(snap, uin, "IncrChance", {
+            comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+            req_0: {
+                module: "music.actCenter.RedPacketRainSvr",
+                method: "IncrChance",
+                param: { RainKey: RED_PACKET_RAIN_KEY, IncrType: 2 },
+            },
+        });
+        debug(chanceRes, `Red Packet Chance ${i + 1}`);
+        if (!redPacketRequestSucceeded(chanceRes)) break;
+        await $.wait(800);
+
+        const drawRes = await appPost(snap, uin, "DrawPrizes", {
+            comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+            req_0: {
+                module: "music.actCenter.RedPacketRainSvr",
+                method: "DrawPrizes",
+                param: { RainKey: RED_PACKET_RAIN_KEY, HitNum: 10, HitStreakNum: 0 },
+            },
+        });
+        debug(drawRes, `Red Packet Draw ${i + 1}`);
+        if (!redPacketRequestSucceeded(drawRes)) break;
+        completed++;
+        coins += Number(findFirstValue(drawRes.req_0.data, ["awardValue", "RewardGold", "rewardGold", "coinNum", "coin"]) || 0);
+    }
+    if (completed) $.messages.push(`✅ 红包雨 ${completed} 次${coins ? `: +${coins} 金币` : ""}`);
+}
+
+async function claimDailyTaskRewards(snap, uin) {
+    let tasks = await getDailyTasks(snap, uin, true);
+    if (!tasks) return;
+
+    const cleanups = [];
+    try {
+        const quizTask = findDailyTask(tasks, (task) => task.ID === "Zff1WO" || /皇宫身份/.test(task.Name || ""));
+        if (quizTask && quizTask.State === 1 && !taskOff("qqmusic_task_activity")) {
+            if (await reportDailyTaskAction(snap, uin, quizTask)) {
+                tasks = await refreshTasksAfterAction(tasks, quizTask, snap, uin);
+            }
+        }
+
+        const moneyTreeTask = findDailyTask(tasks, (task) => task.ID === "5E9TC" || /摇钱树/.test(task.Name || ""));
+        if (moneyTreeTask && moneyTreeTask.State === 1 && !taskOff("qqmusic_task_activity")) {
+            if (await reportDailyTaskAction(snap, uin, moneyTreeTask)) {
+                tasks = await refreshTasksAfterAction(tasks, moneyTreeTask, snap, uin);
+            }
+        }
+
+        if (!taskOff("qqmusic_task_favorite")) {
+            const favoriteSongTask = findDailyTask(tasks, (task) => task.ID === "Z1mKlEI" || task.TaskActTypID === "2tuNRp" || Number(task.Type) === 8);
+            if (favoriteSongTask && favoriteSongTask.State === 1) {
+                const song = await addTemporarySongFavorite(snap, uin);
+                if (song) {
+                    cleanups.push({
+                        name: "临时收藏歌曲",
+                        run: () => updateFavoriteSong(snap, uin, "DelSonglist", song),
+                        warning: "请到“我喜欢”检查最新一首",
+                    });
+                    tasks = await refreshTasksAfterAction(tasks, favoriteSongTask, snap, uin);
+                    if (!taskReachedReady(tasks, favoriteSongTask)) {
+                        $.messages.push("⚠️ 收藏歌曲任务状态未更新;已恢复本次临时收藏");
+                    }
+                }
+            }
+
+            const favoritePlaylistTask = findDailyTask(tasks, (task) => task.ID === "ZBiJs9" || Number(task.Type) === 9);
+            if (favoritePlaylistTask && favoritePlaylistTask.State === 1) {
+                const playlist = await addTemporaryPlaylistFavorite(snap, uin);
+                if (playlist) {
+                    cleanups.push({
+                        name: "临时收藏歌单",
+                        run: () => updateFavoritePlaylist(snap, uin, false, playlist),
+                        warning: "请到收藏歌单中检查",
+                    });
+                    tasks = await refreshTasksAfterAction(tasks, favoritePlaylistTask, snap, uin);
+                    // App 原生收藏使用 JCE 通道。JSON 通道若只改变收藏状态而未记任务，
+                    // 再走活动中心的正式进度上报接口，由服务端决定是否接受。
+                    if (!taskReachedReady(tasks, favoritePlaylistTask) &&
+                        await reportDailyTaskAction(snap, uin, favoritePlaylistTask)) {
+                        tasks = await refreshTasksAfterAction(tasks, favoritePlaylistTask, snap, uin);
+                    }
+                    if (!taskReachedReady(tasks, favoritePlaylistTask)) {
+                        $.messages.push("⚠️ 收藏歌单任务状态未更新;已恢复本次临时收藏");
+                    }
+                }
+            }
+
+            const favoriteAudiobookTask = findDailyTask(tasks, (task) => task.ID === "Z5bnvq" || task.TaskActTypID === "CeYSX" || Number(task.Type) === 36);
+            if (favoriteAudiobookTask && favoriteAudiobookTask.State === 1) {
+                const audiobook = await addTemporaryAudiobookFavorite(snap, uin);
+                if (audiobook) {
+                    cleanups.push({
+                        name: "临时收藏有声书",
+                        run: () => updateFavoriteAudiobook(snap, uin, false, audiobook),
+                        warning: "请到收藏的有声书中检查",
+                    });
+                    tasks = await refreshTasksAfterAction(tasks, favoriteAudiobookTask, snap, uin);
+                }
+            }
+
+            const followSingerTask = findDailyTask(tasks, (task) => task.ID === "2wgcMV" || Number(task.Type) === 13);
+            if (followSingerTask && followSingerTask.State === 1) {
+                const singer = await addTemporarySingerFollow(snap, uin);
+                if (singer) {
+                    cleanups.push({
+                        name: "临时关注歌手",
+                        run: () => updateSingerFollow(snap, uin, false, singer),
+                        warning: "请到关注歌手中检查",
+                    });
+                    tasks = await refreshTasksAfterAction(tasks, followSingerTask, snap, uin);
+                }
+            }
+        }
+
+        await claimReadyTaskRewards(tasks.filter((task) => !isTimedFloorTask(task)), snap, uin);
+    } finally {
+        for (const cleanup of cleanups.reverse()) {
+            const removed = await cleanup.run();
+            if (!removed) $.messages.push(`⚠️ ${cleanup.name}清理失败,${cleanup.warning}`);
+        }
+    }
+}
+
+async function claimTimedTaskRewards(snap, uin, runState, sources) {
+    for (const source of sources) {
+        const queried = source === "floor"
+            ? await queryDailyTasks(snap, uin, "18NtBy", [193], false)
+            : await getTimerTasks(snap, uin);
+        const timedTasks = uniqueTasks((queried || []).filter((task) => source !== "floor" || isTimedFloorTask(task)));
+        const sourceState = runState.timerSources[source];
+        if (!timedTasks.length) {
+            sourceState.done = true;
+            sourceState.nextAt = 0;
+            $.log(`[INFO] ${timedSourceName(source)}未下发任务或查询失败,当天停止查询`);
+            continue;
+        }
+
+        await claimReadyTaskRewards(timedTasks, snap, uin);
+        sourceState.done = timedTasks.every(isTaskFinishedForDay);
+        sourceState.nextAt = sourceState.done ? 0 : getNextTimedCheckAt(timedTasks);
+    }
+}
+
+async function claimReadyTaskRewards(tasks, snap, uin) {
+    const ready = tasks.filter((task) =>
+        task &&
+        task.State === 2 &&
+        Array.isArray(task.PrizeList) &&
+        task.PrizeList.some((prize) => prize && Number(prize.Type) === 12 && Number(prize.Value || 0) > 0)
+    );
+    const claimed = [];
+    for (const task of ready) {
+        const awardBody = {
+            comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+            req_0: {
+                module: "music.activeCenter.ActTaskNewSvr",
+                method: "AwardTaskPrize",
+                param: { actID: task._actID, TaskID: task.ID },
+            },
+        };
+        const awardRes = await appPost(snap, uin, "AwardTaskPrize", awardBody);
+        debug(awardRes, `Award ${task.ID}`);
+        const awardReq = awardRes && awardRes.req_0;
+        const awardData = awardReq && awardReq.data;
+        if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && awardData.retCode === 0) {
+            const value = Number(awardData.awardValue || 0);
+            claimed.push(`${task.Name || task.ID}${value ? ` +${value}` : ""}`);
+            if (awardData.taskStatusInfo && typeof awardData.taskStatusInfo === "object") {
+                Object.assign(task, awardData.taskStatusInfo);
+            }
+        } else {
+            $.log(`[WARN] 每日任务领奖失败 (${task.Name || task.ID}, code=${awardReq ? awardReq.code : "?"}, ret=${awardData ? awardData.retCode : "?"})`);
+        }
+    }
+    if (claimed.length) $.messages.push(`✅ 每日任务领奖: ${claimed.join("、")}`);
+}
+
+async function reportDailyTaskAction(snap, uin, task) {
+    const body = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.activeCenter.ActTaskNewSvr",
+            method: "TaskActDataReport",
+            param: { actID: task._actID || DAILY_TASK_ACT_ID, taskID: task.ID, actData: 1 },
+        },
+    };
+    const res = await appPost(snap, uin, "TaskActDataReport", body);
+    debug(res, `Task Action ${task.ID}`);
+    return appRequestSucceeded(res);
+}
+
+async function refreshTasksAfterAction(tasks, target, snap, uin) {
+    let refreshed = tasks;
+    for (let attempt = 0; attempt < 4; attempt++) {
+        await $.wait(1500);
+        refreshed = await getDailyTasks(snap, uin, false) || refreshed;
+        if (taskReachedReady(refreshed, target)) break;
+    }
+    return refreshed;
+}
+
+async function getDailyTasks(snap, uin, notifyError) {
+    let tasks = await queryDailyTasks(snap, uin, "18NtBy", [193], false);
+    if (!tasks || !tasks.length) tasks = await queryDailyTasks(snap, uin, "songpopup", [85], notifyError);
+    return tasks;
+}
+
+async function queryDailyTasks(snap, uin, pageID, floorIDs, notifyError) {
+    const queryBody = {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsCoinCenter3"),
+        req_0: {
+            module: "music.activeCenter.FloorManagerSvr",
+            method: "GetFloors",
+            param: { Release: 1, PageID: pageID, PersonalityMode: 1, FloorIDs: floorIDs },
+        },
+    };
+    const res = await appPost(snap, uin, "GetFloors", queryBody);
+    debug(res, `Daily Tasks ${pageID}`);
+    const req = res && res.req_0;
+    const data = req && req.data;
+    if (!res || res.code !== 0 || !req || req.code !== 0 || !data || data.RetCode !== 0) {
+        if (notifyError) $.messages.push(`❌ 每日任务查询失败 (code=${req ? req.code : "?"})`);
+        $.log(`[DEBUG] 每日任务响应前300: ${$.toStr(res).slice(0, 300)}`);
+        return null;
+    }
+
+    const tasks = [];
+    for (const floor of data.Floors || []) {
+        for (const item of floor.ItemList || []) {
+            try {
+                const conf = typeof item.ResourceConf === "string" ? JSON.parse(item.ResourceConf) : item.ResourceConf;
+                for (const task of ((((conf || {}).ActTaskModule || {}).TaskList) || [])) {
+                    tasks.push({ ...task, _actID: (conf || {}).ActID || DAILY_TASK_ACT_ID });
+                }
+            } catch (e) {
+                $.log(`[WARN] 每日任务配置解析失败: ${e.message || e}`);
+            }
+        }
+    }
+
+    return tasks;
+}
+
+async function getTimerTasks(snap, uin) {
+    const body = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.activeCenter.ActTaskNewSvr",
+            method: "GetTaskModules",
+            param: { actID: DAILY_TASK_ACT_ID, taskModuleIDs: [TIMER_TASK_MODULE_ID] },
+        },
+    };
+    const res = await appPost(snap, uin, "GetTaskModules", body);
+    debug(res, "Timer Treasure Task");
+    if (!appRequestSucceeded(res)) return null;
+    const modules = (res.req_0.data && res.req_0.data.taskModules) || {};
+    const tasks = [];
+    for (const module of Object.values(modules)) {
+        for (const task of (module && module.TaskList) || []) {
+            tasks.push({ ...task, _actID: DAILY_TASK_ACT_ID });
+        }
+    }
+    return tasks;
+}
+
+function isTimedFloorTask(task) {
+    return Boolean(task && (
+        task.ID === "26EIHk" ||
+        Number(task.Type) === 600 ||
+        /定时领金币/.test(task.Name || "")
+    ));
+}
+
+function isTaskFinishedForDay(task) {
+    if (!task) return false;
+    if (Number(task.State) === 3) return true;
+    const maxTimes = Number(task.TaskMaxTimes || 0);
+    return maxTimes > 0 && Number(task.TaskFinishTime || 0) >= maxTimes;
+}
+
+function getNextTimedCheckAt(tasks, now = Date.now()) {
+    const delays = tasks
+        .filter((task) => !isTaskFinishedForDay(task))
+        .map((task) => {
+            const target = Math.max(0, Number(task.TargetNum || 0));
+            const progress = Math.max(0, Number(task.Progress || 0));
+            if (Number(task.State) === 2) return Math.max(300, target || 0);
+            return Math.max(60, target > 0 ? target - progress : 300);
+        });
+    const seconds = delays.length ? Math.min(...delays) : 300;
+    return now + (seconds + 15) * 1000;
+}
+
+function timedSourceName(source) {
+    return source === "floor" ? "金币中心定时任务" : "独立宝箱任务";
+}
+
+function uniqueTasks(tasks) {
+    const seen = new Set();
+    return tasks.filter((task) => {
+        const key = `${task && task._actID || ""}:${task && task.ID || ""}`;
+        if (!task || !task.ID || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+async function addTemporarySongFavorite(snap, uin) {
+    const topRes = await post(API_URL, JSON.stringify({
+        comm: makeComm(snap, uin),
+        req_0: {
+            module: "music.musicToplist.Toplist",
+            method: "GetDetail",
+            param: { topId: 26, offset: 0, num: 10, withTags: true },
+        },
+    }));
+    debug(topRes, "Favorite Candidates");
+    const songs = topRes && topRes.req_0 && topRes.req_0.data && topRes.req_0.data.data
+        ? topRes.req_0.data.data.song || []
+        : [];
+    const shuffled = songs.slice().sort(() => Math.random() - 0.5);
+    for (const song of shuffled) {
+        const candidate = { songId: Number(song.songId), songType: Number(song.songType || 0) };
+        if (!candidate.songId) continue;
+        if (await addFavoriteSongIfNew(snap, uin, candidate)) return candidate;
+    }
+    $.log("[WARN] 未找到可临时收藏的榜单歌曲,跳过收藏任务");
+    return null;
+}
+
+async function addFavoriteSongIfNew(snap, uin, song) {
+    const res = await post(API_URL, JSON.stringify({
+        comm: makeComm(snap, uin),
+        req_0: {
+            module: "music.musicasset.PlaylistDetailWrite",
+            method: "AddSonglist",
+            param: {
+                dirId: 201,
+                tid: 0,
+                bFmtUtf8: true,
+                v_songInfo: [{ songId: song.songId, songType: song.songType }],
+            },
+        },
+    }));
+    debug(res, "AddSonglist");
+    const added = readSongAddStatus(res, song.songId);
+    if (added === null) {
+        $.log(`[WARN] 歌曲 ${song.songId} 新增状态未知,不登记临时收藏`);
+        return false;
+    }
+    if (!added) {
+        $.log(`[INFO] 歌曲 ${song.songId} 原本已收藏,换一个候选`);
+        return false;
+    }
+    return true;
+}
+
+async function addTemporaryAudiobookFavorite(snap, uin) {
+    const listBody = {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsBase"),
+        req_0: {
+            module: "music.longRadio.LongRadioContent",
+            method: "GetChannelPageV2",
+            param: { tabIndex: -1, abt: "39445_39445003", splashEndInterval: -1, categoryId: AUDIOBOOK_CATEGORY_ID, page: 1 },
+        },
+    };
+    const listRes = await appPost(snap, uin, "GetChannelPageV2", listBody);
+    debug(listRes, "Audiobook Candidates");
+    const dynamicIDs = collectValuesByKeys(listRes, ["albumID", "albumId", "album_id", "radioID", "radioId", "radio_id"], (value) => /^\d{6,12}$/.test(String(value)), 20);
+    const candidates = uniqueValues([...AUDIOBOOK_CANDIDATES, ...dynamicIDs]).map((id) => ({ bookID: String(id) }));
+    for (const candidate of candidates) {
+        const status = await queryFollowStatus(snap, uin, 400, candidate.bookID);
+        if (status === true) continue;
+        if (status !== false) {
+            $.log(`[WARN] 有声书 ${candidate.bookID} 原收藏状态未知,跳过`);
+            continue;
+        }
+        if (await updateFavoriteAudiobook(snap, uin, true, candidate)) return candidate;
+    }
+
+    $.log("[WARN] 未找到可临时收藏的有声书,跳过任务");
+    return null;
+}
+
+async function updateFavoriteAudiobook(snap, uin, add, audiobook) {
+    const body = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.favorSystemWrite.FavorSystem",
+            method: "do_favor",
+            param: {
+                reqtype: add ? 1 : 2,
+                fav_type: 1,
+                vec_id: [String(audiobook.bookID)],
+            },
+        },
+    };
+    const res = await appPost(snap, uin, "do_favor", body);
+    debug(res, add ? "Add Audiobook Favorite" : "Remove Audiobook Favorite");
+    return appRequestSucceeded(res);
+}
+
+async function addTemporaryPlaylistFavorite(snap, uin) {
+    const dynamicIDs = await searchContentCandidates(snap, uin, 4, ["dissid"]);
+    const candidates = uniqueValues([...PLAYLIST_CANDIDATES, ...dynamicIDs]).map((id) => ({ playlistID: Number(id) })).filter((item) => item.playlistID > 0);
+    for (const candidate of candidates) {
+        const status = await queryFollowStatus(snap, uin, 500, String(candidate.playlistID));
+        if (status === true) continue;
+        if (status !== false) {
+            $.log(`[WARN] 歌单 ${candidate.playlistID} 原收藏状态未知,跳过`);
+            continue;
+        }
+        if (await updateFavoritePlaylist(snap, uin, true, candidate)) return candidate;
+    }
+    $.log("[WARN] 未找到可临时收藏的歌单,跳过任务");
+    return null;
+}
+
+async function updateFavoritePlaylist(snap, uin, add, playlist) {
+    const method = add ? "FavPlaylist" : "CancelFavPlaylist";
+    const body = {
+        // 客户端真实收藏链路使用 ct=1/cv=200605;ct=23 虽能改收藏状态,但不会记入每日任务。
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsBase"),
+        req_0: {
+            module: "music.musicasset.PlaylistFavWrite",
+            method,
+            param: { v_playlistId: [Number(playlist.playlistID)] },
+        },
+    };
+    const res = await appPost(snap, uin, method, body);
+    debug(res, add ? "Add Playlist Favorite" : "Remove Playlist Favorite");
+    return appRequestSucceeded(res);
+}
+
+async function addTemporarySingerFollow(snap, uin) {
+    const dynamicMIDs = await searchSingerCandidates(snap, uin);
+    const candidates = uniqueValues([...SINGER_CANDIDATES, ...dynamicMIDs]).map((mid) => ({ mid: String(mid) })).filter((item) => /^[A-Za-z0-9]{10,20}$/.test(item.mid));
+    for (const candidate of candidates) {
+        const status = await querySingerFollowStatus(snap, uin, candidate.mid);
+        if (status === true) continue;
+        if (status !== false) {
+            $.log(`[WARN] 歌手 ${candidate.mid} 原关注状态未知,跳过`);
+            continue;
+        }
+        if (await updateSingerFollow(snap, uin, true, candidate)) return candidate;
+    }
+    $.log("[WARN] 未找到可临时关注的歌手,跳过任务");
+    return null;
+}
+
+async function updateSingerFollow(snap, uin, add, singer) {
+    const body = {
+        comm: makeAppComm(snap, uin, 23, 0, "DevopsBase"),
+        req_0: {
+            module: "music.concern.ConcernSystem",
+            method: "cgi_concern_user_v2",
+            param: {
+                bussinesstype: "",
+                source: 137,
+                opertype: add ? 0 : 1,
+                bussinessid: "",
+                userinfo: { userid: singer.mid, usertype: 1 },
+            },
+        },
+    };
+    const res = await appPost(snap, uin, "cgi_concern_user_v2", body);
+    debug(res, add ? "Follow Singer" : "Unfollow Singer");
+    return appRequestSucceeded(res);
+}
+
+async function queryFollowStatus(snap, uin, type, id) {
+    const body = {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsBase"),
+        req_0: {
+            module: "music.follow.FollowStatus",
+            method: "QueryFollowStatus",
+            param: { type, id: String(id) },
+        },
+    };
+    const res = await appPost(snap, uin, "QueryFollowStatus", body);
+    debug(res, `Follow Status ${type}`);
+    if (!appRequestSucceeded(res)) return null;
+    const data = res.req_0 && res.req_0.data;
+    const direct = readTargetStatus(data, String(id));
+    return direct !== null
+        ? direct
+        : readSingleMappedStatus(data, ["m_user_status", "m_singer_status"]);
+}
+
+async function querySingerFollowStatus(snap, uin, mid) {
+    const body = {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsBase"),
+        req_0: {
+            module: "music.concern.ConcernSystem",
+            method: "cgi_qry_concern_status",
+            param: { vec_userinfo: [{ usertype: 1, userid: mid }] },
+        },
+    };
+    const res = await appPost(snap, uin, "cgi_qry_concern_status", body);
+    debug(res, "Singer Follow Status");
+    if (!appRequestSucceeded(res)) return null;
+    const data = res.req_0 && res.req_0.data;
+    const map = data && data.map_singer_status;
+    if (map && Object.prototype.hasOwnProperty.call(map, mid)) return normalizeStatus(map[mid]);
+    const direct = readTargetStatus(data, mid);
+    return direct !== null
+        ? direct
+        : readSingleMappedStatus(data, ["map_singer_status"]);
+}
+
+async function searchSingerCandidates(snap, uin) {
+    const data = await searchContent(snap, uin, 7);
+    return collectSingerMIDs(data, 20);
+}
+
+async function searchContentCandidates(snap, uin, searchType, keys) {
+    const data = await searchContent(snap, uin, searchType);
+    return collectValuesByKeys(data, keys, (value) => value !== "" && value !== 0, 20);
+}
+
+async function searchContent(snap, uin, searchType) {
+    const body = {
+        comm: makeAppComm(snap, uin, 1, 200605, "DevopsBase"),
+        req_0: {
+            module: "music.search.SearchCgiService",
+            method: "DoSearchForQQMusicMobile",
+            param: {
+                query: "音乐",
+                highlight: 1,
+                searchid: "",
+                sub_searchid: 0,
+                search_type: searchType,
+                sin: 0,
+                ein: 29,
+                page_num: 1,
+                num_per_page: 15,
+                cat: 2,
+                grp: 1,
+                remoteplace: "txt.mqq.all",
+                multi_zhida: 1,
+            },
+        },
+    };
+    const res = await appPost(snap, uin, "DoSearchForQQMusicMobile", body);
+    debug(res, `Search Candidates ${searchType}`);
+    if (!appRequestSucceeded(res)) return null;
+    return res.req_0 && res.req_0.data;
+}
+
+async function updateFavoriteSong(snap, uin, method, song) {
+    const res = await post(API_URL, JSON.stringify({
+        comm: makeComm(snap, uin),
+        req_0: {
+            module: "music.musicasset.PlaylistDetailWrite",
+            method,
+            param: {
+                dirId: 201,
+                tid: 0,
+                bFmtUtf8: true,
+                v_songInfo: [{ songId: song.songId, songType: song.songType }],
+            },
+        },
+    }));
+    debug(res, method);
+    return Boolean(res && res.code === 0 && res.req_0 && res.req_0.code === 0 && res.req_0.data && res.req_0.data.retCode === 0);
+}
+
+function makeAppComm(snap, uin, ct, cv, mesh) {
+    return {
+        g_tk: hash33(snap.authst),
+        uin: Number(uin),
+        format: "json",
+        inCharset: "utf-8",
+        outCharset: "utf-8",
+        notice: 0,
+        platform: "h5",
+        needNewCode: 1,
+        ct,
+        cv,
+        mesh_devops: mesh,
+    };
+}
+
+function appPost(snap, uin, cgiKey, payload) {
+    const body = JSON.stringify(payload);
+    const sign = zzcSign(body);
+    const url = `${APP_API_URL}?_webcgikey=${encodeURIComponent(cgiKey)}&_=${Date.now()}&sign=${sign}`;
+    return post(url, body, {
+        "content-type": "application/x-www-form-urlencoded",
+        Cookie: `uin=o${uin}; qm_keyst=${snap.authst}`,
+    });
 }
 
 // 用 refresh_key 换新 musickey。实测(2026-06-15):
@@ -184,7 +1089,7 @@ async function refreshKey(snap, uin) {
         if (data.refresh_key) snap.refresh_key = data.refresh_key; // 通常不变,变了也跟上
         snap.ts = Date.now();
         $.setjson(snap, CK_KEY);
-        $.log(`[INFO] musickey 已续期 (…${data.musickey.slice(-6)}, ${Math.round((data.keyExpiresIn || 0) / 86400)} 天有效)`);
+        $.log(`[INFO] musickey 已续期 (${Math.round((data.keyExpiresIn || 0) / 86400)} 天有效)`);
     } else {
         // 续期失败:refresh_key 可能已失效,或 cron 停了 >3 天 musickey 也过期了
         $.log(`[WARN] 续期失败 (req1.code=${res && res.req1 ? res.req1.code : "?"}),用库存 authst 继续`);
@@ -193,7 +1098,7 @@ async function refreshKey(snap, uin) {
 
 // ============ 请求 ============
 
-function post(url, body) {
+function post(url, body, extraHeaders = {}, logRequest = true) {
     return new Promise((resolve) => {
         const opts = {
             url,
@@ -201,10 +1106,11 @@ function post(url, body) {
                 "content-type": "application/json",
                 accept: "application/json",
                 "User-Agent": UA,
+                ...extraHeaders,
             },
             body,
         };
-        debug({ url, body }, "POST request");
+        if (logRequest) debug(`${url}\n${body}`, "POST request");
         $.post(opts, (err, resp, data) => {
             if (err) {
                 $.log(`[ERROR] POST 失败: ${$.toStr(err)}`);
@@ -228,6 +1134,424 @@ function lowerKeys(obj) {
     return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v]));
 }
 
+function findDailyTask(tasks, predicate) {
+    return (tasks || []).find((task) => task && predicate(task));
+}
+
+function taskReachedReady(tasks, target) {
+    const current = findDailyTask(tasks, (task) => task.ID === target.ID);
+    return Boolean(current && Number(current.State) >= 2);
+}
+
+function appRequestSucceeded(res, reqKey = "req_0") {
+    const req = res && res[reqKey];
+    if (!res || res.code !== 0 || !req || req.code !== 0) return false;
+    const data = req.data;
+    if (!data || typeof data !== "object") return true;
+    for (const key of ["retCode", "RetCode", "ret", "Ret", "code"]) {
+        if (Object.prototype.hasOwnProperty.call(data, key) && Number(data[key]) !== 0) return false;
+    }
+    return true;
+}
+
+function musicRequestSucceeded(res, reqKey = "req_0") {
+    const req = res && res[reqKey];
+    const data = req && req.data;
+    return Boolean(
+        res &&
+        res.code === 0 &&
+        req &&
+        req.code === 0 &&
+        data &&
+        Number(data.retCode) === 0
+    );
+}
+
+function redPacketRequestSucceeded(res) {
+    if (!appRequestSucceeded(res)) return false;
+    const data = res.req_0 && res.req_0.data;
+    if (!data || !Object.prototype.hasOwnProperty.call(data, "Code")) return true;
+    return [0, 10000].includes(Number(data.Code));
+}
+
+function readRedPacketRestChance(data, now = Math.floor(Date.now() / 1000)) {
+    if (!data || typeof data !== "object") return 0;
+    let config = data.BaseConfig;
+    if (typeof config === "string") {
+        try {
+            config = JSON.parse(config);
+        } catch (_) {
+            return 0;
+        }
+    }
+    const session = config && config.session;
+    const segments = session && Array.isArray(session.timeSegment) ? session.timeSegment : [];
+    const active = segments.find((item) => item && Number(item.status) === 2)
+        || segments.find((item) => {
+            const range = item && item.timeRangeTs;
+            return Array.isArray(range) &&
+                Number(range[0]) <= now &&
+                now <= Number(range[1]);
+        });
+    return active ? Math.max(0, Number(active.restChance) || 0) : 0;
+}
+
+function readSongAddStatus(res, songID) {
+    if (!musicRequestSucceeded(res)) return null;
+    const result = res.req_0.data && res.req_0.data.result;
+    const entries = result && Array.isArray(result.songlist) ? result.songlist : [];
+    const entry = entries.find((item) =>
+        item &&
+        Number(item.songId || item.backendSongId) === Number(songID)
+    );
+    if (!entry || !Object.prototype.hasOwnProperty.call(entry, "existed")) return null;
+    if (Number(entry.existed) === 0) return true;
+    if (Number(entry.existed) === 1) return false;
+    return null;
+}
+
+function collectValuesByKeys(root, keys, predicate = () => true, limit = 50) {
+    const wanted = new Set(keys.map(String));
+    const result = [];
+    const walk = (value) => {
+        if (result.length >= limit || value === null || value === undefined) return;
+        if (Array.isArray(value)) {
+            for (const item of value) walk(item);
+            return;
+        }
+        if (typeof value !== "object") return;
+        for (const [key, item] of Object.entries(value)) {
+            if (wanted.has(key) && predicate(item)) result.push(item);
+            walk(item);
+            if (result.length >= limit) return;
+        }
+    };
+    walk(root);
+    return uniqueValues(result);
+}
+
+function collectSingerMIDs(root, limit = 20) {
+    const body = root && root.body ? root.body : root;
+    if (!body || typeof body !== "object") return [];
+
+    const singers = [];
+    const addSinger = (singer) => {
+        const mid = singer && (singer.mid || singer.singerMID || singer.singer_mid);
+        if (mid && /^[A-Za-z0-9]{10,20}$/.test(String(mid))) singers.push(String(mid));
+    };
+    const addSong = (song) => {
+        if (!song || !Array.isArray(song.singer)) return;
+        for (const singer of song.singer) addSinger(singer);
+    };
+
+    for (const song of Array.isArray(body.item_song) ? body.item_song : []) addSong(song);
+    for (const singer of Array.isArray(body.singer) ? body.singer : []) addSinger(singer);
+    for (const singer of Array.isArray(body.item_singer) ? body.item_singer : []) addSinger(singer);
+    return uniqueValues(singers).slice(0, limit);
+}
+
+function uniqueValues(values) {
+    const seen = new Set();
+    return (values || []).filter((value) => {
+        const key = String(value);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function findFirstValue(root, keys) {
+    const wanted = new Set(keys.map(String));
+    let found;
+    const walk = (value) => {
+        if (found !== undefined || value === null || value === undefined) return;
+        if (Array.isArray(value)) {
+            for (const item of value) walk(item);
+            return;
+        }
+        if (typeof value !== "object") return;
+        for (const [key, item] of Object.entries(value)) {
+            if (wanted.has(key)) {
+                found = item;
+                return;
+            }
+            walk(item);
+            if (found !== undefined) return;
+        }
+    };
+    walk(root);
+    return found;
+}
+
+function normalizeStatus(value) {
+    if (value === true || value === 1 || value === "1" || value === "true") return true;
+    if (value === false || value === 0 || value === "0" || value === "false") return false;
+    return null;
+}
+
+function readSingleMappedStatus(root, mapKeys) {
+    if (!root || typeof root !== "object") return null;
+    const statuses = [];
+    for (const key of mapKeys) {
+        const map = root[key];
+        if (!map || Array.isArray(map) || typeof map !== "object") continue;
+        for (const value of Object.values(map)) {
+            const status = normalizeStatus(value);
+            if (status !== null) statuses.push(status);
+        }
+    }
+    return statuses.length === 1 ? statuses[0] : null;
+}
+
+function readTargetStatus(root, target) {
+    let found = null;
+    const walk = (value) => {
+        if (found !== null || value === null || value === undefined) return;
+        if (Array.isArray(value)) {
+            for (const item of value) walk(item);
+            return;
+        }
+        if (typeof value !== "object") return;
+
+        if (Object.prototype.hasOwnProperty.call(value, target)) {
+            const direct = normalizeStatus(value[target]);
+            if (direct !== null) {
+                found = direct;
+                return;
+            }
+        }
+
+        const objectID = value.id || value.userid || value.userId || value.mid || value.singerMID;
+        if (String(objectID || "") === target) {
+            for (const key of ["status", "follow", "followed", "isFollow", "fav", "isFav", "operation", "oper"]) {
+                if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+                const status = normalizeStatus(value[key]);
+                if (status !== null) {
+                    found = status;
+                    return;
+                }
+            }
+        }
+
+        for (const item of Object.values(value)) {
+            walk(item);
+            if (found !== null) return;
+        }
+    };
+    walk(root);
+    return found;
+}
+
+function formatLotteryGift(data) {
+    let gift = findFirstValue(data, ["lotteryGift"]);
+    if (typeof gift === "string") {
+        try {
+            gift = JSON.parse(gift);
+        } catch (_) {
+            if (gift.trim()) return gift.trim();
+        }
+    }
+    const source = gift && typeof gift === "object" ? gift : data;
+    const name = findFirstValue(source, ["giftName", "prizeName", "PrizeName", "name"]);
+    const value = Number(findFirstValue(source, ["awardValue", "RewardGold", "rewardGold", "coinNum", "coin"]) || 0);
+    if (name && value) return `${name} +${value}`;
+    if (name) return String(name);
+    if (value) return `金币 +${value}`;
+    return "已领取";
+}
+
+function taskOff(key) {
+    const value = $.getdata(key);
+    return value === false || value === 0 || value === "false" || value === "0";
+}
+
+function getRunState(now = new Date()) {
+    const day = localDayKey(now);
+    const saved = $.getjson(RUN_STATE_KEY, {}) || {};
+    if (saved.day !== day) {
+        return {
+            day,
+            dailyAttempted: false,
+            timerSources: makeTimerSources(),
+            redPacketSlots: [],
+        };
+    }
+    const oldTimerDone = Boolean(saved.timerDone);
+    return {
+        day,
+        dailyAttempted: Boolean(saved.dailyAttempted),
+        timerSources: makeTimerSources(saved.timerSources, oldTimerDone),
+        redPacketSlots: Array.isArray(saved.redPacketSlots) ? saved.redPacketSlots.map(String) : [],
+    };
+}
+
+function makeTimerSources(saved = {}, oldTimerDone = false) {
+    const normalize = (source) => ({
+        done: oldTimerDone || Boolean(source && source.done),
+        nextAt: Math.max(0, Number(source && source.nextAt || 0)),
+    });
+    return {
+        floor: normalize(saved.floor),
+        treasure: normalize(saved.treasure),
+    };
+}
+
+function saveRunState(state) {
+    $.setjson(state, RUN_STATE_KEY);
+}
+
+function localDayKey(date) {
+    const pad = (value) => String(value).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function isTimerWindow(date) {
+    const hour = date.getHours();
+    return hour === 9 || hour === 10;
+}
+
+function isDailyFlowDue(date) {
+    const hour = date.getHours();
+    return hour > 7 || (hour === 7 && date.getMinutes() >= 30);
+}
+
+function getDueTimedSources(runState, date = new Date()) {
+    const now = date.getTime();
+    return Object.entries(runState.timerSources)
+        .filter(([, state]) => !state.done && now >= Number(state.nextAt || 0))
+        .map(([source]) => source);
+}
+
+function getRedPacketSlot(date) {
+    const hour = date.getHours();
+    return [0, 8, 12, 16, 20, 22].includes(hour) ? String(hour) : "";
+}
+
+function randomHex32() {
+    let value = "";
+    while (value.length < 32) value += Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, "0");
+    return value.slice(0, 32);
+}
+
+function hash33(text) {
+    let hash = 5381;
+    for (let i = 0; i < text.length; i++) hash += (hash << 5) + text.charCodeAt(i);
+    return hash & 0x7fffffff;
+}
+
+function zzcSign(payload) {
+    const hash = sha1Hex(payload).toUpperCase();
+    const part1Indexes = [23, 14, 6, 36, 16, 7, 19];
+    const part2Indexes = [16, 1, 32, 12, 19, 27, 8, 5];
+    const scramble = [89, 39, 179, 150, 218, 82, 58, 252, 177, 52, 186, 123, 120, 64, 242, 133, 143, 161, 121, 179];
+    const part1 = part1Indexes.map((i) => hash[i]).join("");
+    const part2 = part2Indexes.map((i) => hash[i]).join("");
+    const bytes = scramble.map((value, i) => value ^ parseInt(hash.slice(i * 2, i * 2 + 2), 16));
+    const middle = bytesToBase64(bytes).replace(/[\\/+=]/g, "");
+    return `zzc${part1}${middle}${part2}`.toLowerCase();
+}
+
+function sha1Hex(text) {
+    const input = unescape(encodeURIComponent(text));
+    const words = [];
+    for (let i = 0; i < input.length; i++) {
+        words[i >> 2] = (words[i >> 2] || 0) | input.charCodeAt(i) << (24 - (i % 4) * 8);
+    }
+    words[input.length >> 2] = (words[input.length >> 2] || 0) | 0x80 << (24 - (input.length % 4) * 8);
+    words[(((input.length + 8) >> 6) + 1) * 16 - 1] = input.length * 8;
+
+    let h0 = 0x67452301;
+    let h1 = 0xefcdab89;
+    let h2 = 0x98badcfe;
+    let h3 = 0x10325476;
+    let h4 = 0xc3d2e1f0;
+    const w = new Array(80);
+    for (let offset = 0; offset < words.length; offset += 16) {
+        for (let i = 0; i < 80; i++) {
+            w[i] = i < 16 ? (words[offset + i] || 0) : rotateLeft(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
+        }
+        let a = h0;
+        let b = h1;
+        let c = h2;
+        let d = h3;
+        let e = h4;
+        for (let i = 0; i < 80; i++) {
+            let f;
+            let k;
+            if (i < 20) {
+                f = b & c | ~b & d;
+                k = 0x5a827999;
+            } else if (i < 40) {
+                f = b ^ c ^ d;
+                k = 0x6ed9eba1;
+            } else if (i < 60) {
+                f = b & c | b & d | c & d;
+                k = 0x8f1bbcdc;
+            } else {
+                f = b ^ c ^ d;
+                k = 0xca62c1d6;
+            }
+            const temp = (rotateLeft(a, 5) + f + e + k + w[i]) | 0;
+            e = d;
+            d = c;
+            c = rotateLeft(b, 30);
+            b = a;
+            a = temp;
+        }
+        h0 = h0 + a | 0;
+        h1 = h1 + b | 0;
+        h2 = h2 + c | 0;
+        h3 = h3 + d | 0;
+        h4 = h4 + e | 0;
+    }
+    return [h0, h1, h2, h3, h4]
+        .map((value) => (`00000000${(value >>> 0).toString(16)}`).slice(-8))
+        .join("");
+}
+
+function rotateLeft(value, bits) {
+    return value << bits | value >>> (32 - bits);
+}
+
+function bytesToBase64(bytes) {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let out = "";
+    for (let i = 0; i < bytes.length; i += 3) {
+        const a = bytes[i];
+        const b = i + 1 < bytes.length ? bytes[i + 1] : 0;
+        const c = i + 2 < bytes.length ? bytes[i + 2] : 0;
+        const value = a << 16 | b << 8 | c;
+        out += chars[(value >>> 18) & 63];
+        out += chars[(value >>> 12) & 63];
+        out += i + 1 < bytes.length ? chars[(value >>> 6) & 63] : "=";
+        out += i + 2 < bytes.length ? chars[value & 63] : "=";
+    }
+    return out;
+}
+
+function getCoinSignConfig(rawBody) {
+    if (!rawBody) return {};
+    try {
+        const body = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
+        const reqs = body && typeof body === "object" ? Object.values(body) : [];
+        const matches = reqs.filter((item) =>
+            item &&
+            item.module === "music.actCenter.ActCenterSignNewSvr" &&
+            item.param &&
+            item.param.ActID
+        );
+        const req = matches[0];
+        const sceneReq = matches.find((item) => item.param.ScenesID);
+        return req ? {
+            actID: String(req.param.ActID),
+            sceneID: sceneReq ? String(sceneReq.param.ScenesID) : "",
+        } : {};
+    } catch (e) {
+        $.log(`[WARN] 金币签到配置解析失败,继续使用默认值: ${e.message || e}`);
+        return {};
+    }
+}
+
 // 清理代理合并多 cookie 头时残留的 "cookie:" 脏前缀,拼回标准 "k=v; k=v"
 function normalizeCookie(raw) {
     if (!raw) return "";
@@ -241,8 +1565,18 @@ function normalizeCookie(raw) {
 function debug(content, title = "debug") {
     if ($.is_debug !== "true") return;
     $.log(`\n----- ${title} -----`);
-    $.log(typeof content === "string" ? content : $.toStr(content));
+    const text = typeof content === "string" ? content : $.toStr(content);
+    $.log(redactSensitive(text));
     $.log(`----- end -----\n`);
+}
+
+function redactSensitive(text) {
+    return String(text || "")
+        .replace(/("(?:authst|musickey|refresh_key|session_key|uin|musicid|str_musicid|cookie|openid|unionid|encryptUin|userip|phoneNo|encryptedPhoneNo)"\s*:\s*")[^"]*/gi, "$1<redacted>")
+        .replace(/("(?:uin|musicid)"\s*:\s*)\d+/gi, "$1<redacted>")
+        .replace(/(qm_keyst=)[^;\s]+/gi, "$1<redacted>")
+        .replace(/(refresh_key=)[^;\s]+/gi, "$1<redacted>")
+        .replace(/(sign=)[^&\s]+/gi, "$1<redacted>");
 }
 
 async function sendMsg(message) {
@@ -267,6 +1601,7 @@ if (typeof $request !== "undefined") {
 } else if (JSON.parse($.getdata("qqmusic_clear") || "false")) {
     // BoxJS 一键清除 Cookie:清完自动复位开关
     $.setdata("", CK_KEY);
+    $.setdata("", RUN_STATE_KEY);
     $.setdata("false", "qqmusic_clear");
     $.msg($.name, "", "✅ Cookie 已清除,请重新抓取");
     $.done();
