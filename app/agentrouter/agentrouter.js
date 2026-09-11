@@ -1,5 +1,5 @@
 /**
- * AgentRouter · 每日登录签到并查看余额
+ * AgentRouter · 每日登录签到，查看余额与累计消耗
  *
  * 抓取:无需抓包，Loon 在插件设置填写账号和密码，其他平台使用 BoxJS
  * 签到:cron 每天 09:00 自动运行，结果未确认时请到网站核对
@@ -41,7 +41,7 @@
  */
 
 const $ = new Env("AgentRouter");
-const SCRIPT_VERSION = "2026-09-11.r6";
+const SCRIPT_VERSION = "2026-09-11.r7";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -99,10 +99,10 @@ async function run() {
         }
     }
     if (results.length === 1) {
-        $.msg($.name, results[0].title, results[0].content);
+        $.msg($.name, results[0].title, `👤 账号：${maskAccount(accounts[0].username)}\n${results[0].content}`);
     } else {
         $.msg($.name, `签到汇总（${results.length} 个账号）`, results.map((result, i) =>
-            `账号 ${i + 1}：${result.title}\n${result.content}`).join("\n\n"));
+            `👤 账号 ${i + 1} · ${maskAccount(accounts[i].username)}\n${result.title}\n${result.content}`).join("\n\n"));
     }
 }
 
@@ -159,18 +159,22 @@ async function checkin({ username, password }, quotaUnit) {
         Cookie: cookie,
         "New-API-User": String(data.id),
     };
-    let balance;
+    let stats;
     try {
         const profile = await request("GET", "/api/user/self", userHeaders, undefined, "余额查询");
         const quota = profile.json.data && profile.json.data.quota;
         if (profile.json.success !== true || typeof quota !== "number" || !Number.isFinite(quota)) {
             throw new Error("余额查询未返回有效额度，请到网站核对");
         }
-        balance = quotaUnit === null ? `余额（原始额度）：${quota}` : `余额：$${(quota / quotaUnit).toFixed(2)}`;
+        const user = profile.json.data;
+        stats = `${formatAmount("💰 当前余额", quota, quotaUnit)}\n${formatAmount("📊 累计消耗", user.used_quota, quotaUnit)}`;
+        if (Number.isInteger(user.request_count) && user.request_count >= 0) {
+            stats += `\n🔄 累计调用：${user.request_count} 次`;
+        }
     } catch (error) {
-        balance = `余额：查询失败\n${error.message}`;
+        stats = `💰 当前余额：查询失败\n📊 累计消耗：查询失败\n${error.message}`;
     }
-    let confirmed = false;
+    let checkinRecord = null;
     let detail;
     try {
         const logs = await request("GET", "/api/log/self?p=1&page_size=20", {
@@ -181,28 +185,45 @@ async function checkin({ username, password }, quotaUnit) {
             throw new Error("签到记录查询未成功，请在网站使用日志中核对");
         }
         const items = logs.json.data.items;
-        confirmed = hasTodayCheckin(items, Date.now());
-        debug(`最近记录数=${items.length}；今日签到记录=${confirmed}`);
-        if (!confirmed) detail = "最近 20 条日志中未找到今日签到记录，请到网站核对";
+        checkinRecord = findTodayCheckin(items, Date.now());
+        debug(`最近记录数=${items.length}；今日签到记录=${!!checkinRecord}`);
+        if (!checkinRecord) detail = "最近 20 条日志中未找到今日签到记录，请到网站核对";
     } catch (error) {
         detail = error.message;
     }
 
-    if (confirmed) {
-        return { title: "✅ 今日签到已确认", content: balance };
+    if (checkinRecord) {
+        const time = new Date(checkinRecord.created_at * 1000);
+        const clock = [time.getHours(), time.getMinutes(), time.getSeconds()].map((n) => String(n).padStart(2, "0")).join(":");
+        return { title: "✅ 今日签到已确认", content: `${stats}\n🕘 签到时间：${clock}` };
     } else {
         const state = data.checked_in === true ? "服务端返回已签到，但日志尚未确认" : "登录成功，签到状态尚未确认";
-        return { title: "⚠️ 签到待确认", content: `${state}\n${detail}\n${balance}` };
+        return { title: "⚠️ 签到待确认", content: `${stats}\n\n${state}\n${detail}` };
     }
 }
 
-function hasTodayCheckin(items, now) {
+function maskAccount(username) {
+    const name = username.split("@")[0];
+    return name.length > 4 ? `${name.slice(0, 2)}***${name.slice(-2)}` : `${name.slice(0, 1)}***`;
+}
+
+function formatAmount(label, value, quotaUnit) {
+    if (typeof value !== "number" || !Number.isFinite(value)) return `${label}：未返回`;
+    return quotaUnit === null ? `${label}（原始额度）：${value}` : `${label}：$${(value / quotaUnit).toFixed(2)}`;
+}
+
+function findTodayCheckin(items, now) {
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
-    return items.some((item) => item && item.type === 4
-        && typeof item.content === "string" && item.content.includes("签到成功")
-        && typeof item.created_at === "number" && Number.isFinite(item.created_at)
-        && item.created_at * 1000 >= start.getTime() && item.created_at * 1000 <= now);
+    let latest = null;
+    for (const item of items) {
+        if (item && item.type === 4
+            && typeof item.content === "string" && item.content.includes("签到成功")
+            && typeof item.created_at === "number" && Number.isFinite(item.created_at)
+            && item.created_at * 1000 >= start.getTime() && item.created_at * 1000 <= now
+            && (!latest || item.created_at > latest.created_at)) latest = item;
+    }
+    return latest;
 }
 
 function sessionCookie(headers) {
