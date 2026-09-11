@@ -17,15 +17,15 @@
  * debug = switch,false,tag=调试模式,desc=仅记录请求状态和签到判定
  *
  * [Script]
- * cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, argument=[{username},{password},{accounts},{debug}], tag=AgentRouter签到, timeout=300, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
+ * cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, argument=[{username},{password},{accounts},{debug}], tag=AgentRouter签到, timeout=300, img-url=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/icon.png, enable=true
  *
  * ===== Surge =====
  * [Script]
- * AgentRouter签到 = type=cron,cronexp=0 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+ * AgentRouter签到 = type=cron,cronexp=0 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js,img-url=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/icon.png
  *
  * ===== Quantumult X =====
  * [task_local]
- * 0 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, tag=AgentRouter签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enabled=true
+ * 0 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, tag=AgentRouter签到, img-url=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/icon.png, enabled=true
  *
  * ===== Stash =====
  * cron:
@@ -41,7 +41,7 @@
  */
 
 const $ = new Env("AgentRouter");
-const SCRIPT_VERSION = "2026-09-11.r4";
+const SCRIPT_VERSION = "2026-09-11.r5";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";

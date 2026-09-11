@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png" width="80" alt="AgentRouter" />
+  <img src="https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/icon.png" width="80" alt="AgentRouter" />
 </p>
 
 # AgentRouter
@@ -12,6 +12,7 @@
 
 - `agentrouter.js` — 定时签到脚本。
 - `agentrouter.lpx` — Loon 定时任务插件。
+- `icon.png` — AgentRouter 官网图标。
 
 ## 使用步骤
 
@@ -58,7 +59,7 @@ accounts = input,"",tag=多账号（JSON）,desc=选填；填写后优先使用�
 debug = switch,false,tag=调试模式,desc=仅记录请求状态和签到判定
 
 [Script]
-cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, argument=[{username},{password},{accounts},{debug}], tag=AgentRouter签到, timeout=300, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
+cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, argument=[{username},{password},{accounts},{debug}], tag=AgentRouter签到, timeout=300, img-url=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/icon.png, enable=true
 ```
 
 ### 其他平台
@@ -69,14 +70,14 @@ Surge、Quantumult X、Stash 继续使用 [BoxJS testing 订阅](https://raw.git
 
 ```ini
 [Script]
-AgentRouter签到 = type=cron,cronexp=0 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+AgentRouter签到 = type=cron,cronexp=0 9 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js,img-url=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/icon.png
 ```
 
 ## Quantumult X
 
 ```ini
 [task_local]
-0 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, tag=AgentRouter签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enabled=true
+0 9 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, tag=AgentRouter签到, img-url=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/icon.png, enabled=true
 ```
 
 ## Stash
@@ -98,6 +99,7 @@ script-providers:
 
 | 日期 | 变更 |
 |---|---|
+| 2026-09-11 | r5：更换为 AgentRouter 官网图标，同步插件、任务与 BoxJS |
 | 2026-09-11 | r4：修复签到记录查询的 301 跳转问题，精简重复提示 |
 | 2026-09-11 | r3：Loon 插件新增多账号列表、逐账号处理与汇总通知 |
 | 2026-09-11 | r2：账号密码和调试开关移入 Loon 插件，简化使用步骤与插件简介 |
@@ -116,3 +118,4 @@ script-providers:
 ## 致谢
 
 - 原版 Python 脚本：[@773075692/agentrouter-checkin](https://github.com/773075692/agentrouter-checkin)。
+- 图标：[AgentRouter 官网](https://agentrouter.org/)。

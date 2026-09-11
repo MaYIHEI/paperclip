@@ -2,7 +2,7 @@
 #!desc=每日自动签到，通知结果与余额。
 #!author=773075692, MaYIHEI
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/app/agentrouter
-#!icon=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+#!icon=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/icon.png
 #!tag=签到
 
 [Argument]
@@ -12,4 +12,4 @@ accounts = input,"",tag=多账号（JSON）,desc=选填；填写后优先使用�
 debug = switch,false,tag=调试模式,desc=仅记录请求状态和签到判定
 
 [Script]
-cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, argument=[{username},{password},{accounts},{debug}], tag=AgentRouter签到, timeout=300, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
+cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, argument=[{username},{password},{accounts},{debug}], tag=AgentRouter签到, timeout=300, img-url=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/icon.png, enable=true
