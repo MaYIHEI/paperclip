@@ -12,11 +12,12 @@
  * ===== Loon =====
  * [Argument]
  * username = input,"",tag=账号,desc=网站账号或邮箱
- * password = input,"",tag=密码,desc=网站登录密码；清除账号时清空这两个输入框
+ * password = input,"",tag=密码,desc=网站登录密码
+ * accounts = input,"",tag=多账号（JSON）,desc=选填；填写后优先使用列表；格式见插件主页
  * debug = switch,false,tag=调试模式,desc=仅记录请求状态和签到判定
  *
  * [Script]
- * cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, argument=[{username},{password},{debug}], tag=AgentRouter签到, timeout=60, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
+ * cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, argument=[{username},{password},{accounts},{debug}], tag=AgentRouter签到, timeout=300, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
  *
  * ===== Surge =====
  * [Script]
@@ -40,7 +41,7 @@
  */
 
 const $ = new Env("AgentRouter");
-const SCRIPT_VERSION = "2026-09-11.r2";
+const SCRIPT_VERSION = "2026-09-11.r3";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -71,13 +72,55 @@ async function run() {
         return;
     }
 
-    const username = ((IS_LOON ? PLUGIN.username : $.getdata(USER_KEY)) || "").trim();
-    const password = (IS_LOON ? PLUGIN.password : $.getdata(PASSWORD_KEY)) || "";
-    if (!username || !password) {
+    const accounts = readAccounts();
+    if (!accounts.length) {
         $.msg($.name, "🚫 未配置账号", `请在 ${SETTINGS_PAGE} 的 AgentRouter 中分别填写账号和密码并保存`);
         return;
     }
 
+    const results = [];
+    for (let i = 0; i < accounts.length; i++) {
+        debug(`开始账号 ${i + 1}/${accounts.length}`);
+        try {
+            results.push(await checkin(accounts[i]));
+        } catch (error) {
+            results.push({ title: "❌ 运行失败", content: error.message });
+        }
+    }
+    if (results.length === 1) {
+        $.msg($.name, results[0].title, results[0].content);
+    } else {
+        $.msg($.name, `签到汇总（${results.length} 个账号）`, results.map((result, i) =>
+            `账号 ${i + 1}：${result.title}\n${result.content}`).join("\n\n"));
+    }
+}
+
+function readAccounts() {
+    const multi = IS_LOON ? (PLUGIN.accounts || "").trim() : "";
+    if (multi) {
+        let accounts;
+        try {
+            accounts = JSON.parse(multi);
+        } catch (_) {
+            throw new Error("多账号格式错误，请按使用说明填写 JSON 数组");
+        }
+        if (!Array.isArray(accounts) || !accounts.length) {
+            throw new Error("多账号必须是非空 JSON 数组；使用单账号时请清空多账号输入框");
+        }
+        return accounts.map((account, i) => {
+            if (!account || typeof account.username !== "string" || !account.username.trim()
+                || typeof account.password !== "string" || !account.password) {
+                throw new Error(`多账号第 ${i + 1} 项缺少有效的 username 或 password，请检查插件设置`);
+            }
+            return { username: account.username.trim(), password: account.password };
+        });
+    }
+    const username = ((IS_LOON ? PLUGIN.username : $.getdata(USER_KEY)) || "").trim();
+    const password = (IS_LOON ? PLUGIN.password : $.getdata(PASSWORD_KEY)) || "";
+    return username && password ? [{ username, password }] : [];
+}
+
+async function checkin({ username, password }) {
     const headers = {
         "User-Agent": UA,
         Accept: "application/json, text/plain, */*",
@@ -87,13 +130,11 @@ async function run() {
     };
     const login = await request("POST", "/api/user/login", headers, JSON.stringify({ username, password }), "登录");
     if (login.json.success !== true) {
-        $.msg($.name, "❌ 登录失败", `请先在 AgentRouter 网页确认账号、密码及是否需要验证码，再更新 ${SETTINGS_PAGE}`);
-        return;
+        return { title: "❌ 登录失败", content: `请先在 AgentRouter 网页确认账号、密码及是否需要验证码，再更新 ${SETTINGS_PAGE}` };
     }
     const data = login.json.data;
     if (!data || typeof data !== "object" || Array.isArray(data)) {
-        $.msg($.name, "⚠️ 签到待确认", "登录成功，但响应缺少用户信息，请到网站使用日志中核对");
-        return;
+        return { title: "⚠️ 签到待确认", content: "登录成功，但响应缺少用户信息，请到网站使用日志中核对" };
     }
     debug(`登录成功；checked_in=${data.checked_in === true ? "true" : data.checked_in === false ? "false" : "缺失或格式异常"}`);
 
@@ -124,10 +165,10 @@ async function run() {
     }
 
     if (confirmed) {
-        $.msg($.name, "✅ 今日签到已确认", balance);
+        return { title: "✅ 今日签到已确认", content: balance };
     } else {
         const state = data.checked_in === true ? "服务端返回已签到，但日志尚未确认" : "登录成功，签到状态尚未确认";
-        $.msg($.name, "⚠️ 签到待确认", `${state}\n${detail}\n${balance}\n请到网站使用日志中核对`);
+        return { title: "⚠️ 签到待确认", content: `${state}\n${detail}\n${balance}\n请到网站使用日志中核对` };
     }
 }
 
@@ -156,6 +197,8 @@ function request(method, path, headers, body, label) {
         if ($.isLoon()) {
             options.insecure = false;
             options["auto-redirect"] = false;
+            // 每个账号只使用本次登录拿到的 session，禁止 Cookie 自动沿用到下一个账号。
+            options["auto-cookie"] = false;
         }
         $.send(options, method, (error, response, text) => {
             if (error) {
