@@ -26,6 +26,7 @@
 | [`linghu/`](./linghu/) | 灵狐灵购 - 每日签到领红包(连签奖励) | ✅ 维护中 |
 | [`nodeseek/`](./nodeseek/) | NodeSeek - 每日签到(VPS 中继绕过 CF) | ✅ 维护中 |
 | [`pan1/`](./pan1/) | 123网盘社区 - 每日签到(经验 + 金币) | 🧪 待验证 |
+| [`agentrouter/`](./agentrouter/) | AgentRouter - 每日登录签到 | 🧪 待验证 |
 | [`sgcc/`](./sgcc/) | 网上国网(国家电网 95598) - 积分每日签到(复用签到请求 + 本地抓 Cookie) | 🧪 待验证 |
 | [`baidunetdisk/`](./baidunetdisk/) | 百度网盘 - 会员成长值签到 + 每日答题(助力 SVIP 升级) | 🧪 待验证 |
 | [`cmccbj/`](./cmccbj/) | 北京移动 - 「签到赢好礼」每日签到(送流量/积分) | 📦 已归档 |
