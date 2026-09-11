@@ -41,7 +41,7 @@
  */
 
 const $ = new Env("AgentRouter");
-const SCRIPT_VERSION = "2026-09-11.r5";
+const SCRIPT_VERSION = "2026-09-11.r6";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -78,11 +78,22 @@ async function run() {
         return;
     }
 
+    let quotaUnit = null;
+    try {
+        const status = await request("GET", "/api/status", { Accept: "application/json" }, undefined, "余额显示配置查询");
+        const config = status.json.data;
+        if (status.json.success === true && config && config.display_in_currency === true
+            && typeof config.quota_per_unit === "number" && Number.isFinite(config.quota_per_unit) && config.quota_per_unit > 0) {
+            quotaUnit = config.quota_per_unit;
+        }
+    } catch (_) {
+        debug("余额显示配置未取得，将显示原始额度");
+    }
     const results = [];
     for (let i = 0; i < accounts.length; i++) {
         debug(`开始账号 ${i + 1}/${accounts.length}`);
         try {
-            results.push(await checkin(accounts[i]));
+            results.push(await checkin(accounts[i], quotaUnit));
         } catch (error) {
             results.push({ title: "❌ 运行失败", content: error.message });
         }
@@ -120,7 +131,7 @@ function readAccounts() {
     return username && password ? [{ username, password }] : [];
 }
 
-async function checkin({ username, password }) {
+async function checkin({ username, password }, quotaUnit) {
     const headers = {
         "User-Agent": UA,
         Accept: "application/json, text/plain, */*",
@@ -138,20 +149,33 @@ async function checkin({ username, password }) {
     }
     debug(`登录成功；checked_in=${data.checked_in === true ? "true" : data.checked_in === false ? "false" : "缺失或格式异常"}`);
 
-    const quota = data.quota;
-    const balance = typeof quota === "number" && Number.isFinite(quota) ? `余额（原始额度）：${quota}` : "余额：未返回";
+    const cookie = sessionCookie(login.headers);
+    if (!cookie || !Number.isInteger(data.id) || data.id <= 0) {
+        return { title: "⚠️ 签到待确认", content: "登录响应缺少 Cookie 或用户编号，请到网站核对签到记录与余额" };
+    }
+    const userHeaders = {
+        ...headers,
+        Referer: `${BASE_URL}/console`,
+        Cookie: cookie,
+        "New-API-User": String(data.id),
+    };
+    let balance;
+    try {
+        const profile = await request("GET", "/api/user/self", userHeaders, undefined, "余额查询");
+        const quota = profile.json.data && profile.json.data.quota;
+        if (profile.json.success !== true || typeof quota !== "number" || !Number.isFinite(quota)) {
+            throw new Error("余额查询未返回有效额度，请到网站核对");
+        }
+        balance = quotaUnit === null ? `余额（原始额度）：${quota}` : `余额：$${(quota / quotaUnit).toFixed(2)}`;
+    } catch (error) {
+        balance = `余额：查询失败\n${error.message}`;
+    }
     let confirmed = false;
     let detail;
     try {
-        const cookie = sessionCookie(login.headers);
-        if (!cookie || !Number.isInteger(data.id) || data.id <= 0) {
-            throw new Error("登录响应缺少 Cookie 或用户编号，请到网站核对签到记录");
-        }
         const logs = await request("GET", "/api/log/self?p=1&page_size=20", {
-            ...headers,
+            ...userHeaders,
             Referer: `${BASE_URL}/console/log`,
-            Cookie: cookie,
-            "New-API-User": String(data.id),
         }, undefined, "签到记录查询");
         if (logs.json.success !== true || !logs.json.data || !Array.isArray(logs.json.data.items)) {
             throw new Error("签到记录查询未成功，请在网站使用日志中核对");
