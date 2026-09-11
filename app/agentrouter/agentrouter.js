@@ -41,7 +41,7 @@
  */
 
 const $ = new Env("AgentRouter");
-const SCRIPT_VERSION = "2026-09-11.r3";
+const SCRIPT_VERSION = "2026-09-11.r4";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -145,9 +145,9 @@ async function checkin({ username, password }) {
     try {
         const cookie = sessionCookie(login.headers);
         if (!cookie || !Number.isInteger(data.id) || data.id <= 0) {
-            throw new Error("登录响应缺少 Cookie 或用户编号，无法查询签到记录");
+            throw new Error("登录响应缺少 Cookie 或用户编号，请到网站核对签到记录");
         }
-        const logs = await request("GET", "/api/log/self/?p=1&page_size=20", {
+        const logs = await request("GET", "/api/log/self?p=1&page_size=20", {
             ...headers,
             Referer: `${BASE_URL}/console/log`,
             Cookie: cookie,
@@ -159,7 +159,7 @@ async function checkin({ username, password }) {
         const items = logs.json.data.items;
         confirmed = hasTodayCheckin(items, Date.now());
         debug(`最近记录数=${items.length}；今日签到记录=${confirmed}`);
-        if (!confirmed) detail = "最近 20 条日志中未找到今日签到记录";
+        if (!confirmed) detail = "最近 20 条日志中未找到今日签到记录，请到网站核对";
     } catch (error) {
         detail = error.message;
     }
@@ -168,7 +168,7 @@ async function checkin({ username, password }) {
         return { title: "✅ 今日签到已确认", content: balance };
     } else {
         const state = data.checked_in === true ? "服务端返回已签到，但日志尚未确认" : "登录成功，签到状态尚未确认";
-        return { title: "⚠️ 签到待确认", content: `${state}\n${detail}\n${balance}\n请到网站使用日志中核对` };
+        return { title: "⚠️ 签到待确认", content: `${state}\n${detail}\n${balance}` };
     }
 }
 
