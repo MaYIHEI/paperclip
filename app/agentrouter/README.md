@@ -15,32 +15,41 @@
 
 ## 使用步骤
 
-1. 在 BoxJS 添加或更新 [Paperclip testing 订阅](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/paperclip.boxjs.json)。
-2. 打开 **AgentRouter**，分别填写能在 [AgentRouter 网页](https://agentrouter.org/login)登录的账号和密码，保存。不填 API Key，也不需要 `邮箱#密码` 格式。
-3. 在 Loon 导入下方插件，或添加定时任务配置，二选一即可。
-4. 手动运行一次「AgentRouter签到」，到网站使用日志核对结果；之后每天 **09:00（设备时间）**自动运行。
+1. 在 Loon 导入或更新 [AgentRouter 插件](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.lpx)。
+2. 打开插件设置，填写网站账号和密码并保存。
+3. 手动运行一次「AgentRouter签到」核对结果，之后每天 **09:00（设备时间）**自动运行。
 
-> 使用 testing 订阅与插件；只更新 main 订阅不会出现这个待验证脚本。
+Loon 无需配置 BoxJS。旧版用户更新插件后，需在插件里填写一次账号密码；若之前另加过独立 cron，请关闭那条任务，保留插件任务即可。
 
-### BoxJS 参数
+### 插件设置
 
 | 参数 | 说明 |
 |---|---|
-| 账号 | 必填，网站账号或邮箱 |
-| 密码 | 必填，网站登录密码；首尾空格会原样保留 |
-| 清除账号信息 | 开启后运行一次脚本，清空账号密码并自动关闭，不发起签到 |
-| 调试模式 | 默认关闭；仅打印请求状态和签到判定，不输出账号密码、Cookie 或完整响应 |
+| 账号 | 网站账号或邮箱，不填 API Key |
+| 密码 | 网站登录密码，首尾空格原样保留 |
+| 调试模式 | 默认关闭；仅记录请求状态和签到判定 |
 
-账号密码保存在本机 BoxJS 对应存储中，运行时发给 AgentRouter 登录。不要分享包含这些内容的 BoxJS 备份。
+清除账号：清空插件里的账号、密码并保存。暂停签到：关闭插件即可。账号密码由 Loon 插件设置保存，不要分享包含这些内容的配置或备份。
 
 ## Loon
 
-[插件地址](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.lpx) · 无需添加 MITM 或重写规则。
+[插件地址](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.lpx) · 无需 MITM、重写或 BoxJS。
+
+以下内容用于插件内部配置，直接导入插件即可：
 
 ```ini
+[Argument]
+username = input,"",tag=账号,desc=网站账号或邮箱
+password = input,"",tag=密码,desc=网站登录密码；清除账号时清空这两个输入框
+debug = switch,false,tag=调试模式,desc=仅记录请求状态和签到判定
+
 [Script]
-cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, tag=AgentRouter签到, timeout=60, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
+cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, argument=[{username},{password},{debug}], tag=AgentRouter签到, timeout=60, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
 ```
+
+### 其他平台
+
+Surge、Quantumult X、Stash 继续使用 [BoxJS testing 订阅](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/paperclip.boxjs.json)中的 **AgentRouter（Surge / QX / Stash）**，填写账号密码并按下方配置添加任务。BoxJS 提供调试开关，以及运行一次后生效并复位的「清除账号信息」。
 
 ## Surge
 
@@ -75,6 +84,7 @@ script-providers:
 
 | 日期 | 变更 |
 |---|---|
+| 2026-09-11 | r2：账号密码和调试开关移入 Loon 插件，简化使用步骤与插件简介 |
 | 2026-09-11 | 移植账号密码签到，增加 BoxJS、Loon 插件与签到记录确认；模拟测试通过，待真机验证 |
 
 ## 已知限制

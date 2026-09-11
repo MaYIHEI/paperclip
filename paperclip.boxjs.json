@@ -1652,7 +1652,7 @@
     },
     {
       "id": "paperclip.agentrouter",
-      "name": "AgentRouter",
+      "name": "AgentRouter（Surge / QX / Stash）",
       "keys": [
         "agentrouter_username",
         "agentrouter_password",
@@ -1666,7 +1666,7 @@
           "val": "",
           "type": "text",
           "placeholder": "网站账号或邮箱",
-          "desc": "填写可在 AgentRouter 网页登录的账号；不填 API Key"
+          "desc": "其他平台在此填写网站账号；Loon 请直接在插件设置中填写账号密码，不使用本页配置"
         },
         {
           "id": "agentrouter_password",

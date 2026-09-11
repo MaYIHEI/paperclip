@@ -1,7 +1,7 @@
 /**
  * AgentRouter · 每日登录签到并查看余额
  *
- * 抓取:无需抓包，在 BoxJS 填写账号和密码
+ * 抓取:无需抓包，Loon 在插件设置填写账号和密码，其他平台使用 BoxJS
  * 签到:cron 每天 09:00 自动运行，结果未确认时请到网站核对
  *
  * @Author: @773075692 <https://github.com/773075692/agentrouter-checkin>
@@ -10,8 +10,13 @@
  * @Updated: 2026-09-11
  *
  * ===== Loon =====
+ * [Argument]
+ * username = input,"",tag=账号,desc=网站账号或邮箱
+ * password = input,"",tag=密码,desc=网站登录密码；清除账号时清空这两个输入框
+ * debug = switch,false,tag=调试模式,desc=仅记录请求状态和签到判定
+ *
  * [Script]
- * cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, tag=AgentRouter签到, timeout=60, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
+ * cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, argument=[{username},{password},{debug}], tag=AgentRouter签到, timeout=60, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
  *
  * ===== Surge =====
  * [Script]
@@ -35,13 +40,16 @@
  */
 
 const $ = new Env("AgentRouter");
-const SCRIPT_VERSION = "2026-09-11.r1";
+const SCRIPT_VERSION = "2026-09-11.r2";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
 const PASSWORD_KEY = "agentrouter_password";
 const CLEAR_KEY = "agentrouter_clear";
 const DEBUG_KEY = "agentrouter_debug";
+const IS_LOON = $.isLoon();
+const PLUGIN = typeof $argument !== "undefined" && $argument && typeof $argument === "object" ? $argument : {};
+const SETTINGS_PAGE = IS_LOON ? "Loon 插件设置" : "BoxJS";
 const BASE_URL = "https://agentrouter.org";
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
 
@@ -51,7 +59,7 @@ run().catch((error) => {
 }).finally(() => $.done());
 
 async function run() {
-    const clear = $.getdata(CLEAR_KEY);
+    const clear = IS_LOON ? null : $.getdata(CLEAR_KEY);
     if (clear === "true" || clear === "1") {
         const userCleared = $.setdata("", USER_KEY);
         const passwordCleared = $.setdata("", PASSWORD_KEY);
@@ -63,10 +71,10 @@ async function run() {
         return;
     }
 
-    const username = ($.getdata(USER_KEY) || "").trim();
-    const password = $.getdata(PASSWORD_KEY) || "";
+    const username = ((IS_LOON ? PLUGIN.username : $.getdata(USER_KEY)) || "").trim();
+    const password = (IS_LOON ? PLUGIN.password : $.getdata(PASSWORD_KEY)) || "";
     if (!username || !password) {
-        $.msg($.name, "🚫 未配置账号", "请在 BoxJS 的 AgentRouter 中分别填写账号和密码并保存");
+        $.msg($.name, "🚫 未配置账号", `请在 ${SETTINGS_PAGE} 的 AgentRouter 中分别填写账号和密码并保存`);
         return;
     }
 
@@ -79,7 +87,7 @@ async function run() {
     };
     const login = await request("POST", "/api/user/login", headers, JSON.stringify({ username, password }), "登录");
     if (login.json.success !== true) {
-        $.msg($.name, "❌ 登录失败", "请先在 AgentRouter 网页确认账号、密码及是否需要验证码，再更新 BoxJS");
+        $.msg($.name, "❌ 登录失败", `请先在 AgentRouter 网页确认账号、密码及是否需要验证码，再更新 ${SETTINGS_PAGE}`);
         return;
     }
     const data = login.json.data;
@@ -177,7 +185,7 @@ function request(method, path, headers, body, label) {
 }
 
 function debug(message) {
-    if ($.getdata(DEBUG_KEY) === "true") $.log(`[DEBUG] ${message}`);
+    if (IS_LOON ? PLUGIN.debug === true : $.getdata(DEBUG_KEY) === "true") $.log(`[DEBUG] ${message}`);
 }
 
 function Env(s) {
