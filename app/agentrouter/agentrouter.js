@@ -1,5 +1,5 @@
 /**
- * AgentRouter · 每日登录签到，查看余额与累计消耗
+ * AgentRouter · 每日登录签到，查看奖励、余额与累计消耗
  *
  * 抓取:无需抓包，Loon 在插件设置填写账号和密码，其他平台使用 BoxJS
  * 签到:cron 每天 09:00 自动运行，结果未确认时请到网站核对
@@ -7,7 +7,7 @@
  * @Author: @773075692 <https://github.com/773075692/agentrouter-checkin>
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-09-11
+ * @Updated: 2026-09-12
  *
  * ===== Loon =====
  * [Argument]
@@ -41,7 +41,7 @@
  */
 
 const $ = new Env("AgentRouter");
-const SCRIPT_VERSION = "2026-09-11.r7";
+const SCRIPT_VERSION = "2026-09-12.r8";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -139,7 +139,9 @@ async function checkin({ username, password }, quotaUnit) {
         Origin: BASE_URL,
         Referer: `${BASE_URL}/login`,
     };
+    const loginStarted = Math.floor(Date.now() / 1000);
     const login = await request("POST", "/api/user/login", headers, JSON.stringify({ username, password }), "登录");
+    const loginFinished = Math.floor(Date.now() / 1000);
     if (login.json.success !== true) {
         return { title: "❌ 登录失败", content: `请先在 AgentRouter 网页确认账号、密码及是否需要验证码，再更新 ${SETTINGS_PAGE}` };
     }
@@ -167,12 +169,12 @@ async function checkin({ username, password }, quotaUnit) {
             throw new Error("余额查询未返回有效额度，请到网站核对");
         }
         const user = profile.json.data;
-        stats = `${formatAmount("💰 当前余额", quota, quotaUnit)}\n${formatAmount("📊 累计消耗", user.used_quota, quotaUnit)}`;
+        stats = `${formatAmount("💳 当前余额", quota, quotaUnit)}\n${formatAmount("📉 累计消耗", user.used_quota, quotaUnit)}`;
         if (Number.isInteger(user.request_count) && user.request_count >= 0) {
-            stats += `\n🔄 累计调用：${user.request_count} 次`;
+            stats += `\n⚡ 累计调用：${user.request_count} 次`;
         }
     } catch (error) {
-        stats = `💰 当前余额：查询失败\n📊 累计消耗：查询失败\n${error.message}`;
+        stats = `💳 当前余额：查询失败\n📉 累计消耗：查询失败\n${error.message}`;
     }
     let checkinRecord = null;
     let detail;
@@ -195,10 +197,13 @@ async function checkin({ username, password }, quotaUnit) {
     if (checkinRecord) {
         const time = new Date(checkinRecord.created_at * 1000);
         const clock = [time.getHours(), time.getMinutes(), time.getSeconds()].map((n) => String(n).padStart(2, "0")).join(":");
-        return { title: "✅ 今日签到已确认", content: `${stats}\n🕘 签到时间：${clock}` };
+        // 新增标记与本次登录期间的记录同时成立，才将奖励归于本次运行。
+        const isNew = data.checked_in === true && checkinRecord.created_at >= loginStarted && checkinRecord.created_at <= loginFinished;
+        const reward = formatCheckinReward(checkinRecord.content, isNew);
+        return { title: "✅ 今日签到已确认", content: `${reward}\n${stats}\n🕒 签到时间：${clock}` };
     } else {
         const state = data.checked_in === true ? "服务端返回已签到，但日志尚未确认" : "登录成功，签到状态尚未确认";
-        return { title: "⚠️ 签到待确认", content: `${stats}\n\n${state}\n${detail}` };
+        return { title: "⚠️ 签到待确认", content: `🎁 签到奖励：待确认\n${stats}\n\n${state}\n${detail}` };
     }
 }
 
@@ -210,6 +215,15 @@ function maskAccount(username) {
 function formatAmount(label, value, quotaUnit) {
     if (typeof value !== "number" || !Number.isFinite(value)) return `${label}：未返回`;
     return quotaUnit === null ? `${label}（原始额度）：${value}` : `${label}：$${(value / quotaUnit).toFixed(2)}`;
+}
+
+function formatCheckinReward(content, isNew) {
+    // 系统日志的 quota 不是奖励；只解析实测详情中明确标注的美元金额。
+    const match = content.trim().match(/^每日签到成功，\s*增加额度\s*\$\s*(\d+(?:\.\d+)?)\s*额度$/);
+    const amount = match ? Number(match[1]) : NaN;
+    const label = isNew ? "🎁 本次奖励" : "🎁 今日奖励";
+    if (!Number.isFinite(amount)) return `${label}：金额未识别，请到网站核对`;
+    return `${label}：${amount > 0 ? "+" : ""}$${amount.toFixed(2)}${isNew ? "" : "（今日记录）"}`;
 }
 
 function findTodayCheckin(items, now) {
