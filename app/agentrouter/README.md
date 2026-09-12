@@ -145,4 +145,3 @@ script-providers:
 ## 致谢
 
 - 原版 Python 脚本：[@773075692/agentrouter-checkin](https://github.com/773075692/agentrouter-checkin)。
-- 图标：[AgentRouter 官网](https://agentrouter.org/)。
