@@ -12,6 +12,7 @@ Loon 专用插件文件,后缀 `.lpx`(Loon Plugin Extension,旧称 `.plugin`,内
 | [`nodecheck/`](./nodecheck/) | 在节点/策略组页面检测代理出口、本机网络与远端 TCP 可达性，辅助判断节点阻断或离线 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/nodecheck/nodecheck.lpx) |
 | [`ipquality/`](./ipquality/) | 查询节点出口 IP、多源风险、代理属性及流媒体与 AI 服务可用性 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/ipquality/ipquality.lpx) |
 | [`ipquality-web-test/`](./ipquality-web-test/) | 独立混合模式：单项快速原生报告、多项网页报告、HTTPS 轻量测速与三网探针 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc12) |
+| [`agentrouter`](../app/agentrouter/) | AgentRouter 每日登录签到，支持单/多账号与奖励明细 | 🧪 待验证 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/agentrouter/agentrouter.lpx) |
 
 ---
 

@@ -1607,6 +1607,65 @@
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/linli.png",
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/linli.png"
       ]
+    },
+    {
+      "id": "paperclip.agentrouter",
+      "name": "AgentRouter（Surge / QX / Stash）",
+      "keys": [
+        "agentrouter_username",
+        "agentrouter_password",
+        "agentrouter_clear",
+        "agentrouter_debug"
+      ],
+      "settings": [
+        {
+          "id": "agentrouter_username",
+          "name": "账号",
+          "val": "",
+          "type": "text",
+          "placeholder": "网站账号或邮箱",
+          "desc": "其他平台在此填写网站账号；Loon 请直接在插件设置中填写账号密码，不使用本页配置"
+        },
+        {
+          "id": "agentrouter_password",
+          "name": "密码",
+          "val": "",
+          "type": "text",
+          "placeholder": "网站登录密码",
+          "desc": "单独填写密码，首尾空格会保留；不要分享含账号密码的 BoxJS 备份"
+        },
+        {
+          "id": "agentrouter_clear",
+          "name": "清除账号信息",
+          "val": false,
+          "type": "boolean",
+          "desc": "开启后运行一次脚本会清空账号密码并自动关闭，不发起签到"
+        },
+        {
+          "id": "agentrouter_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "仅打印 HTTP 状态和签到判定，不打印账号密码、Cookie 或完整响应"
+        }
+      ],
+      "author": "@773075692, 移植 @MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/agentrouter",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/agentrouter/agentrouter.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/agentrouter/icon.png",
+        "https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/agentrouter/icon.png"
+      ]
     }
   ]
 }

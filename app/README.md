@@ -27,6 +27,7 @@
 | [`nodeseek/`](./nodeseek/) | NodeSeek - 每日签到(VPS 中继绕过 CF) | ✅ 维护中 |
 | [`sgcc/`](./sgcc/) | 网上国网(国家电网 95598) - 积分每日签到(复用签到请求 + 本地抓 Cookie) | 🧪 待验证 |
 | [`baidunetdisk/`](./baidunetdisk/) | 百度网盘 - 会员成长值签到 + 每日答题(助力 SVIP 升级) | 🧪 待验证 |
+| [`agentrouter/`](./agentrouter/) | AgentRouter - 每日登录签到、奖励与账户明细 | 🧪 待验证 |
 | [`cmccbj/`](./cmccbj/) | 北京移动 - 「签到赢好礼」每日签到(送流量/积分) | 📦 已归档 |
 | [`lvcchong/`](./lvcchong/) | 驴充充(充电桩) - 积分中心每日签到 | 📦 已归档 |
 
