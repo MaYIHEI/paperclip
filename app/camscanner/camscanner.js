@@ -8,7 +8,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-20
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -54,7 +54,7 @@
 
 const $ = new Env("扫描全能王");
 
-const SCRIPT_VERSION = "2026-06-20.r3";
+const SCRIPT_VERSION = "2026-10-15.r1";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY     = 'camscanner_data';
@@ -93,6 +93,7 @@ function debug(content, title = "debug") {
 
     const ckRaw = $.getdata(CK_KEY);
     if (!ckRaw) {
+        saveStatus('cookie', '未抓取 Cookie');
         $.msg('扫描全能王', '🚫 缺少 Cookie',
             '请先开启 Cookie 抓取脚本,然后打开扫描全能王 APP 任意页面停留几秒');
         $.done();
@@ -101,6 +102,7 @@ function debug(content, title = "debug") {
 
     let ck;
     try { ck = JSON.parse(ckRaw); } catch (e) {
+        saveStatus('cookie', 'Cookie 格式错误');
         $.msg('扫描全能王', '🚫 Cookie 格式错误', '请重新抓取');
         $.done();
         return;
@@ -108,6 +110,7 @@ function debug(content, title = "debug") {
 
     const { token, cs_ept_d, client_id } = ck;
     if (!token || !cs_ept_d || !client_id) {
+        saveStatus('cookie', 'Cookie 不完整');
         $.msg('扫描全能王', '🚫 Cookie 不完整',
             `缺少: ${[!token && 'token', !cs_ept_d && 'cs_ept_d', !client_id && 'client_id'].filter(Boolean).join(',')} — 请重新抓取`);
         $.done();
@@ -118,6 +121,7 @@ function debug(content, title = "debug") {
         // 1. 查今日剩余次数
         const infoRes = await getLotteryInfo(token, cs_ept_d);
         if (isTokenError(infoRes)) {
+            saveStatus('cookie', 'Token 已失效');
             $.msg('扫描全能王', '🚫 Token 已失效',
                 '请重新打开扫描全能王 APP 任意页面停留几秒,重新抓取 Cookie');
             $.done();
@@ -125,6 +129,7 @@ function debug(content, title = "debug") {
         }
         const info = infoRes && infoRes.data ? infoRes.data : null;
         if (!info || info.day_count == null) {
+            saveStatus('fail', `查询次数失败 ${JSON.stringify(infoRes)}`);
             $.msg('扫描全能王', '⚠️ 查询次数失败',
                 `服务端返回: ${JSON.stringify(infoRes).slice(0, 120)}`);
             $.done();
@@ -133,6 +138,7 @@ function debug(content, title = "debug") {
         $.log(`[INFO] 今日剩余: ${info.day_count} 次 / 本周累计: ${info.week_count} 次`);
 
         if (info.day_count <= 0) {
+            saveStatus('ok', '今日已抽完');
             $.msg('扫描全能王', '✅ 今日已抽完', `本周累计 ${info.week_count} 次`);
             $.done();
             return;
@@ -146,6 +152,7 @@ function debug(content, title = "debug") {
             // 2a. 拿 lottery_code(原生接口,需签名);遇限频(109)重试一次
             const codeRes = await withRetry(() => getLotteryCode(token, client_id));
             if (isTokenError(codeRes)) {
+                saveStatus('cookie', 'Token 已失效');
                 $.msg('扫描全能王', '🚫 Token 已失效', '请重新抓取 Cookie');
                 $.done();
                 return;
@@ -175,9 +182,11 @@ function debug(content, title = "debug") {
         }
 
         const summary = prizes.map((p, i) => `第${i + 1}次: ${p}`).join(' · ');
+        saveStatus('ok', `今日抽奖完成 ${prizes.length}/${info.day_count} 次`);
         $.msg('扫描全能王', `🎰 今日抽奖完成(${prizes.length}/${info.day_count} 次)`, summary);
     } catch (e) {
         $.log('[ERROR] ' + e);
+        saveStatus('fail', String(e));
         $.msg('扫描全能王', '⚠️ 脚本运行异常', String(e).slice(0, 100));
     }
 
@@ -185,6 +194,11 @@ function debug(content, title = "debug") {
 })();
 
 // ── 错误判定 + 重试 ────────────────────────────────────────────────────────────
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'camscanner_status');
+}
 
 // intsig 约定:成功 ret 为 0 或 "200"(类型不统一,统一转字符串比对)
 // ret 105/116 或 err 含 token = 凭据失效;ret 109 = 请求频繁(限频)

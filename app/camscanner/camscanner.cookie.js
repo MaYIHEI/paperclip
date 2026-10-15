@@ -59,6 +59,7 @@ const CK_KEY = 'camscanner_data';
         $.log(`[INFO] 已更新 token=${data.token.slice(0,8)}… cs_ept_d=${data.cs_ept_d ? '有' : '无'} client_id=${data.client_id || '无'}`);
 
         const complete = data.token && data.cs_ept_d && data.client_id;
+        $.setdata('', 'camscanner_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         $.msg('扫描全能王', '✅ 扫描全能王 Cookie 获取成功',
             complete ? `token=${maskToken(data.token)}` : `token=${maskToken(data.token)} — cs_ept_d/client_id 稍后自动补全`);
     } catch (e) {
