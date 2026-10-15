@@ -7,7 +7,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-16
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -53,7 +53,7 @@
 
 const $ = new Env("林里");
 
-const SCRIPT_VERSION = "2026-07-16.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "linli_data";
@@ -106,6 +106,7 @@ function captureCookie() {
         if (!saved || checked.activityId !== data.activityId) {
             throw new Error("Cookie 写入失败");
         }
+        if (oldToken !== token) $.setdata("", "linli_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         if (!oldToken) {
             $.msg($.name, "✅ 林里 Cookie 获取成功", "可关闭抓包,定时自动签到");
         } else if (oldToken !== token) {
@@ -128,6 +129,7 @@ function loadAuth() {
     const raw = $.isNode() ? process.env.LINLI_DATA : $.getdata(CK_KEY);
     const auth = parseJSON(raw, null);
     if (!auth || !auth.headers || !auth.activityId || !auth.storeId || !auth.appid) {
+        saveStatus("cookie", "未抓取 Cookie");
         throw new Error("未配置 Cookie,请进入林里小程序签到页抓取");
     }
     return auth;
@@ -141,6 +143,7 @@ async function checkin(auth) {
     assertAuth(before);
 
     if (isSigned(before)) {
+        saveStatus("ok", "今日已签到");
         $.messages.push(formatStatus("✨ 今日已签到", before));
         return;
     }
@@ -155,6 +158,7 @@ async function checkin(auth) {
 
     if (sign && sign.status === true) {
         const rewards = rewardText(sign.data && sign.data.rewardDetailList);
+        saveStatus("ok", `签到成功${rewards ? ` ${rewards}` : ""}`);
         const after = await api(SIGN_BASE + "/userSignStatistics", headers, common);
         debug(after, "userSignStatistics(after)");
         $.messages.push(formatStatus(`✅ 签到成功${rewards ? `: ${rewards}` : ""}`, after));
@@ -163,9 +167,11 @@ async function checkin(auth) {
 
     const message = String((sign && sign.message) || "");
     if (/已签到|重复签到/.test(message)) {
+        saveStatus("ok", "今日已签到");
         $.messages.push("✨ 今日已签到");
         return;
     }
+    saveStatus("fail", `签到失败: ${message || short(sign)}`);
     throw new Error(`签到失败: ${message || short(sign)}`);
 }
 
@@ -243,15 +249,24 @@ function api(url, headers, body) {
     });
 }
 
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "linli_status");
+}
+
 function taskOn(key) {
     const value = $.isNode() ? process.env[key.toUpperCase()] : $.getdata(key);
     return value === true || value === 1 || value === "true" || value === "1";
 }
 
 function assertAuth(res) {
-    if (!res) throw new Error("网络无响应,请稍后重试");
+    if (!res) {
+        saveStatus("fail", "网络无响应");
+        throw new Error("网络无响应,请稍后重试");
+    }
     const message = String(res.message || "");
     if ([9001, 10008, 41000].includes(Number(res.code)) || /token|登录|鉴权|未授权|失效|过期/i.test(message)) {
+        saveStatus("cookie", `Cookie 已失效: ${message || `code=${res.code}`}`);
         throw new Error(`Cookie 已失效,请重新进入签到页抓取: ${message || `code=${res.code}`}`);
     }
 }
