@@ -33,6 +33,7 @@ const UA_KEY = "nodeseek_ua";
     }
 
     $.setdata(cookie, CK_KEY);
+    $.setdata("", "nodeseek_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
     $.msg("NodeSeek", "✅ NodeSeek Cookie 获取成功", "");
     $.done();
 })();

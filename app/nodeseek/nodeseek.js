@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-07
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -55,7 +55,7 @@
 
 const $ = new Env("NodeSeek");
 
-const SCRIPT_VERSION = "2026-07-08.r3";
+const SCRIPT_VERSION = "2026-10-15.r1";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const CK_KEY        = "nodeseek_cookie";
@@ -70,10 +70,12 @@ const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) Appl
 (async () => {
     const cookie = $.getdata(CK_KEY) || "";
     if (!cookie) {
+        saveStatus("cookie", "未抓取 Cookie");
         $.msg("NodeSeek", "🚫 缺少 Cookie", "请先用 Safari 打开 nodeseek.com 触发 Cookie 抓取");
         $.done(); return;
     }
     if (!cookie.includes("pjwt")) {
+        saveStatus("cookie", "Cookie 缺少 pjwt");
         $.msg("NodeSeek", "🚫 Cookie 无效", "缺少 pjwt，请重新抓取");
         $.done(); return;
     }
@@ -81,10 +83,12 @@ const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) Appl
     const relayUrl = normalizeRelayUrl($.getdata(RELAY_URL_KEY) || "");
     const relayKey = $.getdata(RELAY_KEY_KEY) || "";
     if (!relayUrl || !relayKey) {
+        saveStatus("fail", "未配置中继");
         $.msg("NodeSeek", "🚫 未配置中继", "请在 BoxJS 中设置 nodeseek_relay_url 和 nodeseek_relay_key");
         $.done(); return;
     }
     if (!/^https?:\/\/.+\/attend(?:\?.*)?$/i.test(relayUrl)) {
+        saveStatus("fail", "中继地址格式错误");
         $.msg("NodeSeek", "🚫 中继地址格式错误", "请填写完整地址，例如 http://VPS_IP:3001/attend");
         $.done(); return;
     }
@@ -106,6 +110,7 @@ const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) Appl
     try {
         await attend(cookie, UA, random, relayUrl, relayKey, DEBUG, rid);
     } catch (e) {
+        saveStatus("fail", String(e));
         $.msg("NodeSeek", "❌ 签到异常", String(e));
     }
 
@@ -123,6 +128,7 @@ function attend(cookie, UA, random, relayUrl, relayKey, DEBUG, rid) {
             body: JSON.stringify({ cookie, ua: UA, random, rid }),
         }, (err, resp, data) => {
             if (err) {
+                saveStatus("fail", "中继请求失败");
                 $.msg("NodeSeek", "❌ 中继请求失败", relayErrorHint(err));
                 return resolve();
             }
@@ -132,14 +138,17 @@ function attend(cookie, UA, random, relayUrl, relayKey, DEBUG, rid) {
             }
 
             if ((resp && resp.status) === 401) {
+                saveStatus("fail", "中继鉴权失败");
                 $.msg("NodeSeek", "❌ 中继鉴权失败", "请检查 BoxJS 的中继密钥是否和 VPS 上的 NS_KEY 一致");
                 return resolve();
             }
             if ((resp && resp.status) === 404) {
+                saveStatus("fail", "中继路径错误");
                 $.msg("NodeSeek", "❌ 中继路径错误", "中继地址应以 /attend 结尾");
                 return resolve();
             }
             if ((resp && resp.status) === 502) {
+                saveStatus("fail", "中继被 CF 拦截");
                 $.msg("NodeSeek", "❌ CF 拦截", "中继被 CF 拦截，请检查 VPS");
                 return resolve();
             }
@@ -147,6 +156,7 @@ function attend(cookie, UA, random, relayUrl, relayKey, DEBUG, rid) {
             let result;
             try { result = JSON.parse(atob(data)); } catch (_) {
                 try { result = JSON.parse(data); } catch (_2) {
+                    saveStatus("fail", "中继响应异常");
                     $.msg("NodeSeek", "❌ 响应异常", "status=" + (resp && resp.status) + "\n" + String(data).substring(0, 120));
                     return resolve();
                 }
@@ -154,6 +164,7 @@ function attend(cookie, UA, random, relayUrl, relayKey, DEBUG, rid) {
             normalizeRelayResult(result);
 
             if (result.error) {
+                saveStatus("fail", `中继错误:${result.error}`);
                 $.msg("NodeSeek", "❌ 中继错误", result.error);
                 return resolve();
             }
@@ -163,20 +174,29 @@ function attend(cookie, UA, random, relayUrl, relayKey, DEBUG, rid) {
                 $.log("[DEBUG] classify=" + state + " success=" + result.success + " status=" + result.status + " gain=" + result.gain + " current=" + result.current + " message=" + (result.message || ""));
             }
             if (state === "unconfirmed") {
+                saveStatus("fail", "签到未确认");
                 $.msg("NodeSeek", "❌ 签到未确认", "NodeSeek 未返回成功字段，需进站核对鸡腿是否变化");
             } else if (state === "already") {
+                saveStatus("ok", "今日已签到");
                 $.msg("NodeSeek", "ℹ️ 今日已签到", result.message || "");
             } else if (state === "failed") {
+                saveStatus("fail", result.message || "签到失败");
                 $.msg("NodeSeek", "❌ 签到失败", result.message || "未知错误");
             } else {
                 const detail = result.message
                     ? result.message + (result.gain != null ? "\n鸡腿+" + result.gain + " 当前" + result.current : "")
                     : "";
+                saveStatus("ok", "签到成功");
                 $.msg("NodeSeek", "✅ 签到成功", detail);
             }
             resolve();
         });
     });
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "nodeseek_status");
 }
 
 function maskRelayUrl(raw) {
