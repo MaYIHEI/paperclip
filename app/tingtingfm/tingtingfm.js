@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-18
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("听听FM");
 
-const SCRIPT_VERSION = "2026-06-18.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'tingtingfm_data';        // 存的是含 s_k 会话密钥的完整 User-Agent
@@ -74,6 +74,7 @@ if (typeof $request !== "undefined") {
         try {
             await main();
         } catch (e) {
+            saveStatus('fail', String(e && e.message || e));
             $.msg($.name, '❌ 运行异常', String(e && e.message || e));
         } finally {
             $.done();
@@ -93,6 +94,7 @@ function getCookie() {
         return;
     }
     $.setdata(ua, CK_KEY);
+    $.setdata('', 'tingtingfm_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
     $.msg($.name, '✅ 听听FM Cookie 获取成功', `s_k: ${maskToken(m[1])}`);
 }
 
@@ -100,6 +102,7 @@ function getCookie() {
 async function main() {
     const ua = $.getdata(CK_KEY);
     if (!ua) {
+        saveStatus('cookie', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少 Cookie',
             '请先开启重写规则，打开听听FM APP 进「我的 → 任务中心」页面');
         return;
@@ -108,6 +111,7 @@ async function main() {
     // 1. 用 s_k(在 UA 里)换取本次会话 token —— token 每次现生成、不可长期缓存
     const token = await login(ua);
     if (!token) {
+        saveStatus(token === false ? 'fail' : 'cookie', token === false ? '网络错误' : '会话密钥已过期');
         $.msg($.name, '🚫 会话密钥失效',
             's_k 已过期，请重新打开听听FM「任务中心」重抓 Cookie');
         return;
@@ -119,6 +123,7 @@ async function main() {
     if (DEBUG) $.log(`[sign] resp=${JSON.stringify(r).slice(0, 400)}`);
 
     if (!r || r.status !== 200 || r.error) {
+        saveStatus('fail', (r && r.error) ? String(r.error) : '无响应');
         $.msg($.name, '❌ 签到失败', (r && r.error) ? String(r.error) : '无响应');
         return;
     }
@@ -128,6 +133,7 @@ async function main() {
     const point = await getPoint(token, ua);
     const pointStr = point != null ? ` · 金币 ${point}` : '';
 
+    saveStatus('ok', log ? `签到成功 +${log.grow || 0} 成长值` : '今日已签到');
     if (log) {
         $.msg($.name, '✅ 签到成功',
             `+${log.grow || 0} 成长值 · +${log.coin || 0} 金币${pointStr}`);
@@ -144,7 +150,7 @@ function login(ua) {
     return new Promise((resolve) => {
         $.post({ url: `${BASE}/sns/app`, headers: buildHeaders(ua), body: '' },
             (err, _resp, body) => {
-                if (err) { $.log(`[login] 错误: ${JSON.stringify(err)}`); return resolve(null); }
+                if (err) { $.log(`[login] 错误: ${JSON.stringify(err)}`); return resolve(false); } // false = 网络错误,区别于密钥失效
                 try {
                     const j = JSON.parse(body);
                     resolve(j && j.status === 200 ? j.data : null);
@@ -191,6 +197,11 @@ function getPoint(token, ua) {
             } catch (e) { resolve(null); }
         });
     });
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'tingtingfm_status');
 }
 
 function buildHeaders(ua) {
