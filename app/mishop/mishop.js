@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-27
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -48,7 +48,7 @@
 
 const $ = new Env('小米商城');
 
-const SCRIPT_VERSION = "2026-06-20.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'mishop_data';
@@ -68,6 +68,7 @@ if (JSON.parse($.getdata("mishop_clear") || "false")) {
 (async () => {
     const raw = $.getdata(CK_KEY);
     if (!raw) {
+        saveStatus('cookie', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少 Cookie',
             '请先开启 cookie 抓取脚本,然后打开小米商城 APP → 首页 → 米金商城');
         $.done();
@@ -78,12 +79,14 @@ if (JSON.parse($.getdata("mishop_clear") || "false")) {
     try {
         ck = JSON.parse(raw);
     } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg($.name, '🚫 Cookie 解析失败', '请清空缓存重抓');
         $.done();
         return;
     }
 
     if (!ck.cookie) {
+        saveStatus('cookie', 'Cookie 不完整');
         $.msg($.name, '🚫 Cookie 不完整', '缺 cookie 字段,请重抓');
         $.done();
         return;
@@ -100,6 +103,7 @@ if (JSON.parse($.getdata("mishop_clear") || "false")) {
         ]);
 
         if (!r1) {
+            saveStatus('fail', '请求异常');
             $.msg($.name, `❌ ${userId} 签到失败`, '请求异常,请查看日志');
             $.done();
             return;
@@ -109,8 +113,10 @@ if (JSON.parse($.getdata("mishop_clear") || "false")) {
         const r1msg = r1.message || r1.msg || '';
         if (r1.code !== 0 || !r1.data || !r1.data.taskToken) {
             if (/已|重复|完成|done/i.test(r1msg)) {
+                saveStatus('ok', '今日已签');
                 $.msg($.name, `✨ ${userId} 今日已签`, r1msg);
             } else {
+                saveStatus('fail', `code=${r1.code} ${r1msg}`);
                 $.msg($.name, `❌ ${userId} 签到失败`, `code=${r1.code} ${r1msg}`);
                 debug(`do raw: ${JSON.stringify(r1).slice(0, 400)}`);
             }
@@ -129,6 +135,7 @@ if (JSON.parse($.getdata("mishop_clear") || "false")) {
 
         if (!r2 || r2.code !== 0) {
             const m = (r2 && (r2.message || r2.msg)) || '响应异常';
+            saveStatus('fail', `领奖失败 ${m}`);
             $.msg($.name, `⚠️ ${userId} 领奖失败`, `code=${r2 && r2.code} ${m}`);
             debug(`done raw: ${JSON.stringify(r2).slice(0, 400)}`);
             $.done();
@@ -153,9 +160,11 @@ if (JSON.parse($.getdata("mishop_clear") || "false")) {
             : `连签 ${doneInSeries || '?'} 天`;
 
         $.log(`✅ ${body}`);
+        saveStatus('ok', body);
         $.msg($.name, `✅ ${userId} 签到成功`, body);
     } catch (e) {
         $.log(`❌ 异常: ${e.message || e}`);
+        saveStatus('fail', String(e.message || e));
         $.msg($.name, `❌ ${userId} 签到异常`, String(e.message || e));
     }
 
@@ -203,6 +212,10 @@ function buildHeaders(ck) {
     return h;
 }
 
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'mishop_status');
+}
 
 // @Chavy Env
 // 调试日志:BoxJS 设 mishop_debug=true 才打印接口原始响应
