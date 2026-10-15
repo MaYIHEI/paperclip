@@ -7,7 +7,7 @@
  * @Author: @773075692 <https://github.com/773075692/agentrouter-checkin>
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-09-12
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [Argument]
@@ -41,7 +41,7 @@
  */
 
 const $ = new Env("AgentRouter");
-const SCRIPT_VERSION = "2026-09-12.r8";
+const SCRIPT_VERSION = "2026-10-15.r1";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -56,6 +56,7 @@ const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/6
 
 run().catch((error) => {
     // 只输出脚本主动生成的错误，不转储账号、请求和原始响应。
+    saveStatus("fail", error.message);
     $.msg($.name, "❌ 运行失败", error.message);
 }).finally(() => $.done());
 
@@ -74,6 +75,7 @@ async function run() {
 
     const accounts = readAccounts();
     if (!accounts.length) {
+        saveStatus("cookie", "未配置账号");
         $.msg($.name, "🚫 未配置账号", `请在 ${SETTINGS_PAGE} 的 AgentRouter 中分别填写账号和密码并保存`);
         return;
     }
@@ -98,6 +100,12 @@ async function run() {
             results.push({ title: "❌ 运行失败", content: error.message });
         }
     }
+    // 登录失败 = 账号密码需要更新,对应体检里的「需重新抓取」
+    const loginFailed = results.some((result) => result.title === "❌ 登录失败");
+    const failed = results.find((result) => result.title === "❌ 运行失败");
+    if (loginFailed) saveStatus("cookie", "登录失败,请检查账号密码");
+    else if (failed) saveStatus("fail", failed.content);
+    else saveStatus("ok", `${results.length} 个账号已处理`);
     if (results.length === 1) {
         $.msg($.name, results[0].title, `👤 账号：${maskAccount(accounts[0].username)}\n${results[0].content}`);
     } else {
@@ -205,6 +213,11 @@ async function checkin({ username, password }, quotaUnit) {
         const state = data.checked_in === true ? "服务端返回已签到，但日志尚未确认" : "登录成功，签到状态尚未确认";
         return { title: "⚠️ 签到待确认", content: `🎁 签到奖励：待确认\n${stats}\n\n${state}\n${detail}` };
     }
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "agentrouter_status");
 }
 
 function maskAccount(username) {
