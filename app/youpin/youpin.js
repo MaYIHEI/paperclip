@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-27
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("小米有品");
 
-const SCRIPT_VERSION = "2026-06-20.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY  = 'youpin_data';
@@ -75,6 +75,7 @@ if (typeof $request !== "undefined") {
         try {
             await main();
         } catch (e) {
+            saveStatus('fail', String(e));
             $.msg($.name, '❌ 运行异常', String(e));
         } finally {
             $.done();
@@ -106,6 +107,7 @@ function getCookie() {
 
     const ck = { serviceToken, youpinSession, distinctId, userAgent: ua };
     $.setdata(JSON.stringify(ck), CK_KEY);
+    $.setdata('', 'youpin_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
 
     $.msg(
         $.name,
@@ -119,6 +121,7 @@ function getCookie() {
 async function main() {
     const raw = $.getdata(CK_KEY);
     if (!raw) {
+        saveStatus('cookie', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少 Cookie',
             '请先开启重写规则，打开有品 APP 进「我的 → 签到有礼」页面');
         return;
@@ -128,11 +131,13 @@ async function main() {
     try {
         ck = JSON.parse(raw);
     } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg($.name, '🚫 Cookie 解析失败', '请清空后重新触发抓取');
         return;
     }
 
     if (!ck.serviceToken) {
+        saveStatus('cookie', 'serviceToken 为空');
         $.msg($.name, '🚫 serviceToken 为空', '请重新进「签到有礼」页面');
         return;
     }
@@ -145,12 +150,14 @@ async function main() {
         const r = await post(`${BASE}/mtop/act/redPacketSign/getActInfo`, headers,
             [{}, { actId: ACT_ID }]);
         if (!r || r.code !== 0) {
+            saveStatus('fail', `状态查询失败 code=${r && r.code} ${r && (r.msg || r.message)}`);
             $.msg($.name, '❌ 状态查询失败',
                 `code=${r && r.code} msg=${r && (r.msg || r.message)}`);
             return;
         }
         actData = r.data;
     } catch (e) {
+        saveStatus('fail', `状态请求异常 ${e}`);
         $.msg($.name, '❌ 状态请求异常', String(e));
         return;
     }
@@ -159,6 +166,7 @@ async function main() {
     const alreadySigned = signInfo && signInfo.sign === true;
 
     if (alreadySigned) {
+        saveStatus('ok', '今日已签到');
         $.msg($.name, '✨ 今日已签到', `连签第 ${(signInfo.dayIndex || 0) + 1} 天`);
         return;
     }
@@ -169,12 +177,14 @@ async function main() {
         signResult = await post(`${BASE}/mtop/act/redPacketSign/clickSign`, headers,
             [{}, { actId: ACT_ID }]);
     } catch (e) {
+        saveStatus('fail', `签到请求异常 ${e}`);
         $.msg($.name, '❌ 签到请求异常', String(e));
         return;
     }
 
     if (!signResult || signResult.code !== 0) {
         const errMsg = (signResult && (signResult.msg || signResult.message)) || JSON.stringify(signResult).slice(0, 200);
+        saveStatus('fail', errMsg);
         $.msg($.name, '❌ 签到失败', errMsg);
         return;
     }
@@ -187,6 +197,7 @@ async function main() {
     let body = `💰 获得红包 ¥${amount}`;
     if (tip && tip !== '签到成功！') body += `\n${tip}`;
 
+    saveStatus('ok', `签到成功 红包 ¥${amount}`);
     $.msg($.name, '✅ 签到成功', body);
 }
 
@@ -204,6 +215,11 @@ function normalizeCookie(raw) {
         line.replace(/^cookie:\s*/i, '').split(';')
     );
     return parts.map(s => s.trim()).filter(Boolean).join('; ');
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'youpin_status');
 }
 
 function parseCookieField(cookieStr, field) {
