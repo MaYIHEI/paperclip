@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-08-05
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -70,7 +70,7 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-08-05.r21"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -132,6 +132,7 @@ function getCookie() {
             ts: Date.now(),
         };
         $.setjson(saved, CK_KEY);
+        $.setdata("", "qqmusic_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         $.msg($.name, "✅ QQ音乐 Cookie 获取成功", "可关闭抓包,主脚本会自动续期并签到");
         $.log(`[INFO] 已保存 (loginType=${login_type}, refresh_key=${saved.refresh_key ? "有" : "无"}, 金币活动${saved.coin_act_id ? "已识别" : "用默认值"})`);
     } catch (e) {
@@ -144,6 +145,7 @@ function getCookie() {
 async function checkin() {
     const snap = $.getjson(CK_KEY, null);
     if (!snap || !snap.authst || !snap.uin) {
+        saveStatus("cookie", "未抓取 Cookie");
         $.messages.push(
             "🚫 未抓到 Cookie\n" +
             "👉 打开 QQ 音乐 →「我的 / 会员 / 每日签到」或「金币中心 / 每日签到」一次"
@@ -209,6 +211,7 @@ async function checkLvzScore(snap, uin) {
     debug(res, "EveryDaySignLvzScore");
 
     if (!res) {
+        saveStatus("fail", "绿钻成长值签到无响应");
         $.messages.push("❌ 绿钻成长值签到无响应(详情见日志)");
         return;
     }
@@ -217,6 +220,7 @@ async function checkLvzScore(snap, uin) {
 
     // 外层鉴权失败(authst 失效)→ code!=0,需重抓
     if (res.code !== 0 || (r0.code !== 0 && r0.code !== undefined && data.Ret === undefined)) {
+        saveStatus("cookie", `登录态失效 (code=${res.code}, req_0.code=${r0.code})`);
         $.messages.push(
             `❌ 绿钻成长值签到失败 (code=${res.code}, req_0.code=${r0.code})\n` +
             "续期可能也失败(refresh_key 失效或离线 >3 天),请重进「每日签到」页重抓"
@@ -225,6 +229,8 @@ async function checkLvzScore(snap, uin) {
         return;
     }
 
+    // 每日流程以绿钻签到的鉴权结果代表 Cookie 状态;定时任务/红包雨不改写
+    saveStatus("ok", "每日签到已完成");
     if (data.Ret === 0) {
         const score = (data.Info && data.Info.Score) || 0;
         $.messages.push(`✅ 绿钻成长值签到成功${score ? `: 今日 +${score}` : ""}`);
@@ -234,6 +240,11 @@ async function checkLvzScore(snap, uin) {
         $.messages.push(`⚠️ 绿钻成长值已处理 (Ret=${data.Ret})${data.Msg ? `: ${data.Msg}` : ""}`);
         $.log(`[DEBUG] 响应前300: ${$.toStr(res).slice(0, 300)}`);
     }
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "qqmusic_status");
 }
 
 async function checkCoinSignIn(snap, uin) {
