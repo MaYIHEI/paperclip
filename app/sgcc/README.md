@@ -4,55 +4,39 @@
 
 # 网上国网
 
-国家电网「网上国网」(95598)App 积分每日签到。
+国家电网「网上国网」(95598)App 积分每日签到。🧪 待验证
 
 ## 文件
 
-- `sgcc.js` — cron 签到主脚本(复用抓到的签到请求,免账密/登录/验证码)
-- `sgcc.cookie.js` — Cookie + 签到请求抓取(http-request 重写)
+- `sgcc.js` — cron 签到脚本(手机号 + 密码自动登录并签到,无需抓包)
+- `sgcc.plugin` — Loon 插件(只含 cron)
 
 ## 使用步骤
 
-1. 按下方对应平台配置,开启重写脚本 + cron(或直接导入 `sgcc.plugin` 一键配置);需先开启 MITM 并安装信任 CA 证书
-2. 打开「网上国网」App → 进入「我的 / 积分签到」页(进页面会自动签到,同时触发抓取)
-3. 收到两条通知 `✅ 网上国网 Cookie 获取成功` + `✅ 网上国网 签到请求已抓` 即抓取成功
-4. cron 会按计划自动签到:成功推 `✅`,Cookie 失效推 `⚠️`(再开 App 进签到页即自动重抓)
+1. 按下方对应平台添加 cron(Loon 可直接导入 `sgcc.plugin`),不需要 MITM 和重写
+2. 在 BoxJS「网上国网」填写手机号和密码(没设过密码的先在 App 里设置)
+3. 手动运行一次签到脚本:若提示「首次登录需短信验证」,把收到的 6 位验证码填进 BoxJS「短信验证码」,15 分钟内再运行一次
+4. 之后 cron 每天自动签到,登录凭证到期或失效会自动重新登录
 
 ## Loon
 
 ```ini
-[MITM]
-hostname = csc-service.sgcc.com.cn
-
 [Script]
-http-request ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/ tag=网上国网 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
-
-cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js, tag=网上国网签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enable=true
+cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js, tag=网上国网签到, timeout=60, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enable=true
 ```
 
 ## Surge
 
 ```ini
-[MITM]
-hostname = csc-service.sgcc.com.cn
-
 [Script]
-网上国网 Cookie = type=http-request,pattern=^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
-
-网上国网签到 = type=cron,cronexp=30 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
+网上国网签到 = type=cron,cronexp=30 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
 ```
 
 ## Quantumult X
 
 ```ini
-[MITM]
-hostname = csc-service.sgcc.com.cn
-
-[rewrite_local]
-^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/ url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.cookie.js
-
 [task_local]
-30 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js, tag=网上国网签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enabled=true
+30 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js, tag=网上国网签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enabled=true
 ```
 
 ## Stash
@@ -64,36 +48,28 @@ cron:
       cron: '30 8 * * *'
       timeout: 60
 
-http:
-  mitm:
-    - "csc-service.sgcc.com.cn"
-  script:
-    - match: ^https?:\/\/csc-service\.sgcc\.com\.cn:28630\/.+\/member\/
-      name: 网上国网 Cookie
-      type: request
-      require-body: true
-
 script-providers:
   网上国网签到:
-    url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.js
+    url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js
     interval: 86400
 ```
 
 ## 实现细节
 
-- **鉴权 = 抓取的 Cookie**(进 App 签到页时自动带的 t + 设备头),由 `sgcc.cookie.js` 抓取存本地
-- **签到 = 复用抓到的"提交签到"请求**:cron 取出请求体、重算时间戳后提交,**免账号密码、免登录、免图形验证码**
-- **数据全在本地**(BoxJS),仓库与脚本不含任何账号数据;脚本可共享,各人抓各自 Cookie
-- **响应加密**,脚本只判签到成功/失败,**读不到积分数字**(积分到 App 查看)
+- **按 App 方式登录**:手机号 + 密码登录拿凭证,到期或失效自动重新登录;新设备首次登录需短信验证一次
+- **签到与 App 签到页同一请求**,通知显示签到结果和获得的签到金;今日已签会提示「今日已签到」
+- **数据全在本地**(BoxJS),仓库与脚本不含任何账号数据
+- 协议部分移植自 [stevenjoezhang/hass-state-grid](https://github.com/stevenjoezhang/hass-state-grid)(MIT)
 
 ## 维护记录
 
 | 日期 | 变更 |
 |---|---|
-| 2026-06-22 | 初版:复用签到请求 + 本地抓 Cookie,免账密/登录/验证码;实测连续多天可签,Cookie ≥4.5 天 |
+| 2026-06-22 | 初版:复用签到请求 + 本地抓 Cookie;Loon 实测连续多天可签,Cookie ≥4.5 天 |
+| 2026-10-15 | 🧪 改为手机号 + 密码自动登录并直接签到,不再需要抓包和 MITM;可读到签到结果 |
 
 ## 已知限制
 
-- **Cookie 会失效**:失效时签到脚本推 `⚠️` 提醒,开 App 进积分签到页即自动重抓(实测有效期 ≥4.5 天,无需频繁操作)
-- **读不到积分数字**:签到响应加密,脚本只判成功/失败,具体积分与连签天数请到 App 查看
-- **目前仅 Loon 实测**:其他平台配置已按规范提供,未逐一验证
+- **🧪 待验证**:真账号登录、短信验证和每日签到尚未真机跑通;是否影响手机 App 登录状态待观察
+- **需要账号密码**:密码只存在本机 BoxJS,不要分享含账号密码的 BoxJS 备份
+- **密码连续错误 5 次锁定 30 分钟**:填错时先改对再运行,不要反复重试

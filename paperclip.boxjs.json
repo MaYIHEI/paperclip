@@ -1241,18 +1241,46 @@
       "id": "paperclip.sgcc",
       "name": "网上国网",
       "keys": [
-        "sgcc_data",
-        "sgcc_signin",
+        "sgcc_phone",
+        "sgcc_password",
+        "sgcc_sms",
+        "sgcc_session",
+        "sgcc_device",
+        "sgcc_sms_pending",
         "sgcc_clear",
         "sgcc_debug"
       ],
       "settings": [
         {
+          "id": "sgcc_phone",
+          "name": "手机号",
+          "val": "",
+          "type": "text",
+          "placeholder": "网上国网登录手机号",
+          "desc": "脚本用手机号 + 密码按 App 方式登录，凭证到期自动重新登录"
+        },
+        {
+          "id": "sgcc_password",
+          "name": "密码",
+          "val": "",
+          "type": "text",
+          "placeholder": "网上国网登录密码",
+          "desc": "没设过密码的先在 App 里设置；不要分享含账号密码的 BoxJS 备份"
+        },
+        {
+          "id": "sgcc_sms",
+          "name": "短信验证码",
+          "val": "",
+          "type": "text",
+          "placeholder": "6 位验证码",
+          "desc": "首次登录提示新设备验证时，把收到的验证码填这里再手动运行一次签到脚本；登录成功后自动清空"
+        },
+        {
           "id": "sgcc_clear",
-          "name": "清除 Cookie",
+          "name": "清除登录凭证",
           "val": false,
           "type": "boolean",
-          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie 与签到请求，完成后自动复位为关闭；之后重新开 App 进积分签到页抓取"
+          "desc": "设为开启后，运行一次签到脚本会清空登录凭证与模拟设备（账号密码保留），完成后自动复位为关闭；下次运行重新登录"
         },
         {
           "id": "sgcc_debug",
@@ -1273,8 +1301,8 @@
         }
       ],
       "author": "@MaYIHEI",
-      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/sgcc",
-      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/sgcc/sgcc.js",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/testing/app/sgcc",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/testing/app/sgcc/sgcc.js",
       "icons": [
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/sgcc.png",
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/sgcc.png"
