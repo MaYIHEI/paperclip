@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-17
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env('名创优品');
 
-const SCRIPT_VERSION = "2026-06-17.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_NAME = 'miniso_data';
@@ -77,10 +77,14 @@ $.alreadyDone = 0;
 // ============= 主流程 =============
 async function main() {
     if (!$.userData) {
+        saveStatus('cookie', '未抓取 Cookie');
         throw new Error('未配置账号 Cookie,请先打开名创优品小程序的"任务中心"页面抓取 ❌');
     }
     const { openid, unionid, uid, skey, weappcode, appcode } = $.userData;
-    if (!openid || !skey) throw new Error('Cookie 不完整,请重新抓取 ❌');
+    if (!openid || !skey) {
+        saveStatus('cookie', 'Cookie 不完整');
+        throw new Error('Cookie 不完整,请重新抓取 ❌');
+    }
 
     $.log(`📱 用户 uid=${uid} openid=${openid.substring(0, 8)}...`);
 
@@ -88,6 +92,7 @@ async function main() {
     const jwtPayload = parseJWT(skey);
     if (jwtPayload && jwtPayload.exp && jwtPayload.exp * 1000 < Date.now()) {
         const expDate = new Date(jwtPayload.exp * 1000).toISOString().slice(0, 10);
+        saveStatus('cookie', `Cookie 已过期(${expDate})`);
         throw new Error(`Cookie 已过期(${expDate}),请重新抓取 ❌`);
     }
     if (jwtPayload && jwtPayload.PHONE) {
@@ -155,14 +160,22 @@ async function signIn() {
         { activityId: ACTIVITY_ID, taskId: SIGNIN_TASK_ID }
     );
     if (res?.code === 200 && res?.success) {
+        saveStatus('ok', '每日签到成功');
         $.messages.push(`✅ 每日签到成功 (+20 mini币)`);
         $.signSuccess = true;
     } else if (/已完成|已签|已经/.test(res?.message || '')) {
+        saveStatus('ok', '今日已签到');
         $.messages.push(`✨ 今日已签到`);
         $.signSuccess = true;
     } else {
+        saveStatus('fail', `签到失败: ${res?.message || JSON.stringify(res)}`);
         $.messages.push(`❌ 签到失败: ${res?.message || JSON.stringify(res)}`);
     }
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'miniso_status');
 }
 
 // 查任务列表,返回所有未完成的浏览任务(taskType=5)
@@ -385,6 +398,7 @@ function getCookie() {
 
         const newData = { openid, unionid, uid, skey, weappcode, appcode };
         $.setjson(newData, CK_NAME);
+        $.setdata('', 'miniso_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
 
         const phone = (parseJWT(skey) || {}).PHONE || '';
         const masked = phone ? phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : openid.substring(0, 8) + '...';
