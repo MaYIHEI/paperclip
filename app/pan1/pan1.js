@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-17
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -60,7 +60,7 @@
 
 const $ = new Env("123社区");
 
-const SCRIPT_VERSION = "2026-07-17.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "pan1_data";
@@ -105,6 +105,7 @@ function capture() {
     if (!ok || !$.getdata(CK_KEY)) {
         $.msg($.name, "❌ Cookie 保存失败", "请查看脚本日志后重试");
     } else if (changed) {
+        $.setdata("", "pan1_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         $.msg($.name, "", "✅ 123社区 Cookie 获取成功");
     }
     $.done();
@@ -113,6 +114,7 @@ function capture() {
 async function run() {
     const raw = $.getdata(CK_KEY);
     if (!raw) {
+        saveStatus("cookie", "未抓取 Cookie");
         $.msg($.name, "🚫 缺少 Cookie", "请先用 Safari 登录 123网盘社区并打开任意页面");
         return;
     }
@@ -121,21 +123,25 @@ async function run() {
     try {
         auth = JSON.parse(raw);
     } catch (_) {
+        saveStatus("cookie", "Cookie 解析失败");
         $.msg($.name, "🚫 Cookie 解析失败", "请在 BoxJS 清除后重新抓取");
         return;
     }
     if (!/^bbs_token=.+/.test(auth.cookie || "")) {
+        saveStatus("cookie", "Cookie 不完整");
         $.msg($.name, "🚫 Cookie 不完整", "请重新登录 123网盘社区并打开任意页面");
         return;
     }
 
     const result = await signWithRetry(auth);
     if (result.error) {
+        saveStatus("fail", "网络错误,已重试 3 次");
         $.msg($.name, "❌ 签到失败", `网络错误，已重试 3 次\n${result.error.slice(0, 100)}`);
         return;
     }
     debug(`status=${result.status} body=${String(result.body).slice(0, 500)}`);
     if (result.status < 200 || result.status >= 300) {
+        saveStatus("fail", `HTTP ${result.status}`);
         $.msg($.name, "❌ 签到失败", `HTTP ${result.status}，请稍后重试`);
         return;
     }
@@ -145,6 +151,7 @@ async function run() {
         data = JSON.parse(result.body);
     } catch (_) {
         const text = stripHtml(result.body);
+        saveStatus(/登录|login/i.test(text) ? "cookie" : "fail", /登录|login/i.test(text) ? "Cookie 已失效" : "响应解析失败");
         if (/登录|login/i.test(text)) {
             $.msg($.name, "🚫 Cookie 已失效", "请重新登录 123网盘社区并打开任意页面");
         } else {
@@ -155,12 +162,16 @@ async function run() {
 
     const message = String(data.message || data.msg || "").replace(/<br\s*\/?>/gi, " ").trim();
     if (String(data.code) === "0") {
+        saveStatus("ok", "签到成功");
         $.msg($.name, "✅ 签到成功", message || "经验和金币已到账");
     } else if (/已签到|已经签到|今日.*签|重复/i.test(message)) {
+        saveStatus("ok", "今日已签到");
         $.msg($.name, "✨ 今日已签到", message);
     } else if (/登录|用户不存在|权限|login/i.test(message)) {
+        saveStatus("cookie", "Cookie 已失效");
         $.msg($.name, "🚫 Cookie 已失效", "请重新登录 123网盘社区并打开任意页面");
     } else {
+        saveStatus("fail", message || `code=${data.code}`);
         $.msg($.name, "❌ 签到失败", message || `code=${data.code}`);
     }
 }
@@ -203,6 +214,11 @@ function signOnce(auth) {
             });
         });
     });
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "pan1_status");
 }
 
 function sleep(ms) {
