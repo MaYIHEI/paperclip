@@ -7,7 +7,7 @@
  * @Author: @Sliverkiss
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-11
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
  */
 const $ = new Env("泡泡玛特");
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const ckName = "ppmt_data";
 const userCookie = $.toObj($.isNode() ? process.env[ckName] : $.getdata(ckName)) || [];
@@ -78,6 +78,8 @@ async function main() {
             DoubleLog(`⛔️ 账号 ${user.userName || user.index} 处理异常: ${e.message || e}`);
         }
     }
+    const failed = $.userList.length - $.succCount;
+    saveStatus(failed ? 'cookie' : 'ok', failed ? `${failed} 个账号签到失败,需要重新登录` : `${$.succCount} 个账号签到完成`);
     $.title = `共${$.userList.length}个账号,成功${$.succCount}个,失败${$.userList.length - 0 - $.succCount}个`
     await sendMsg($.notifyMsg.join("\n"), $.avatar ? { $media: $.avatar } : undefined);
 }
@@ -147,6 +149,11 @@ class UserInfo {
     }
 }
 
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'ppmt_status');
+}
+
 // 解析 JWT payload
 function parseJWT(token) {
     try {
@@ -208,6 +215,7 @@ async function getCookie() {
         index >= 0 ? userCookie[index] = newData : userCookie.push(newData);
 
         $.setjson(userCookie, ckName);
+        $.setdata('', 'ppmt_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         $.msg($.name, `✅ 泡泡玛特 Cookie 获取成功`, `账号 ${phone_num(newData.userName)}`);
 
     } catch (e) {
@@ -279,6 +287,7 @@ async function loadCryptoJS() {
                 $.msg($.name, "", "✅ Cookie 已清除，请重新抓取");
                 return;
             }
+            if (!userCookie.length) saveStatus('cookie', '未抓取 Cookie');
             $.CryptoJS = await loadCryptoJS();
             await checkEnv();
             await main();
