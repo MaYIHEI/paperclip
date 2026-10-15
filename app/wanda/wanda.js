@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-10
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -169,7 +169,7 @@ function urlEncodeUnicode(s) {
 // ========== 签到逻辑 ==========
 const $ = new Env('万达电影');
 
-const SCRIPT_VERSION = '2026-06-10.r3'; // 去掉请求里的 timeout(Loon 误判为 ms 致秒超时)
+const SCRIPT_VERSION = '2026-10-15.r1'; // 去掉请求里的 timeout(Loon 误判为 ms 致秒超时)
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'wanda_data';
@@ -196,6 +196,7 @@ if (JSON.parse($.getdata('wanda_clear') || 'false')) {
 (async () => {
     const raw = $.getdata(CK_KEY);
     if (!raw) {
+        saveStatus('cookie', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少 Cookie',
             '请先开启 Cookie 抓取脚本,再打开万达电影 APP →「我的」');
         $.done();
@@ -203,11 +204,13 @@ if (JSON.parse($.getdata('wanda_clear') || 'false')) {
     }
     let ck;
     try { ck = JSON.parse(raw); } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg($.name, '🚫 Cookie 解析失败', '请清空缓存重抓');
         $.done();
         return;
     }
     if (!ck.token || !ck.user) {
+        saveStatus('cookie', 'Cookie 不完整');
         $.msg($.name, '🚫 Cookie 不完整', '缺 token/user,请重抓');
         $.done();
         return;
@@ -224,6 +227,7 @@ if (JSON.parse($.getdata('wanda_clear') || 'false')) {
         check = signCheck(ts, SIGN_URI, bodyStr);
     } catch (e) {
         $.log(`[sign] 签名引擎异常: ${e && e.message || e}`);
+        saveStatus('fail', '本地签名引擎异常');
         $.msg($.name, `❌ ${user} 签到失败`, '本地签名引擎异常,请查看日志');
         $.done();
         return;
@@ -232,12 +236,15 @@ if (JSON.parse($.getdata('wanda_clear') || 'false')) {
 
     const resp = await doSign(ck, ts, check, bodyStr);
     if (!resp) {
+        saveStatus('fail', '万达接口无响应');
         $.msg($.name, `❌ ${user} 签到失败`, '万达接口无响应,请查看日志');
         $.done();
         return;
     }
 
     if (resp.code === 403 || /signature/i.test(resp.msg || '')) {
+        // 签名引擎问题也会报 403,不能断定是 Cookie 失效
+        saveStatus('fail', '签名校验失败,token 可能已失效');
         $.msg($.name, `🔐 ${user} 签名校验失败`,
             'token 可能已失效,请重开万达 APP「我的」重抓 Cookie');
         $.log(`[ERR] 403: ${JSON.stringify(resp).slice(0, 300)}`);
@@ -245,6 +252,7 @@ if (JSON.parse($.getdata('wanda_clear') || 'false')) {
         return;
     }
     if (resp.code !== 0) {
+        saveStatus('fail', `code=${resp.code} ${resp.msg || ''}`);
         $.msg($.name, `❌ ${user} 签到失败`, `code=${resp.code} ${resp.msg || ''}`);
         $.log(`[ERR] ${JSON.stringify(resp).slice(0, 400)}`);
         $.done();
@@ -254,8 +262,10 @@ if (JSON.parse($.getdata('wanda_clear') || 'false')) {
     const biz = resp.data || {};
     const inner = biz.data || {};
     if (biz.bizCode === 1004 || /已签|重复/.test(biz.bizMsg || '')) {
+        saveStatus('ok', '今日已签');
         $.msg($.name, `✨ ${user} 今日已签`, biz.bizMsg || '已签到过了');
     } else {
+        saveStatus('ok', '签到成功');
         $.msg($.name, `✅ ${user} 签到成功`, inner.successMessage || '签到成功');
     }
     $.log(`[OK] ${JSON.stringify(resp).slice(0, 300)}`);
@@ -294,6 +304,11 @@ function doSign(ck, ts, check, bodyStr) {
             }
         });
     });
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'wanda_status');
 }
 
 function todayCN() {

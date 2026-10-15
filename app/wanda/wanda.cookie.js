@@ -52,6 +52,7 @@ const CK_KEY = 'wanda_data';
 
         $.setdata(JSON.stringify(data), CK_KEY);
         $.log(`[INFO] 已更新 token, user=${mask(user)}`);
+        $.setdata('', 'wanda_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         $.msg('万达电影', '✅ 万达电影 Cookie 获取成功', `账号 ${mask(user)}`);
     } catch (e) {
         $.log('[ERROR] cookie 抓取失败: ' + e);
