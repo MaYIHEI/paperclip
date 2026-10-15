@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-10
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env('龙湖天街 App');
 
-const SCRIPT_VERSION = "2026-06-10.r5"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 // ── 持久化 key ──
@@ -100,6 +100,7 @@ if (typeof $request !== "undefined" && $request.url && $request.url.includes('/s
 
     const raw = $.getdata(CK_KEY);
     if (!raw) {
+      saveStatus('cookie', '未抓取 Cookie');
       $.msg($.name, '', '❌ 未抓取到鉴权,请按 README 重写规则在 App 内点一次签到');
       return $.done();
     }
@@ -107,10 +108,12 @@ if (typeof $request !== "undefined" && $request.url && $request.url.includes('/s
     try {
       auth = JSON.parse(raw);
     } catch (e) {
+      saveStatus('cookie', 'Cookie 解析失败');
       $.msg($.name, '', '❌ 鉴权数据格式异常,请重新抓取');
       return $.done();
     }
     if (!auth.usertoken) {
+      saveStatus('cookie', 'Cookie 缺失 usertoken');
       $.msg($.name, '', '❌ 鉴权缺失 usertoken,请重新抓取');
       return $.done();
     }
@@ -162,6 +165,7 @@ function getCookie() {
   };
   $.setdata(JSON.stringify(data), CK_KEY);
   $.setdata("", DONE_KEY); // 重新抓取 → 清今日完成标记,允许当天再签
+  $.setdata('', 'lhtj_app_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
   $.msg($.name, '', '✅ 龙湖天街 App Cookie 获取成功');
   $done({});
 }
@@ -239,6 +243,7 @@ function sign(auth) {
     $.post(opts, (err, resp, body) => {
       try {
         if (err) {
+          saveStatus('fail', `网络错误: ${err}`);
           $.msg($.name, '签到失败', `网络错误: ${err}`);
           return resolve();
         }
@@ -251,24 +256,34 @@ function sign(auth) {
             const tag = r.sign_type === 20 ? '(连签)' : '';
             return `+${r.reward_num}${type}${tag}`;
           }).join(' / ') || '已签到';
+          saveStatus('ok', `签到成功 ${desc}`);
           $.msg($.name, '✅ 签到成功', desc);
           markDone();
         } else if (data.code === '8040012' || data.code === '8040013') {
           // 顶象风控拦截:账号已被标记,只能停脚本手动养号
+          saveStatus('fail', `账号已被风控 [${data.code}]`);
           $.msg($.name, '⚠️ 账号已被风控', `建议暂停脚本、改用 App 手动签到养号一段时间再恢复 [${data.code}] ${truncate(body, 120)}`);
         } else if (data.message && /已签|不能重复|今日已/.test(data.message)) {
+          saveStatus('ok', '今日已签');
           $.msg($.name, '✅ 今日已签', data.message);
           markDone();
         } else {
+          saveStatus('fail', `[${data.code}] ${data.message || ''}`);
           $.msg($.name, '❌ 签到失败', `[${data.code}] ${data.message || ''} | ${truncate(body, 200)}`);
         }
       } catch (e) {
+        saveStatus('fail', `签到解析异常 ${e.message}`);
         $.msg($.name, '❌ 签到解析异常', `${e.message} | ${truncate(body, 300)}`);
       } finally {
         resolve();
       }
     });
   });
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+  $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'lhtj_app_status');
 }
 
 function markDone() {
