@@ -43,6 +43,7 @@ const CK_KEY = "wps_sid"; // 只存 wps_sid 这一个长效登录态(activity �
 
         $.setdata(sid, CK_KEY);
         $.log(`[INFO] 已更新 wps_sid (${maskSid(sid)})`);
+        $.setdata("", "wps_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         $.msg("WPS", "✅ WPS Cookie 获取成功", "可去签到脚本验证");
     } catch (e) {
         $.log("[ERROR] cookie 抓取失败: " + e);

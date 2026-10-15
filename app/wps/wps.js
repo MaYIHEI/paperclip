@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-27
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("WPS");
 
-const SCRIPT_VERSION = "2026-06-27.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -67,6 +67,11 @@ function taskOff(k) {
 function debug(content) {
     if (($.getdata("wps_debug") || "false") !== "true") return;
     $.log(`[DEBUG] ${typeof content === "string" ? content : JSON.stringify(content)}`);
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "wps_status");
 }
 
 // ===== 接口 =====
@@ -119,6 +124,7 @@ if (JSON.parse($.getdata("wps_clear") || "false")) {
 } else {
     main().catch((e) => {
         $.log(`[ERROR] 主流程异常: ${e}`);
+        saveStatus("fail", String(e));
         $.msg("WPS", "❌ 运行异常", String(e));
     }).finally(() => $.done());
 }
@@ -126,6 +132,7 @@ if (JSON.parse($.getdata("wps_clear") || "false")) {
 async function main() {
     const sid = $.getdata(CK_KEY);
     if (!sid) {
+        saveStatus("cookie", "未抓取 Cookie");
         $.msg("WPS", "🚫 缺少 Cookie", "请先开启 cookie 抓取脚本,打开 WPS APP 进任意活动页停留 1 秒");
         return;
     }
@@ -141,12 +148,14 @@ async function main() {
             const j = JSON.parse(r.body);
             if (j.result !== "ok" || !j.userid) {
                 // 服务端明确判失效 = 真·登录态失效,不重试
+                saveStatus("cookie", "wps_sid 已过期");
                 $.msg("WPS", "🚫 登录态失效", "wps_sid 已过期,请重新抓取(打开 WPS 进活动页)");
                 $.log(`[ERROR] islogin 非 ok: ${r.body.slice(0, 200)}`);
                 return;
             }
             uid = j.userid;
             $.log(`[INFO] user_id 已获取(${String(uid).slice(0, 3)}***)`);
+            saveStatus("ok", "登录态有效");
         } catch (e) {
             lastErr = e; // 网络超时 / 连接失败 / 响应非 JSON → 值得重试
             $.log(`[WARN] islogin 网络错误(${attempt + 1}/2): ${e}`);
@@ -154,6 +163,7 @@ async function main() {
     }
     if (!uid) {
         // 重试后仍失败:是网络问题,不是 Cookie 失效——别误导用户去重抓
+        saveStatus("fail", "网络异常,未能校验登录态");
         $.msg("WPS", "⚠️ 网络异常", "islogin 请求超时(非 Cookie 失效),稍后会自动重试或手动运行一次");
         $.log(`[ERROR] islogin 重试后仍失败: ${lastErr}`);
         return;
