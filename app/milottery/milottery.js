@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-11
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -60,7 +60,7 @@
 
 const $ = new Env("小米抽奖");
 
-const SCRIPT_VERSION = "2026-07-11.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "milottery_data";
@@ -127,6 +127,7 @@ function capture() {
     const ok = $.setdata(JSON.stringify(data), CK_KEY);
     const saved = $.getdata(CK_KEY);
     if (ok && saved && notify) {
+        $.setdata("", "milottery_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         $.msg($.name, "", "✅ 小米抽奖 Cookie 获取成功");
     } else if (!ok || !saved) {
         $.msg($.name, "❌ Cookie 保存失败", "请查看脚本日志后重试");
@@ -137,6 +138,7 @@ function capture() {
 async function run() {
     const raw = $.getdata(CK_KEY);
     if (!raw) {
+        saveStatus("cookie", "未抓取 Cookie");
         $.msg($.name, "🚫 缺少 Cookie", "请先进入小米商城 APP → 狂欢礼 → 抽奖活动页抓取");
         return;
     }
@@ -145,10 +147,12 @@ async function run() {
     try {
         auth = JSON.parse(raw);
     } catch (e) {
+        saveStatus("cookie", "Cookie 解析失败");
         $.msg($.name, "🚫 Cookie 解析失败", "请清除后重新抓取");
         return;
     }
     if (!auth.body || !header(auth.headers || {}, "cookie")) {
+        saveStatus("cookie", "Cookie 不完整");
         $.msg($.name, "🚫 Cookie 不完整", "请重新进入抽奖活动页抓取");
         return;
     }
@@ -158,6 +162,7 @@ async function run() {
     let tasks = extractTasks(first);
     const lottery = tasks.find((task) => Number(task.taskType) === 128);
     if (!lottery) {
+        saveStatus("cookie", "未找到抽奖活动,需重进活动页抓取");
         $.msg($.name, "⚠️ 未找到抽奖活动", "活动配置可能已更新，请重进活动页抓取");
         debug(`task query raw: ${JSON.stringify(first).slice(0, 500)}`);
         return;
@@ -165,6 +170,7 @@ async function run() {
 
     const now = Number(lottery.serverTime || Date.now());
     if ((lottery.startTime && now < lottery.startTime) || (lottery.endTime && now > lottery.endTime)) {
+        saveStatus("cookie", "活动不在有效期,需重进活动页抓取");
         $.msg($.name, "⚠️ 活动不在有效期", "请进入当前抽奖活动页重新抓取配置");
         return;
     }
@@ -199,6 +205,7 @@ async function run() {
     tasks = extractTasks(refreshed);
     const drawTask = tasks.find((task) => Number(task.taskType) === 128);
     if (!drawTask) {
+        saveStatus("fail", "重新查询后未找到抽奖任务");
         $.msg($.name, "⚠️ 任务已处理", "重新查询后未找到抽奖任务");
         return;
     }
@@ -235,17 +242,20 @@ async function run() {
     if (drawResult.failed) lines.push(`⚠️ 抽奖中止: ${drawResult.failed}`);
 
     const ok = !taskResult.failed.length && !drawResult.failed;
+    saveStatus("ok", lines.join(" · ")); // 部分任务失败不代表 Cookie 有问题,详情见当次通知
     $.msg($.name, ok ? "✅ 执行完成" : "⚠️ 部分完成", lines.join("\n"));
 }
 
 async function queryTasks(auth) {
     const result = await request(auth.url || API + BATCH_PATH, auth.headers, auth.body);
     if (!result) {
+        saveStatus("fail", "查询任务失败:网络无响应");
         $.msg($.name, "❌ 查询任务失败", "网络无响应，请稍后重试");
         return null;
     }
     if (Number(result.code) !== 0) {
         const message = result.message || result.msg || "未知错误";
+        saveStatus("fail", `查询任务失败:${message}`);
         $.msg($.name, "❌ 查询任务失败", `${message}；若提示未登录，请重进活动页抓取`);
         debug(`query raw: ${JSON.stringify(result).slice(0, 500)}`);
         return null;
@@ -409,6 +419,11 @@ function normalizeCookie(raw) {
 function messageOf(result) {
     if (!result) return "网络无响应";
     return result.message || result.msg || `code=${result.code}`;
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "milottery_status");
 }
 
 function sleep(ms) {
