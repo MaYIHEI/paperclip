@@ -86,6 +86,7 @@ script-providers:
 | 2026-05-23 | 初版,适配万象 H5 网关签名 |
 | 2026-05-23 | 改名 `yidian` → `newmixc`(对齐英文命名规范),CK_KEY `yidian_data` → `newmixc_data`,中文显示名保持「一点万象」不变 |
 | 2026-05-24 | tag 统一为 `一点万象 Cookie` / `一点万象签到`,加 img-url 图标 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../checkup/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 

@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-23
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("一点万象");
 
-const SCRIPT_VERSION = "2026-06-23.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'newmixc_data';
@@ -69,6 +69,7 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
 (async () => {
     const ckRaw = $.getdata(CK_KEY);
     if (!ckRaw) {
+        saveStatus('cookie', '未抓取 Cookie');
         $.msg('一点万象', '🚫 缺少 Cookie',
             '请先开启 cookie 抓取脚本,然后打开一点万象 APP 任意页面停留 1 秒');
         $.done();
@@ -79,6 +80,7 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
     try {
         ck = JSON.parse(ckRaw);
     } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg('一点万象', '🚫 Cookie 解析失败', '请清空缓存重抓');
         $.done();
         return;
@@ -87,6 +89,7 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
     const required = ['token', 'mallNo', 'imei', 'deviceParams', 'appVersion', 'osVersion'];
     const missing = required.filter(k => !ck[k]);
     if (missing.length) {
+        saveStatus('cookie', 'Cookie 不完整');
         $.msg('一点万象', '🚫 Cookie 不完整', `缺: ${missing.join(',')} ,请重抓`);
         $.done();
         return;
@@ -108,6 +111,7 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
         debug(`sign 完整返回: ${JSON.stringify(r)}`);
         if (!r || r.code !== 0) {
             const m = (r && (r.message || r.msg)) || JSON.stringify(r).slice(0, 200);
+            saveStatus(/已签|签过|不可重复/.test(m) ? 'ok' : 'fail', m);
             if (/已签|签过|不可重复/.test(m)) {
                 $.msg('一点万象', `✨ ${phoneMasked} 今日已签`, `${m}${statTail(st)}`);
             } else if (/频繁|稍后|过于/.test(m)) {
@@ -123,6 +127,7 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
         const sd = (r.data && r.data.signDataMap) || {};
         const todayPoint = sd.todayPoint || r.data.point || 0;
         $.log(`✅ 签到成功 +${todayPoint} 积分`);
+        saveStatus('ok', `签到成功 +${todayPoint} 积分`);
 
         // 3. 尝试领阶段奖(签到接口本身已发主积分,nextStep 可能有连签奖)
         let extraMsg = '';
@@ -148,6 +153,7 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
         $.msg('一点万象', `✅ ${phoneMasked} 签到成功`, body);
     } catch (e) {
         $.log('❌ 异常: ' + (e.message || e));
+        saveStatus('fail', String(e.message || e));
         $.msg('一点万象', `❌ ${phoneMasked} 签到异常`, String(e.message || e));
     }
 
@@ -156,6 +162,11 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
 }
 
 // 从 latticeList 响应提取真实积分余额(remaindPoints)和当前连签(currentStep)
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'newmixc_status');
+}
+
 function parseStatus(status) {
     const d = status && status.code === 0 && status.data;
     if (!d || typeof d !== 'object') return { balance: null, streak: null };
