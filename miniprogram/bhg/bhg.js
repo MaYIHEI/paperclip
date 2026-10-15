@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-16
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("北京华联");
 
-const SCRIPT_VERSION = "2026-06-23.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const CK_NAME = "bhg_token";
 const MALL_KEY = "bhg_mallid"; // 华联是连锁,mall_id 不在 JWT 里,从抓取 URL 提取后存这里
@@ -125,10 +125,12 @@ function parseJWT(token) {
 async function checkin() {
     const payload = parseJWT($.token);
     if (!payload) {
+        saveStatus("cookie", "Cookie 解析失败");
         throw new Error("JWT 解析失败,请重新抓取 token");
     }
     // 华联 JWT 不含 mall_id,从抓取时存下的门店 id 读取
     if (!$.mallId) {
+        saveStatus("cookie", "缺少门店 mall_id");
         throw new Error("缺少门店 mall_id,请重新进签到页抓取");
     }
     const mallId = $.mallId;
@@ -140,6 +142,7 @@ async function checkin() {
     debug(formRes, "checkInForm");
 
     if (formRes && formRes.code === 401) {
+        saveStatus("cookie", `token 已失效: ${formRes.msg || ""}`);
         throw new Error(`token 已失效: ${formRes.msg || ""}`);
     }
 
@@ -150,6 +153,7 @@ async function checkin() {
     debug(res, "checkInRecord");
 
     if (!res) {
+        saveStatus("fail", "签到无响应");
         $.messages.push("❌ 签到失败: 无响应");
         return;
     }
@@ -169,6 +173,7 @@ async function checkin() {
             (res.data && (res.data.point_total || res.data.point)) ||
             (sum && sum.todayEarned) ||
             0;
+        saveStatus("ok", `签到成功 +${earned} 分`);
         $.messages.push(`✅ 签到成功: +${earned} 分${statLine(sum)}${balLine}`);
         return;
     }
@@ -177,16 +182,19 @@ async function checkin() {
     if (res.code === 400 || res.code === 422 || /已签|已经签到/.test(res.msg || "")) {
         const sum = summarizeForm(formRes);
         const earned = sum && sum.todayEarned ? ` (+${sum.todayEarned} 分)` : "";
+        saveStatus("ok", "今日已签到");
         $.messages.push(`✨ 今日已签到${earned}${statLine(sum)}${balLine}`);
         return;
     }
 
     // 401 / token 问题
     if (res.code === 401) {
+        saveStatus("cookie", `token 失效: ${res.msg || ""}`);
         $.messages.push(`❌ token 失效: ${res.msg || ""}`);
         return;
     }
 
+    saveStatus("fail", `code=${res.code} ${res.msg || $.toStr(res)}`);
     $.messages.push(`❌ 签到失败: code=${res.code} msg=${res.msg || $.toStr(res)}`);
 }
 
@@ -236,6 +244,11 @@ function statLine(sum) {
 }
 
 // ============ 请求 ============
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "bhg_status");
+}
 
 function request(method, path, body) {
     return new Promise((resolve) => {
@@ -301,6 +314,7 @@ function getCookie() {
         }
         $.setdata(newToken, CK_NAME);
         $.setdata(mallId, MALL_KEY);
+        $.setdata("", "bhg_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         const expDate = payload.exp ? new Date(payload.exp * 1000).toLocaleDateString() : "?";
         $.msg($.name, "✅ 北京华联 Cookie 获取成功", `门店 mall_id: ${mallId}\n有效至: ${expDate}`);
     } catch (e) {
@@ -449,10 +463,12 @@ if (typeof $request !== "undefined") {
             return;
         }
         if (!$.token) {
+            saveStatus("cookie", "未抓取 Cookie");
             throw new Error("未配置 token,请先进小程序'签到'页抓取");
         }
         const payload = parseJWT($.token);
         if (payload && payload.exp && payload.exp * 1000 < Date.now()) {
+            saveStatus("cookie", "token 已过期");
             throw new Error("token 已过期,请重新抓取");
         }
         await checkin();
