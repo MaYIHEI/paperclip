@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-26
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("百度网盘");
 
-const SCRIPT_VERSION = "2026-06-26.r9"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY    = 'baidunetdisk_data';
@@ -92,6 +92,7 @@ if (typeof $request !== "undefined") {
         try {
             await main();
         } catch (e) {
+            saveStatus('fail', String(e));
             $.msg($.name, '❌ 运行异常', String(e));
         } finally {
             $.done();
@@ -109,6 +110,7 @@ function getCookie() {
         return;
     }
     $.setdata(cookie, CK_KEY);
+    $.setdata('', 'baidunetdisk_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
     const uid = (cookie.match(/BDUSS=([^;]{0,8})/) || [])[1] || '';
     $.msg($.name, '✅ 百度网盘 Cookie 获取成功', `BDUSS: ${uid}…`);
 }
@@ -117,6 +119,7 @@ function getCookie() {
 async function main() {
     const cookie = $.getdata(CK_KEY);
     if (!cookie) {
+        saveStatus('cookie', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少 Cookie',
             '请先开启重写规则,打开网盘「我的 → 签到 / 会员」页面');
         return;
@@ -126,10 +129,12 @@ async function main() {
     const signRes = await api(`/rest/2.0/membership/level?${COMMON}&method=signin`, cookie);
     debug('[signin] ' + signRes.slice(0, 200));
     if (!signRes) {
+        saveStatus('fail', '签到无响应');
         $.msg($.name, '❌ 签到失败', '无响应\n(若 Cookie 失效,请重新打开网盘签到页抓取)');
         return;
     }
     if (/("errno"|"error_code")\s*:\s*-?(6|2|110)\b/.test(signRes) || /not login|登录/.test(signRes)) {
+        saveStatus('cookie', '登录失效');
         $.msg($.name, '🚫 登录失效', '请重新打开网盘「我的 → 签到 / 会员」页抓 Cookie');
         return;
     }
@@ -158,7 +163,13 @@ async function main() {
     // 3. 查会员成长值 / 等级 → 距 SVIP10 进度
     const tail = await growthTail(cookie, (signPts || 0) + answerPts);
 
+    saveStatus('ok', `${signTip}${answerTip}`);
     $.msg($.name, '✅ 百度网盘成长值签到', `${signTip}${answerTip}${tail}`);
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'baidunetdisk_status');
 }
 
 // 拼「会员成长值 / 等级 / 距下一级 + 估算天数」尾巴(失败不影响主结果)
