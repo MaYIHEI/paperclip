@@ -8,7 +8,7 @@
  * @Modifier: @Sliverkiss(修复 blackBox 参数)
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>(适配新接口)
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-08
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -54,7 +54,7 @@
 
 const $ = new Env('途虎养车');
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 $.is_debug = ($.isNode() ? process.env['IS_DEDUG'] : $.getdata('is_debug')) || 'false';  // 调试模式
 $.token = ($.isNode() ? process.env['TUHU_TOKEN'] : $.getdata('tuhu_token')) || '';  // Token
@@ -109,7 +109,10 @@ async function main() {
             await getIntegral();
         }
         $.log(`----- 所有账号执行完成 -----`);
+        if ($.expired) saveStatus('cookie', `${$.expired} 个账号 Token 无效`);
+        else saveStatus($.signOk ? 'ok' : 'fail', $.signOk ? '签到完成' : $.lastFail || '签到失败');
     } else {
+        saveStatus('cookie', '未抓取 Cookie');
         throw new Error('未找到 Token 变量 ❌');
     }
 }
@@ -162,6 +165,7 @@ async function whoami() {
         msg += `\n当前用户: ${nickName}`;
     } else if (/token无效/.test($.toStr(result))) {
         $.is_login = false;
+        $.expired = ($.expired || 0) + 1;
         msg += `${$.toStr(result)} ❌`;
     } else {
         $.log($.toStr(result));
@@ -194,6 +198,8 @@ async function checkin(type, name) {
     };
 
     var result = await Request(opt);
+    if (result?.data?.rewardIntegral || /已签/.test(result?.message || '')) $.signOk = true;
+    else $.lastFail = `${name}签到失败: ${result?.message || $.toStr(result)}`;
     if (result?.data?.rewardIntegral) {
         msg += `${name}任务: 签到成功, 积分 +${result?.data?.rewardIntegral}, 连续签到: ${result?.data?.continuousDays}/7天 ✅`;
     } else {
@@ -201,6 +207,11 @@ async function checkin(type, name) {
     }
 
     $.messages.push(msg), $.log(msg);
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'tuhu_status');
 }
 
 // 获取用户积分
@@ -263,6 +274,7 @@ function GetCookie() {
             $.tokenArr.push($.newToken);
             $.log(`开始新增用户数据 ${$.newToken}`);
             $.setdata($.toStr($.tokenArr), 'tuhu_token');
+            $.setdata('', 'tuhu_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
             $.msg($.name, `✅ 途虎养车 Cookie 获取成功`, ``);
         } else {
             $.log(`无需更新 Token: ${$.newToken}`);
