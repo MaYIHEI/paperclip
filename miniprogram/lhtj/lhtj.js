@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-24
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env('龙湖天街');
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const CK_KEY = 'lhtj_headers';
 const ACTIVITY_NO = '11111111111686241863606037740000';
@@ -76,6 +76,7 @@ if (typeof $request !== "undefined" && $request.url && $request.url.includes('/s
     }
     const raw = $.getdata(CK_KEY);
     if (!raw) {
+      saveStatus('cookie', '未抓取 Cookie');
       $.msg($.name, '', '❌ 未抓取到 token,请按 README 重写规则抓取');
       return $.done();
     }
@@ -83,10 +84,12 @@ if (typeof $request !== "undefined" && $request.url && $request.url.includes('/s
     try {
       headers = JSON.parse(raw);
     } catch (e) {
+      saveStatus('cookie', 'Cookie 解析失败');
       $.msg($.name, '', '❌ token 数据格式异常,请重新抓取');
       return $.done();
     }
     if (!headers['x-lf-usertoken']) {
+      saveStatus('cookie', 'Cookie 缺失 x-lf-usertoken');
       $.msg($.name, '', '❌ token 缺失 x-lf-usertoken,请重新抓取');
       return $.done();
     }
@@ -125,6 +128,7 @@ function getCookie() {
     return $done({});
   }
   $.setdata(JSON.stringify(data), CK_KEY);
+  $.setdata('', 'lhtj_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
   $.msg($.name, '✅ 龙湖天街 Cookie 获取成功', '可关闭重写规则');
   $done({});
 }
@@ -147,6 +151,7 @@ function sign(headers) {
     $.post(opts, (err, resp, body) => {
       try {
         if (err) {
+          saveStatus('fail', `网络错误: ${err}`);
           $.msg($.name, '签到失败', `网络错误: ${err}`);
           return resolve();
         }
@@ -159,22 +164,32 @@ function sign(headers) {
             const tag = r.sign_type === 20 ? '(连签)' : '';
             return `+${r.reward_num}${type}${tag}`;
           }).join(' / ') || '已签到';
+          saveStatus('ok', `签到成功 ${desc}`);
           $.msg($.name, '✅ 签到成功', desc);
         } else if (data.code === '8040012' || data.code === '8040013') {
           // 风控被拒(目前小程序通道未观察到,APP 通道才会)
+          saveStatus('fail', `风控拦截 [${data.code}]`);
           $.msg($.name, '❌ 风控拦截', `[${data.code}] ${data.message || '请重新抓取 token'} | 响应: ${truncate(body, 200)}`);
         } else if (data.message && /已签|不能重复|今日已/.test(data.message)) {
+          saveStatus('ok', '今日已签');
           $.msg($.name, '✅ 今日已签', data.message);
         } else {
+          saveStatus('fail', `[${data.code}] ${data.message || ''}`);
           $.msg($.name, '❌ 签到失败', `[${data.code}] ${data.message || ''} | 响应: ${truncate(body, 200)}`);
         }
       } catch (e) {
+        saveStatus('fail', `解析异常 ${e.message}`);
         $.msg($.name, '❌ 解析异常', `${e.message} | 响应: ${truncate(body, 300)}`);
       } finally {
         resolve();
       }
     });
   });
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+  $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'lhtj_status');
 }
 
 function truncate(s, n) {
