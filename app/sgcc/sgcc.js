@@ -1,7 +1,7 @@
 /**
  * 网上国网 · 国家电网 95598 积分每日签到
  *
- * 抓取:无需抓包,在 BoxJS 填写网上国网手机号和密码(首次登录按提示填短信验证码)
+ * 抓取:无需抓包,在 Loon 插件设置或 BoxJS 填写网上国网手机号和密码(首次登录按提示填短信验证码)
  * 签到:cron 每天 08:30 自动登录并签到,凭证到期自动重新登录
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
@@ -9,8 +9,14 @@
  * @Updated: 2026-10-15
  *
  * ===== Loon =====
+ * [Argument]
+ * phone = input,"",tag=手机号,desc=网上国网登录手机号;留空则读 BoxJS
+ * password = input,"",tag=密码,desc=网上国网登录密码;留空则读 BoxJS
+ * sms = input,"",tag=短信验证码,desc=首次登录提示新设备验证时填写,再手动运行一次
+ * debug = switch,false,tag=调试模式,desc=打印服务器返回
+ *
  * [Script]
- * cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js, tag=网上国网签到, timeout=60, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enable=true
+ * cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js, argument=[{phone},{password},{sms},{debug}], tag=网上国网签到, timeout=60, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enable=true
  *
  * ===== Surge =====
  * [Script]
@@ -44,15 +50,17 @@ const KEY_SESS = "sgcc_session";      // 登录凭证 {user,token,userId,provinc
 const KEY_DEV = "sgcc_device";        // 模拟设备 {seed,boot,install,tok}
 const KEY_PEND = "sgcc_sms_pending";  // 已发验证码 {user,codeKey,ts,used}
 const P_SIGN = "osg-omgmt1042/member/m1/0103514";
-const DEBUG = JSON.parse($.getdata("sgcc_debug") || "false");
+// Loon 插件设置优先,没填则读 BoxJS
+const ARG = typeof $argument === "object" && $argument ? $argument : {};
+const DEBUG = ARG.debug === true || ARG.debug === "true" || $.getdata("sgcc_debug") === "true";
 
 const getJ = (k) => { try { return JSON.parse($.getdata(k) || "null"); } catch (e) { return null; } };
 const setJ = (k, v) => $.setdata(v == null ? "" : JSON.stringify(v), k);
 const post = (opt) => new Promise((ok) => $.post(opt, (err, resp, data) => ok({ err, status: resp && resp.status, data })));
 class SgError extends Error { constructor(code, msg) { super(msg || code); this.code = String(code || ""); } }
 
-const user = String($.getdata(KEY_PHONE) || "").replace(/\D/g, "").replace(/^86(?=1\d{10}$)/, "");
-const pass = String($.getdata(KEY_PASS) || "");
+const user = String(ARG.phone || $.getdata(KEY_PHONE) || "").replace(/\D/g, "").replace(/^86(?=1\d{10}$)/, "");
+const pass = String(ARG.password || $.getdata(KEY_PASS) || "");
 const mask = user ? user.slice(0, 3) + "****" + user.slice(-4) : "";
 
 // ----- 设备与请求头(按 Android App 3.2.3)-----
@@ -117,7 +125,7 @@ async function login(code, codeKey) {
 async function ensureLogin(force) {
   const s = getJ(KEY_SESS);
   if (!force && s && s.user === user && s.token && s.exp > Date.now() + 3600000) return s;
-  const sms = String($.getdata(KEY_SMS) || "").replace(/\D/g, "");
+  const sms = String(ARG.sms || $.getdata(KEY_SMS) || "").replace(/\D/g, "");
   const pend = getJ(KEY_PEND);
   const pendOk = pend && pend.user === user && Date.now() - pend.ts < 15 * 60000;
   if (pendOk && sms.length === 6 && sms !== pend.used) { setJ(KEY_PEND, { ...pend, used: sms }); return login(sms, pend.codeKey); }
@@ -131,7 +139,7 @@ async function ensureLogin(force) {
       if (!ck) throw new SgError("sms", "验证码发送失败");
       setJ(KEY_PEND, { user, codeKey: String(ck), ts: Date.now(), used: sms });
     }
-    throw new SgError("4006", `验证码已发到 ${mask},15 分钟内填进 BoxJS「短信验证码」后再手动运行一次`);
+    throw new SgError("4006", `验证码已发到 ${mask},15 分钟内填进插件设置或 BoxJS 的「短信验证码」后再手动运行一次`);
   }
 }
 
@@ -143,7 +151,7 @@ async function main() {
     [KEY_SESS, KEY_DEV, KEY_PEND, KEY_SMS].forEach((k) => $.setdata("", k)); $.setdata("false", "sgcc_clear");
     $.msg("网上国网签到", "", "✅ 已清除登录凭证;账号密码保留"); return;
   }
-  if (!user || !pass) { $.msg("⚠️ 网上国网签到", "缺少账号密码", "在 BoxJS 填写网上国网手机号和密码"); return; }
+  if (!user || !pass) { $.msg("⚠️ 网上国网签到", "缺少账号密码", "在 Loon 插件设置或 BoxJS 填写网上国网手机号和密码"); return; }
 
   let sess = await ensureLogin(false), d;
   try { d = await signin(sess); }

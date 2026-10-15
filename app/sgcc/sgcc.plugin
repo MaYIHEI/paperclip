@@ -1,8 +1,0 @@
-#!name=网上国网签到(测试)
-#!desc=网上国网积分签到。在 BoxJS 填手机号和密码,cron 每天 8:30 自动登录并签到;首次登录按提示填短信验证码。无需抓包。🧪 待验证。
-#!author=MaYIHEI
-#!homepage=https://github.com/MaYIHEI/paperclip
-#!icon=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
-
-[Script]
-cron "30 8 * * *" tag=网上国网签到, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js, timeout=60

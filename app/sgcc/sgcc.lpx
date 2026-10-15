@@ -1,0 +1,15 @@
+#!name=网上国网签到
+#!desc=每天 8:30 自动登录并签到,无需抓包。在插件设置填手机号和密码(或留空改用 BoxJS);首次登录按通知把短信验证码填进来再手动运行一次。🧪 待验证
+#!author=MaYIHEI
+#!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/app/sgcc
+#!icon=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
+#!tag=签到
+
+[Argument]
+phone = input,"",tag=手机号,desc=网上国网登录手机号;留空则读 BoxJS
+password = input,"",tag=密码,desc=网上国网登录密码;留空则读 BoxJS
+sms = input,"",tag=短信验证码,desc=首次登录提示新设备验证时填写,再手动运行一次
+debug = switch,false,tag=调试模式,desc=打印服务器返回
+
+[Script]
+cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js, argument=[{phone},{password},{sms},{debug}], tag=网上国网签到, timeout=60, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enable=true
