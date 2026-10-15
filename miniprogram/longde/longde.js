@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-24
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("龙德广场");
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const CK_NAME = "longde_token";
 $.token = ($.isNode() ? process.env.LONGDE_TOKEN : $.getdata(CK_NAME)) || "";
@@ -121,6 +121,7 @@ function parseJWT(token) {
 async function checkin() {
     const payload = parseJWT($.token);
     if (!payload || !payload.mall_id) {
+        saveStatus("cookie", "Cookie 解析失败");
         throw new Error("JWT 解析失败,请重新抓取 token");
     }
     const mallId = payload.mall_id;
@@ -132,6 +133,7 @@ async function checkin() {
     debug(formRes, "checkInForm");
 
     if (formRes && formRes.code === 401) {
+        saveStatus("cookie", `token 已失效: ${formRes.msg || ""}`);
         throw new Error(`token 已失效: ${formRes.msg || ""}`);
     }
 
@@ -142,6 +144,7 @@ async function checkin() {
     debug(res, "checkInRecord");
 
     if (!res) {
+        saveStatus("fail", "签到无响应");
         $.messages.push("❌ 签到失败: 无响应");
         return;
     }
@@ -153,26 +156,35 @@ async function checkin() {
         const extraLine = extra && extra > 0 ? ` (含连签 +${extra})` : "";
         const totalLine = typeof total_point === "number" ? `, 累计 ${total_point} 分` : "";
         const numLine = typeof num === "number" ? `\n📅 本月已签 ${num} 天` : "";
+        saveStatus("ok", `签到成功 +${earned} 分`);
         $.messages.push(`✅ 签到成功: +${earned} 分${extraLine}${totalLine}${numLine}`);
         return;
     }
 
     // 已签
     if (res.code === 422 || /已签|已经签到/.test(res.msg || "")) {
+        saveStatus("ok", "今日已签到");
         $.messages.push(`✨ 今日已签到${res.msg ? `: ${res.msg}` : ""}`);
         return;
     }
 
     // 401 / token 问题
     if (res.code === 401) {
+        saveStatus("cookie", `token 失效: ${res.msg || ""}`);
         $.messages.push(`❌ token 失效: ${res.msg || ""}`);
         return;
     }
 
+    saveStatus("fail", `code=${res.code} ${res.msg || $.toStr(res)}`);
     $.messages.push(`❌ 签到失败: code=${res.code} msg=${res.msg || $.toStr(res)}`);
 }
 
 // ============ 请求 ============
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "longde_status");
+}
 
 function request(method, path, body) {
     return new Promise((resolve) => {
@@ -228,6 +240,7 @@ function getCookie() {
             return;
         }
         $.setdata(newToken, CK_NAME);
+        $.setdata("", "longde_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         const expDate = payload.exp ? new Date(payload.exp * 1000).toLocaleDateString() : "?";
         $.msg($.name, "✅ 龙德广场 Cookie 获取成功", `mall_id: ${payload.mall_id}\n有效至: ${expDate}`);
     } catch (e) {
@@ -375,10 +388,12 @@ if (typeof $request !== "undefined") {
             return;
         }
         if (!$.token) {
+            saveStatus("cookie", "未抓取 Cookie");
             throw new Error("未配置 token,请先进小程序'签到'页抓取");
         }
         const payload = parseJWT($.token);
         if (payload && payload.exp && payload.exp * 1000 < Date.now()) {
+            saveStatus("cookie", "token 已过期");
             throw new Error("token 已过期,请重新抓取");
         }
         await checkin();
