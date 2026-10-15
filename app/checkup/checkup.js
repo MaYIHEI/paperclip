@@ -33,14 +33,42 @@
 
 const $ = new Env("Cookie 体检");
 
-const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 // [显示名, 状态 key];没装或从未运行的脚本没有记录,自动跳过
 const SCRIPTS = [
+    ["微博超话", "weibotalk_status"],
+    ["腾讯视频", "tenvideo_status"],
+    ["米游社", "mihoyo_status"],
+    ["一点万象", "newmixc_status"],
     ["小米商城", "mishop_status"],
+    ["小米抽奖", "milottery_status"],
+    ["小米有品", "youpin_status"],
+    ["龙湖天街 App", "lhtj_app_status"],
+    ["QQ音乐", "qqmusic_status"],
+    ["万达电影", "wanda_status"],
+    ["听听FM", "tingtingfm_status"],
     ["WPS", "wps_status"],
+    ["扫描全能王", "camscanner_status"],
+    ["追觅", "dreame_status"],
+    ["灵狐灵购", "linghu_status"],
+    ["NodeSeek", "nodeseek_status"],
+    ["123社区", "pan1_status"],
+    ["AgentRouter", "agentrouter_status"],
+    ["网上国网", "sgcc_status"],
+    ["百度网盘", "baidunetdisk_status"],
+    ["泡泡玛特", "ppmt_status"],
+    ["途虎养车", "tuhu_status"],
+    ["海底捞", "haidilao_status"],
+    ["惠省红包墙", "huisheng_status"],
+    ["名创优品", "miniso_status"],
+    ["龙德广场", "longde_status"],
+    ["龙湖天街", "lhtj_status"],
+    ["松山棉店", "songshan_status"],
     ["味多美", "wedome_status"],
+    ["北京华联", "bhg_status"],
+    ["林里", "linli_status"],
 ];
 
 const cookie = [], fail = [];
