@@ -1,0 +1,88 @@
+/**
+ * Cookie 体检 · 一条通知列出哪些签到脚本需要重新抓 Cookie
+ *
+ * 体检:汇总各签到脚本最近一次运行结果;cron 每天一次,也可随时手动运行
+ *
+ * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
+ * @Channel: Telegram 频道 https://t.me/mayihei
+ * @Updated: 2026-10-15
+ *
+ * ===== Loon =====
+ * [Script]
+ * cron "0 12 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/checkup/checkup.js, tag=Cookie 体检, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
+ *
+ * ===== Surge =====
+ * [Script]
+ * Cookie 体检 = type=cron,cronexp=0 12 * * *,timeout=30,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/checkup/checkup.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+ *
+ * ===== Quantumult X =====
+ * [task_local]
+ * 0 12 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/checkup/checkup.js, tag=Cookie 体检, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enabled=true
+ *
+ * ===== Stash =====
+ * cron:
+ *   script:
+ *     - name: Cookie 体检
+ *       cron: '0 12 * * *'
+ *       timeout: 30
+ * script-providers:
+ *   Cookie 体检:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/checkup/checkup.js
+ *     interval: 86400
+ */
+
+const $ = new Env("Cookie 体检");
+
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
+$.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
+
+// [显示名, 状态 key];没装或从未运行的脚本没有记录,自动跳过
+const SCRIPTS = [
+    ["小米商城", "mishop_status"],
+    ["WPS", "wps_status"],
+    ["味多美", "wedome_status"],
+];
+
+const cookie = [], fail = [];
+let ok = 0;
+for (const [name, key] of SCRIPTS) {
+    let r;
+    try { r = JSON.parse($.getdata(key) || "null"); } catch (e) { r = null; }
+    if (!r) continue;
+    const label = `${name}${day(r.t) === day(Date.now()) ? "" : `(${day(r.t)})`}`; // 不是今天的结果标上日期
+    if (r.s === "ok") ok++;
+    else if (r.s === "cookie") cookie.push(label);
+    else fail.push(`${label}:${r.msg}`);
+}
+
+const bad = cookie.length + fail.length;
+const lines = [];
+if (cookie.length) lines.push(`需重新抓取:${cookie.join("、")}`);
+if (fail.length) lines.push(`签到失败:\n${fail.join("\n")}`);
+if (!ok && !bad) lines.push("暂无记录,签到脚本运行一次后会自动登记");
+$.msg($.name, bad ? `⚠️ ${bad} 个需要处理,${ok} 个正常` : ok ? `✅ 全部正常(${ok} 个)` : "", lines.join("\n"));
+$.done();
+
+// 北京时间 MM-DD
+function day(t) {
+    return new Date(t + 8 * 3600 * 1000).toISOString().slice(5, 10);
+}
+
+function Env(s) {
+    this.name = s;
+    this.isSurge = () => typeof $httpClient !== "undefined";
+    this.isQuanX = () => typeof $task !== "undefined";
+    this.isLoon = () => typeof $loon !== "undefined";
+    this.log = (...a) => console.log(a.join("\n"));
+    this.msg = (t = this.name, s = "", b = "") => {
+        if (this.isSurge() || this.isLoon()) $notification.post(t, s, b);
+        else if (this.isQuanX()) $notify(t, s, b);
+        console.log(["", "====📣" + t + "====", s, b].filter(Boolean).join("\n"));
+    };
+    this.getdata = (k) => {
+        if (this.isSurge() || this.isLoon()) return $persistentStore.read(k);
+        if (this.isQuanX()) return $prefs.valueForKey(k);
+        return null;
+    };
+    this.done = (v = {}) => { if (typeof $done !== "undefined") $done(v); };
+}
