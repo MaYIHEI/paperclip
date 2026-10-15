@@ -8,7 +8,7 @@
  * @Author: @Evilbutcher (https://github.com/evilbutcher) / @toulanboy (https://github.com/toulanboy/scripts)
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-11
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -54,7 +54,7 @@
 
 const $ = new Env("微博超话");
 
-const SCRIPT_VERSION = "2026-05-11.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 $.delete_cookie = false;
@@ -146,6 +146,7 @@ function loadCookies() {
     if (!$.checkinUrl || !$.checkinHeadersStr) missing.push('签到 cookie');
 
     if (missing.length > 0) {
+        saveStatus('cookie', `缺少${missing.join(' + ')}`);
         $.msg(
             '微博超话',
             `🚫 缺少 ${missing.join(' + ')}`,
@@ -159,6 +160,7 @@ function loadCookies() {
         $.checkinHeaders = JSON.parse($.checkinHeadersStr);
         return true;
     } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg('微博超话', '🚫 Cookie 解析失败', '请清空 cookie 后重新抓取');
         return false;
     }
@@ -204,6 +206,7 @@ function fetchTopicPage(sinceId) {
                 if (obj.errmsg || obj.errno) {
                     const em = obj.errmsg || `errno: ${obj.errno}`;
                     $.log(`[列表] 微博错误: ${em}`);
+                    $.listError = em;
                     let hint = '\n\n🔍 风控签名(X-Validator)可能已过期。\n请重新抓 cookie:\n1️⃣ 进 我的→超话社区→我的→关注\n2️⃣ 进任一超话签到一次';
                     $.msg('微博超话', '🚨 拉取关注列表失败', `${em}${hint}`);
                     resolve(null);
@@ -325,15 +328,23 @@ function cleanHeaders(h) {
     return out;
 }
 
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'weibotalk_status');
+}
+
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 function sendSummary() {
     const total = $.successNum + $.alreadyNum + $.failNum;
     const title = `${$.name}: 新签 ${$.successNum},已签 ${$.alreadyNum},失败 ${$.failNum} (共${total})`;
     if ($.message.length === 0) {
+        // 关注列表被微博拒绝 = 风控签名过期,需要重抓;其他情况(没关注超话/网络)算失败
+        saveStatus($.listError ? 'cookie' : 'fail', $.listError ? `拉取关注列表失败:${$.listError}` : '没有签到任何超话');
         $.msg(title, '', '⚠️ 没有签到任何超话,请检查 cookie 或关注列表');
         return;
     }
+    saveStatus($.successNum + $.alreadyNum > 0 ? 'ok' : 'fail', `新签 ${$.successNum},已签 ${$.alreadyNum},失败 ${$.failNum}`);
     for (let i = 0; i < $.message.length; i += $.msg_max_num) {
         const chunk = $.message.slice(i, i + $.msg_max_num).join('\n');
         const subtitle = `第 ${Math.floor(i / $.msg_max_num) + 1} 页 / 共 ${Math.ceil($.message.length / $.msg_max_num)} 页`;

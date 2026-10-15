@@ -43,6 +43,7 @@ const KEY_CHECKIN_HEADERS = 'evil_tokencheckinheaders';
             $.setdata(url, KEY_LIST_URL);
             $.setdata(JSON.stringify(headers), KEY_LIST_HEADERS);
             $.setdata(body, KEY_LIST_BODY);
+            $.setdata('', 'weibotalk_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
             $.log(`[INFO] 列表 cookie: url=${url.length}字符 headers=${Object.keys(headers).length}个 body=${body.length}字符`);
 
             const checkinExists = !!$.getdata(KEY_CHECKIN_URL);
@@ -65,6 +66,7 @@ const KEY_CHECKIN_HEADERS = 'evil_tokencheckinheaders';
             const headers = $request.headers;
             $.setdata(url, KEY_CHECKIN_URL);
             $.setdata(JSON.stringify(headers), KEY_CHECKIN_HEADERS);
+            $.setdata('', 'weibotalk_status');
             $.log(`[INFO] 签到 cookie: url=${url.length}字符 headers=${Object.keys(headers).length}个`);
             $.log(`[INFO] 签到 url 含 active_checkin: ${/active_checkin/.test(url)}`);
 

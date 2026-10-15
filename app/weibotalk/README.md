@@ -94,6 +94,7 @@ script-providers:
 | - | 原作者 [@Evilbutcher](https://github.com/Evilbutcher) / [@toulanboy](https://github.com/toulanboy) |
 | 2026-05 | 适配新接口: `cardlist` → `container_timeline_topicsub`(POST+since_id);双 cookie 模式适配 X-Validator |
 | 2026-05-24 | tag 统一为 `微博超话 Cookie` / `微博超话签到`,加 img-url 图标 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../checkup/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
