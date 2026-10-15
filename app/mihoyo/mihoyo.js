@@ -7,7 +7,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-27
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -54,7 +54,7 @@
 
 const $ = new Env("米游社");
 
-const SCRIPT_VERSION = "2026-06-27.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 $.delete_cookie = false;
@@ -85,6 +85,7 @@ const GAMES = {
         // 用存储的游戏角色列表 (cookie 抓取时已从 stoken 接口响应里抠出来,绕过 DS 校验)
         const roles = $.gameRoles || [];
         if (roles.length === 0) {
+            saveStatus('cookie', '未获取到游戏角色');
             $.msg('米游社', '🚫 未获取到游戏角色', '请重新抓 cookie:\n打开米游社 APP "我的" 页面');
             return;
         }
@@ -142,6 +143,7 @@ function loadCookies() {
     if (!$.webCookie || !$.webHeadersStr) missing.push('web 签到 cookie');
 
     if (missing.length > 0) {
+        saveStatus('cookie', `缺少${missing.join(' + ')}`);
         $.msg(
             '米游社',
             `🚫 缺少 ${missing.join(' + ')}`,
@@ -155,6 +157,7 @@ function loadCookies() {
         $.webHeaders = JSON.parse($.webHeadersStr);
         return true;
     } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg('米游社', '🚫 Cookie 解析失败', '请清空 cookie 后重新抓取');
         return false;
     }
@@ -184,6 +187,7 @@ async function signOne(cfg, role) {
             // cookie 失效给提示
             if (info.retcode === -100 || /token|登录|登錄/.test(info.message || '')) {
                 $.message.push(`💡 web cookie 可能已过期,请重抓签到页面 cookie`);
+                $.cookieExpired = true;
             }
             return;
         }
@@ -295,11 +299,18 @@ function cleanHeaders(h) {
     return out;
 }
 
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'mihoyo_status');
+}
+
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 function sendSummary() {
     const total = $.successNum + $.alreadyNum + $.failNum;
     const title = `${$.name}: 成功 ${$.successNum},已签 ${$.alreadyNum},失败 ${$.failNum} (共${total})`;
+    if ($.cookieExpired) saveStatus('cookie', 'web Cookie 已过期');
+    else saveStatus($.successNum + $.alreadyNum > 0 ? 'ok' : 'fail', `成功 ${$.successNum},已签 ${$.alreadyNum},失败 ${$.failNum}`);
     if ($.message.length === 0) {
         $.msg(title, '', '⚠️ 没有签到任何游戏,请检查 cookie 或游戏角色绑定');
         return;

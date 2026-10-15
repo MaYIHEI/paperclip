@@ -78,6 +78,7 @@ const KEY_WEB_HEADERS     = 'mhy_web_headers';
             }
             $.setdata(parts.join('; '), KEY_WEB_COOKIE);
             $.setdata(JSON.stringify(headers), KEY_WEB_HEADERS);  // header 模板(DS / x-rpc-* / UA)仍从请求头取
+            $.setdata('', 'mihoyo_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
             $.log(`[INFO] web cookie 已存: ${parts.length}字段 headers ${Object.keys(headers).length}个`);
             notify();
         } catch (e) { $.log('[ERROR] web cookie: ' + e); }
