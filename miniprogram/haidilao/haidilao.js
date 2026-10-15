@@ -7,7 +7,7 @@
  * @Author: @Sliverkiss
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-24
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
  */
 const $ = new Env("海底捞");
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const ckName = "hdl_data";
 const Notify = 1;
@@ -84,6 +84,10 @@ async function main() {
         }
     }
     await Promise.all(taskall);
+    const expired = userList.filter(u => !u.ckStatus).length;
+    const signed = userList.some(u => /^[✅✨]/.test(u.signMsg));
+    if (expired) saveStatus('cookie', `${expired} 个账号 token 失效`);
+    else saveStatus(signed ? 'ok' : 'fail', signed ? '签到完成' : (userList[0] && userList[0].signMsg) || '签到失败');
 }
 
 class UserInfo {
@@ -213,6 +217,7 @@ async function getCookie() {
             existing.push(token);
             const newVal = existing.join('@');
             $.setdata(newVal, ckName);
+            $.setdata('', 'haidilao_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
             $.msg($.name, '✅ 海底捞 Cookie 获取成功', `共 ${existing.length} 个账号`);
             $.log(`[INFO] 新增 token: ${token}`);
         } else {
@@ -222,6 +227,11 @@ async function getCookie() {
         $.log(`[ERROR] getCookie: ${e}`);
         $.msg($.name, '', `❌ 获取 Token 失败: ${e.message || e}`);
     }
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'haidilao_status');
 }
 
 function ObjectKeys2LowerCase(obj) {
@@ -239,7 +249,7 @@ function ObjectKeys2LowerCase(obj) {
         $.notifyMsg.push("✅ Cookie 已清除，请重新抓取");
         return;
     }
-    if (!(await checkEnv())) { throw new Error(`❌未检测到ck，请添加环境变量`); }
+    if (!(await checkEnv())) { saveStatus('cookie', '未抓取 Cookie'); throw new Error(`❌未检测到ck，请添加环境变量`); }
     if (userList.length > 0) {
         await main();
     }
