@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-18
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("惠省红包墙");
 
-const SCRIPT_VERSION = "2026-05-18.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 $.delete_cookie = false;
@@ -77,6 +77,7 @@ const KEY_LIST_BODY = 'huisheng_list_body';
         const tabs = buildGrantTabs(listResp);
         const totalCoupons = tabs.reduce((s, t) => s + t.rightCodes.length, 0);
         if (totalCoupons === 0) {
+            saveStatus('ok', '没有可领的券');
             $.msg($.name, '⚠️ 没有可领的券', '可能今日已领或活动已结束');
             return;
         }
@@ -92,6 +93,7 @@ const KEY_LIST_BODY = 'huisheng_list_body';
         summarize(grantResp);
     } catch (e) {
         $.log(`❌ 执行异常: ${e.message || e}`);
+        saveStatus('fail', String(e.message || e));
         $.msg($.name, '❌ 执行异常', String(e.message || e));
     }
 })()
@@ -121,6 +123,7 @@ function loadCookies() {
     $.log(`[diag] headers 读到 ${$.headersStr.length} 字符,body 读到 ${$.listBody.length} 字符`);
 
     if (!$.headersStr || !$.listBody) {
+        saveStatus('cookie', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少鉴权数据', `headers=${$.headersStr.length}字符 body=${$.listBody.length}字符\n请先打开 cookie 抓取脚本,然后:\n1️⃣ 进微信"惠省"小程序\n2️⃣ 在首页停留 3 秒触发列表接口`);
         return false;
     }
@@ -129,6 +132,7 @@ function loadCookies() {
         $.listBodyObj = JSON.parse($.listBody);
         return true;
     } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg($.name, '🚫 数据解析失败', '请清空 cookie 后重新抓取');
         return false;
     }
@@ -154,9 +158,10 @@ function listActivityCoupon() {
         if ($.debug) $.log(`[list] headers: ${$.toStr(headers)}\n[list] body: ${body}`);
 
         $.post(opts, (err, resp, data) => {
-            if (err) { $.log(`[list] 网络错误: ${$.toStr(err)}`); resolve(null); return; }
+            if (err) { $.log(`[list] 网络错误: ${$.toStr(err)}`); saveStatus('fail', '拉券列表网络错误'); resolve(null); return; }
             if (resp && resp.statusCode !== 200) {
                 $.log(`[list] HTTP ${resp.statusCode}: ${(data || '').substring(0, 200)}`);
+                saveStatus('cookie', `拉券列表失败 HTTP ${resp.statusCode}`);
                 $.msg($.name, '❌ 拉券列表失败', `HTTP ${resp.statusCode},可能 mtgsig 已过期。请重新抓 cookie。`);
                 resolve(null); return;
             }
@@ -164,6 +169,7 @@ function listActivityCoupon() {
                 const obj = JSON.parse(data);
                 if (obj.code !== 200) {
                     $.log(`[list] 业务失败: ${obj.code} ${obj.msg}`);
+                    saveStatus('cookie', `拉券列表失败 ${obj.code} ${obj.msg}`);
                     $.msg($.name, '❌ 拉券列表失败', `${obj.code} ${obj.msg}\n\n可能 mtgsig/token 已失效,请重新抓 cookie`);
                     resolve(null); return;
                 }
@@ -209,9 +215,10 @@ function grantActivityCoupon(listResp, tabs) {
         if ($.debug) $.log(`[grant] body: ${body}`);
 
         $.post(opts, (err, resp, data) => {
-            if (err) { $.log(`[grant] 网络错误: ${$.toStr(err)}`); resolve(null); return; }
+            if (err) { $.log(`[grant] 网络错误: ${$.toStr(err)}`); saveStatus('fail', '领券网络错误'); resolve(null); return; }
             if (resp && resp.statusCode !== 200) {
                 $.log(`[grant] HTTP ${resp.statusCode}: ${(data || '').substring(0, 300)}`);
+                saveStatus('fail', `领券失败 HTTP ${resp.statusCode}`);
                 $.msg($.name, '❌ 领券失败', `HTTP ${resp.statusCode}`);
                 resolve(null); return;
             }
@@ -219,6 +226,7 @@ function grantActivityCoupon(listResp, tabs) {
                 const obj = JSON.parse(data);
                 if (obj.code !== 200) {
                     $.log(`[grant] 业务失败: ${obj.code} ${obj.msg}`);
+                    saveStatus('fail', `领券失败 ${obj.code} ${obj.msg}`);
                     $.msg($.name, '❌ 领券失败', `${obj.code} ${obj.msg}`);
                     resolve(null); return;
                 }
@@ -316,8 +324,14 @@ function summarize(grantData) {
     const subtitle = $.failNum > 0 ? `失败 ${$.failNum} 张` : '';
     // 通知 body 折叠前 15 条
     const body = $.couponNames.slice(0, 15).join('、') + ($.couponNames.length > 15 ? ` 等 ${$.couponNames.length} 张` : '');
+    saveStatus('ok', `领到 ${$.successNum} 张${subtitle ? `,${subtitle}` : ''}`);
     $.msg($.name, title, body || subtitle);
     $.log(`${title} ${subtitle}\n${body}`);
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'huisheng_status');
 }
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
