@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-04
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("松山棉店");
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_HEADERS = "songshan_headers"; // 签到请求头(JSON)
@@ -85,6 +85,7 @@ function getCookie() {
 
         $.setdata(JSON.stringify(headers), CK_HEADERS);
         $.setdata(body, CK_BODY);
+        $.setdata("", "songshan_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
 
         $.msg($.name, "✅ 松山棉店 Cookie 获取成功", "可关闭抓包,主脚本自动签到");
     } catch (e) {
@@ -110,6 +111,7 @@ async function checkin() {
     debug(res, "sign");
 
     if (!res) {
+        saveStatus("fail", "签到无响应");
         $.messages.push("❌ 签到失败: 无响应");
         return;
     }
@@ -119,18 +121,27 @@ async function checkin() {
         const extra = res.data.extraReward || {};
         const pName = res.data.pointName || "积分";
         const got = (fixed.points || 0) + (extra.points || 0);
+        saveStatus("ok", `签到成功 +${got} ${pName}`);
         $.messages.push(`✅ 签到成功: +${got} ${pName}`);
         return;
     }
     // 已签到 / token 失效等
     const msg = res.errmsg || $.toStr(res);
     if (/已签|重复|已经签到/.test(msg)) {
+        saveStatus("ok", "今日已签到");
         $.messages.push("✨ 今日已签到");
     } else if (/登录|token|鉴权|未授权|失效|过期/.test(msg)) {
+        saveStatus("cookie", `token 失效: ${msg}`);
         $.messages.push(`❌ token 失效,请重新抓取: ${msg}`);
     } else {
+        saveStatus("fail", `errcode=${res.errcode} ${msg}`);
         $.messages.push(`❌ 签到失败: errcode=${res.errcode} ${msg}`);
     }
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "songshan_status");
 }
 
 // ============ 请求 ============
@@ -204,11 +215,13 @@ if (typeof $request !== "undefined") {
         const rawHeaders = $.isNode() ? process.env.SONGSHAN_HEADERS : $.getdata(CK_HEADERS);
         $.body = $.isNode() ? process.env.SONGSHAN_BODY : $.getdata(CK_BODY);
         if (!rawHeaders || !$.body) {
+            saveStatus("cookie", "未抓取 Cookie");
             throw new Error("未配置签到凭据,请先进小程序签到页点一次签到抓取");
         }
         try {
             $.headers = JSON.parse(rawHeaders);
         } catch (e) {
+            saveStatus("cookie", "Cookie 解析失败");
             throw new Error("已存请求头损坏,请重新抓取");
         }
         await checkin();
