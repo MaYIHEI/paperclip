@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-07
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("味多美");
 
-const SCRIPT_VERSION = "2026-06-13.r8"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_OPENID = "wedome_openid";      // 公众号 openid(永久固定)
@@ -92,6 +92,7 @@ function captureOpenid() {
             return;
         }
         $.setdata(openid, CK_OPENID);
+        $.setdata("", "wedome_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         // member/find 响应同时带 name,signIn body 需要
         const mname = j.data.member.name || "";
         if (mname) $.setdata(mname, CK_NAME);
@@ -120,6 +121,7 @@ async function checkin() {
     const openid = ($.isNode() ? process.env.WEDOME_OPENID : $.getdata(CK_OPENID)) || "";
     $.log(`[检测] 版本=${SCRIPT_VERSION}  openid=${openid ? openid.slice(0, 4) + "…" + openid.slice(-4) : "空"}`);
     if (!openid) {
+        saveStatus("cookie", "未抓取 Cookie");
         throw new Error(`[${SCRIPT_VERSION}] 未配置 openid,请先进味多美小程序签到页抓取(或 BoxJS 填 wedome_openid)`);
     }
 
@@ -129,6 +131,7 @@ async function checkin() {
     const token = login && login.data && login.data.token;
     const memberId = login && login.data && login.data.memberId;
     if (!token || !memberId) {
+        saveStatus(login ? "cookie" : "fail", login ? "openid 失效" : "请求异常");
         throw new Error(`[${SCRIPT_VERSION}] loginByOpenid 失败(openid 失效?重进小程序重抓): ${$.toStr(login).slice(0, 160)}`);
     }
     $.log(`[登录] token 末6=${token.slice(-6)}  memberId=${memberId}`);
@@ -138,6 +141,7 @@ async function checkin() {
     debug(act, "get");
     const activityId = act && act.data && act.data.id;
     if (!activityId) {
+        saveStatus("fail", "取签到活动失败");
         throw new Error(`[${SCRIPT_VERSION}] 取 activityId 失败: ${$.toStr(act).slice(0, 160)}`);
     }
     const lastActId = $.getdata(CK_ACTID) || "";
@@ -185,12 +189,15 @@ async function checkin() {
     const changedNote = actChanged ? " ⚠️ activityId 已变更" : "";
     if (delta != null && delta > 0) {
         $.setdata(activityId, CK_ACTID);
+        saveStatus("ok", `签到成功 +${delta} 积分`);
         $.messages.push(`✅ 签到成功 (+${delta} 积分)${changedNote}`);
     } else if (signedToday) {
         // 积分没动但今天确有签到记录 → 多为当天 cron 已签过,正常
         $.setdata(activityId, CK_ACTID);
+        saveStatus("ok", "今日已签到");
         $.messages.push(`✨ 今日已签到${check.data.index ? `,第 ${check.data.index} 天` : ""}`);
     } else {
+        saveStatus("fail", "签到失败,积分未变");
         $.messages.push(`${tag} ❌ 签到失败,积分未变${memberName ? "" : "(memberName 为空)"}`);
     }
     if (p1 != null) $.messages.push(`💰 当前积分: ${p1}`);
@@ -247,6 +254,11 @@ function debug(content, title = "debug") {
     $.log(`\n----- ${title} -----`);
     $.log(typeof content === "string" ? content : $.toStr(content));
     $.log(`----- end -----\n`);
+}
+
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "wedome_status");
 }
 
 async function sendMsg(message) {
