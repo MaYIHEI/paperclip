@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-25
+ * @Updated: 2026-10-15
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("追觅");
 
-const SCRIPT_VERSION = "2026-06-25.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'dreame_data';
@@ -85,6 +85,7 @@ if (typeof $request !== "undefined") {
         try {
             await main();
         } catch (e) {
+            saveStatus('fail', String(e));
             $.msg($.name, '❌ 运行异常', String(e));
         } finally {
             $.done();
@@ -118,6 +119,7 @@ function getCookie() {
     }
 
     $.setdata(JSON.stringify({ sessid, user_id: userId }), CK_KEY);
+    $.setdata('', 'dreame_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
     $.msg($.name, '✅ 追觅 Cookie 获取成功',
         `user_id: ${userId}\nsessid: ${maskToken(sessid)}`);
 }
@@ -126,6 +128,7 @@ function getCookie() {
 async function main() {
     const raw = $.getdata(CK_KEY);
     if (!raw) {
+        saveStatus('cookie', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少 Cookie',
             '请先开启重写规则,打开追觅 APP「商城 / 我的」页面');
         return;
@@ -135,10 +138,12 @@ async function main() {
     try {
         ck = JSON.parse(raw);
     } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg($.name, '🚫 Cookie 解析失败', '请清空后重新触发抓取');
         return;
     }
     if (!ck.sessid || !ck.user_id) {
+        saveStatus('cookie', 'Cookie 不完整');
         $.msg($.name, '🚫 Cookie 不完整', '请重新打开页面抓取');
         return;
     }
@@ -148,10 +153,12 @@ async function main() {
     if (!status || status.iRet !== 1) {
         const m = (status && status.sMsg) || '无响应';
         // sessid 过期 / 失效在这一步暴露(返回鉴权类错误)
+        saveStatus('fail', `状态查询失败:${m}`);
         $.msg($.name, '❌ 状态查询失败', `${m}\n(若提示登录失效,请重新抓 Cookie)`);
         return;
     }
     if (status.data && status.data.todaySignedIn === true) {
+        saveStatus('ok', '今日已签到');
         $.msg($.name, '✨ 今日已签到',
             `连签 ${status.data.continueSignDays || 0} 天`);
         return;
@@ -161,6 +168,7 @@ async function main() {
     const r = await call('sign-in', ck);
     if (!r || r.iRet !== 1) {
         const m = (r && r.sMsg) || JSON.stringify(r).slice(0, 200);
+        saveStatus(/已签|签过/.test(m) ? 'ok' : 'fail', m);
         if (/已签|签过/.test(m)) {
             $.msg($.name, '✨ 今日已签到', m);
         } else {
@@ -190,6 +198,7 @@ async function main() {
     }
 
     const body = [todayPoint, continueDays, total].filter(Boolean).join(' · ') || '签到成功';
+    saveStatus('ok', '签到成功');
     $.msg($.name, '✅ 追觅签到成功', body);
 }
 
@@ -240,6 +249,11 @@ function call(endpoint, ck, extra = {}) {
 }
 
 // 签名: 把盐塞进 security_key 字段, 所有 key 排序后拼 "k=v&k=v..." 再 md5
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+function saveStatus(s, msg) {
+    $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'dreame_status');
+}
+
 function buildSign(params) {
     const p = { ...params, security_key: SALT };
     const s = Object.keys(p).sort().map(k => `${k}=${p[k]}`).join('&');
