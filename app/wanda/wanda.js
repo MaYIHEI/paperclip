@@ -12,8 +12,8 @@
  * [MITM]
  * hostname = user-api-prd-mx.wandafilm.com
  * [Script]
- * http-request ^https:\/\/user-api-prd-mx\.wandafilm\.com\/user\/user_info tag=万达电影 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wanda/wanda.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wanda.png
- * cron "20 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wanda/wanda.js, tag=万达电影签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wanda.png, enable=true
+ * request if ${url} ~= /^https:\/\/user-api-prd-mx\.wandafilm\.com\/user\/user_info/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wanda/wanda.cookie.js") with tag="万达电影 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wanda.png"
+ * cron "20 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wanda/wanda.js") with tag="万达电影签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wanda.png"
  *
  * ===== Surge =====
  * [MITM]
