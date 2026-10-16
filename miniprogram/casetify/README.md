@@ -25,9 +25,9 @@ CASETiFY 微信小程序每日签到。一天 1 C 币,连签 7 天 6 C 币奖励
 hostname = mini-app-api.casetify.cn
 
 [Script]
-http-response ^https:\/\/mini-app-api\.casetify\.cn\/api\/v4\/estore\/member\/checkWebToken tag=CASETiFY Cookie, requires-body=1, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/casetify/casetify.js, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/casetify.png
+response if ${url} ~= /^https:\/\/mini-app-api\.casetify\.cn\/api\/v4\/estore\/member\/checkWebToken/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/casetify/casetify.js") with tag="CASETiFY Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/casetify.png", requires_body=true
 
-cron "5 0 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/casetify/casetify.js, tag=CASETiFY签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/casetify.png
+cron "5 0 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/casetify/casetify.js") with tag="CASETiFY签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/casetify.png"
 ```
 
 ### Surge
