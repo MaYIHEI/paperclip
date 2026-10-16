@@ -12,8 +12,8 @@
  * [MITM]
  * hostname = cn-yx-wxmall.dreame.tech
  * [Script]
- * http-request ^https:\/\/cn-yx-wxmall\.dreame\.tech\/main\/my\/info tag=灵狐灵购 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/linghu/linghu.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linghu.png
- * cron "33 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/linghu/linghu.js, tag=灵狐灵购签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linghu.png, enable=true
+ * request if ${url} ~= /^https:\/\/cn-yx-wxmall\.dreame\.tech\/main\/my\/info/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/linghu/linghu.js") with tag="灵狐灵购 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linghu.png", requires_body=true
+ * cron "33 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/linghu/linghu.js") with tag="灵狐灵购签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linghu.png"
  *
  * ===== Surge =====
  * [MITM]
