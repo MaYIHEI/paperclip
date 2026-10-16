@@ -25,9 +25,9 @@
 hostname = api-cs.intsig.net
 
 [Script]
-http-request ^https:\/\/api-cs\.intsig\.net\/user\/cs\/get_user_attribute tag=扫描全能王 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png
+request if ${url} ~= /^https:\/\/api-cs\.intsig\.net\/user\/cs\/get_user_attribute/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.cookie.js") with tag="扫描全能王 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png"
 
-cron "15 10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.js, tag=扫描全能王签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png, enable=true
+cron "15 10 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.js") with tag="扫描全能王签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png"
 ```
 
 ## Surge
