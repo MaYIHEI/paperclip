@@ -16,7 +16,7 @@
  * debug = switch,false,tag=调试模式,desc=打印服务器返回
  *
  * [Script]
- * cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js, argument=[{phone},{password},{sms},{debug}], tag=网上国网签到, timeout=60, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enable=true
+ * cron "30 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js", {${phone}, ${password}, ${sms}, ${debug}}) with tag="网上国网签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png", timeout=60
  *
  * ===== Surge =====
  * [Script]

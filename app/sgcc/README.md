@@ -30,7 +30,7 @@ https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/
 
 ```ini
 [Script]
-cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js, tag=网上国网签到, timeout=60, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png, enable=true
+cron "30 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js") with tag="网上国网签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png", timeout=60
 ```
 
 ## Surge
