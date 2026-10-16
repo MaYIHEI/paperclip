@@ -2,7 +2,7 @@
  * NodeSeek · 每日签到
  *
  * 抓取：用 Safari 打开 nodeseek.com 任意页面（触发 Cookie 抓取脚本）
- * 签到：cron 定时自动签到；需在 BoxJS 配置中继地址和密钥
+ * 签到：cron 定时自动签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
@@ -61,202 +61,68 @@ if (typeof $argument === "object" && $argument) {
     $.getdata = (key) => ($argument[key] === undefined || $argument[key] === "" ? readStore(key) : String($argument[key]));
 }
 
-const SCRIPT_VERSION = "2026-10-16.r1";
+const SCRIPT_VERSION = "2026-10-16.r2";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
-
-const CK_KEY        = "nodeseek_cookie";
-const UA_KEY        = "nodeseek_ua";
-const RANDOM_KEY    = "nodeseek_random";
-const RELAY_URL_KEY = "nodeseek_relay_url";
-const RELAY_KEY_KEY = "nodeseek_relay_key";
-const DEBUG_KEY     = "nodeseek_debug";
 
 const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
 
-(async () => {
-    const cookie = $.getdata(CK_KEY) || "";
-    if (!cookie) {
-        saveStatus("cookie", "未抓取 Cookie");
-        $.msg("NodeSeek", "🚫 缺少 Cookie", "请先用 Safari 打开 nodeseek.com 触发 Cookie 抓取");
-        $.done(); return;
-    }
-    if (!cookie.includes("pjwt")) {
-        saveStatus("cookie", "Cookie 缺少 pjwt");
-        $.msg("NodeSeek", "🚫 Cookie 无效", "缺少 pjwt，请重新抓取");
-        $.done(); return;
-    }
-
-    const relayUrl = normalizeRelayUrl($.getdata(RELAY_URL_KEY) || "");
-    const relayKey = $.getdata(RELAY_KEY_KEY) || "";
-    if (!relayUrl || !relayKey) {
-        saveStatus("fail", "未配置中继");
-        $.msg("NodeSeek", "🚫 未配置中继", "请在 BoxJS 中设置 nodeseek_relay_url 和 nodeseek_relay_key");
-        $.done(); return;
-    }
-    if (!/^https?:\/\/.+\/attend(?:\?.*)?$/i.test(relayUrl)) {
-        saveStatus("fail", "中继地址格式错误");
-        $.msg("NodeSeek", "🚫 中继地址格式错误", "请填写完整地址，例如 http://VPS_IP:3001/attend");
-        $.done(); return;
-    }
-
-    const UA     = $.getdata(UA_KEY) || UA_FALLBACK;
-    const random = ($.getdata(RANDOM_KEY) || "false") === "true";
-    const DEBUG  = ($.getdata(DEBUG_KEY) || "false") === "true";
-    const rid    = makeRequestId();
-
-    const cookieKeys = cookie.split(";").map(c => c.trim().split("=")[0]).join(", ");
-    $.log("[INFO] cookie keys=" + cookieKeys);
-    $.log("[INFO] ua=" + UA.substring(0, 60));
-    if (DEBUG) {
-        $.log("[DEBUG] rid=" + rid);
-        $.log("[DEBUG] relay=" + maskRelayUrl(relayUrl));
-        $.log("[DEBUG] random=" + random);
-    }
-
-    try {
-        await attend(cookie, UA, random, relayUrl, relayKey, DEBUG, rid);
-    } catch (e) {
-        saveStatus("fail", String(e));
-        $.msg("NodeSeek", "❌ 签到异常", String(e));
-    }
-
+const cookie = $.getdata("nodeseek_cookie") || "";
+if (!cookie.includes("pjwt=")) {
+    saveStatus("cookie", "未抓取 Cookie");
+    $.msg("NodeSeek", "🚫 缺少 Cookie", "请先用浏览器打开 nodeseek.com 并登录");
     $.done();
-})();
-
-function attend(cookie, UA, random, relayUrl, relayKey, DEBUG, rid) {
-    return new Promise((resolve) => {
-        $.post({
-            url: relayUrl,
-            headers: {
-                "x-api-key": relayKey,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ cookie, ua: UA, random, rid }),
-        }, (err, resp, data) => {
-            if (err) {
-                saveStatus("fail", "中继请求失败");
-                $.msg("NodeSeek", "❌ 中继请求失败", relayErrorHint(err));
-                return resolve();
-            }
-            $.log("[INFO] relay status=" + (resp && resp.status) + " body=" + String(data).substring(0, 200));
-            if (DEBUG) {
-                $.log("[DEBUG] relay raw=" + String(data).substring(0, 800));
-            }
-
-            if ((resp && resp.status) === 401) {
-                saveStatus("fail", "中继鉴权失败");
-                $.msg("NodeSeek", "❌ 中继鉴权失败", "请检查 BoxJS 的中继密钥是否和 VPS 上的 NS_KEY 一致");
-                return resolve();
-            }
-            if ((resp && resp.status) === 404) {
-                saveStatus("fail", "中继路径错误");
-                $.msg("NodeSeek", "❌ 中继路径错误", "中继地址应以 /attend 结尾");
-                return resolve();
-            }
-            if ((resp && resp.status) === 502) {
-                saveStatus("fail", "中继被 CF 拦截");
-                $.msg("NodeSeek", "❌ CF 拦截", "中继被 CF 拦截，请检查 VPS");
-                return resolve();
-            }
-
-            let result;
-            try { result = JSON.parse(atob(data)); } catch (_) {
-                try { result = JSON.parse(data); } catch (_2) {
-                    saveStatus("fail", "中继响应异常");
-                    $.msg("NodeSeek", "❌ 响应异常", "status=" + (resp && resp.status) + "\n" + String(data).substring(0, 120));
-                    return resolve();
-                }
-            }
-            normalizeRelayResult(result);
-
-            if (result.error) {
-                saveStatus("fail", `中继错误:${result.error}`);
-                $.msg("NodeSeek", "❌ 中继错误", result.error);
-                return resolve();
-            }
-            const state = classifyResult(result);
-            if (DEBUG) {
-                $.log("[DEBUG] parsed keys=" + Object.keys(result || {}).join(","));
-                $.log("[DEBUG] classify=" + state + " success=" + result.success + " status=" + result.status + " gain=" + result.gain + " current=" + result.current + " message=" + (result.message || ""));
-            }
-            if (state === "unconfirmed") {
-                saveStatus("fail", "签到未确认");
-                $.msg("NodeSeek", "❌ 签到未确认", "NodeSeek 未返回成功字段，需进站核对鸡腿是否变化");
-            } else if (state === "already") {
-                saveStatus("ok", "今日已签到");
-                $.msg("NodeSeek", "ℹ️ 今日已签到", result.message || "");
-            } else if (state === "failed") {
-                saveStatus("fail", result.message || "签到失败");
-                $.msg("NodeSeek", "❌ 签到失败", result.message || "未知错误");
-            } else {
-                const detail = result.message
-                    ? result.message + (result.gain != null ? "\n鸡腿+" + result.gain + " 当前" + result.current : "")
-                    : "";
-                saveStatus("ok", "签到成功");
-                $.msg("NodeSeek", "✅ 签到成功", detail);
-            }
-            resolve();
-        });
+} else {
+    const random = $.getdata("nodeseek_random") === "true";
+    $.post({
+        url: "https://www.nodeseek.com/api/attendance?random=" + random,
+        headers: {
+            "Cookie": cookie,
+            "User-Agent": $.getdata("nodeseek_ua") || UA_FALLBACK,
+            "Content-Type": "text/plain;charset=UTF-8",
+            "Accept": "*/*",
+            "Accept-Language": "zh-CN,zh-Hans;q=0.9",
+            "Origin": "https://www.nodeseek.com",
+            "Referer": "https://www.nodeseek.com/board",
+            "Sec-Fetch-Site": "same-origin",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Dest": "empty",
+        },
+        body: "",
+    }, (err, resp, data) => {
+        const status = resp && resp.status;
+        const h = (resp && resp.headers) || {};
+        $.log("[INFO] status=" + status + " cf-ray=" + (h["cf-ray"] || h["CF-RAY"] || "") + " body=" + String(data).slice(0, 200));
+        if (err) {
+            saveStatus("fail", "网络错误");
+            $.msg("NodeSeek", "❌ 网络错误", String(err));
+            return $.done();
+        }
+        let res;
+        try { res = JSON.parse(data); } catch (_) {
+            const cf = /Just a moment|challenge-platform/.test(data || "");
+            saveStatus(cf ? "cookie" : "fail", cf ? "被 Cloudflare 拦截" : "响应异常 " + status);
+            $.msg("NodeSeek", cf ? "❌ 被 Cloudflare 拦截" : "❌ 响应异常", cf ? "用浏览器打开 nodeseek.com 刷新 Cookie 后重试" : "status=" + status);
+            return $.done();
+        }
+        const msg = res.message || "";
+        if (res.success === true) {
+            saveStatus("ok", "签到成功");
+            $.msg("NodeSeek", "✅ 签到成功", msg + (res.current != null ? "\n当前鸡腿 " + res.current : ""));
+        } else if (/已.*签到|重复/.test(msg)) {
+            saveStatus("ok", "今日已签到");
+            $.msg("NodeSeek", "ℹ️ 今日已签到", msg);
+        } else {
+            const relogin = /登录|login/i.test(msg);
+            saveStatus(relogin ? "cookie" : "fail", msg || "签到失败");
+            $.msg("NodeSeek", "❌ 签到失败", msg || "status=" + status);
+        }
+        $.done();
     });
 }
 
 // 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "nodeseek_status");
-}
-
-function maskRelayUrl(raw) {
-    try {
-        const u = new URL(raw);
-        return u.protocol + "//" + u.host + u.pathname;
-    } catch (_) {
-        return String(raw || "").replace(/[?&].*$/, "");
-    }
-}
-
-function makeRequestId() {
-    return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
-}
-
-function classifyResult(result) {
-    if (!result || typeof result !== "object") return "unconfirmed";
-    if (result.state === "success") return "success";
-    if (result.state === "empty") return "unconfirmed";
-    if (result.state === "unconfirmed") return "unconfirmed";
-    if (Object.keys(result).length === 0) return "unconfirmed";
-    const msg = String((result && result.message) || "");
-    if (/已签到|重复|already|duplicate|repeat/i.test(msg)) return "already";
-    if (result && result.success === false) return "failed";
-    if (result && result.success === true) return "success";
-    return "unconfirmed";
-}
-
-function normalizeRelayResult(result) {
-    if (!result || typeof result !== "object" || !result.message_b64) return;
-    try {
-        result.message = decodeURIComponent(escape(atob(result.message_b64)));
-    } catch (_) {
-        try { result.message = atob(result.message_b64); } catch (_2) {}
-    }
-}
-
-function normalizeRelayUrl(raw) {
-    let u = String(raw || "").trim();
-    if (!u) return "";
-    u = u.replace(/\/+$/, "");
-    if (/^https?:\/\/[^/?#]+$/i.test(u)) u += "/attend";
-    return u;
-}
-
-function relayErrorHint(err) {
-    const s = String(err);
-    if (/connect to host timed out|timed out|timeout/i.test(s)) {
-        return "连接中继超时。请检查 VPS 服务是否运行、端口是否放行、BoxJS 中继地址是否可从手机直连访问；Loon cron 的请求通常不走代理。";
-    }
-    if (/Could not connect|connection refused|refused/i.test(s)) {
-        return "中继端口拒绝连接。请检查 ns-relay 服务是否启动、端口是否正确。";
-    }
-    return s;
 }
 
 function Env(s) {

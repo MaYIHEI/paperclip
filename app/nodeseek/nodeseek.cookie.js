@@ -5,7 +5,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-26
+ * @Updated: 2026-10-16
  */
 
 const $ = new Env("NodeSeek [Cookie]");
@@ -24,15 +24,15 @@ const UA_KEY = "nodeseek_ua";
     const oldPjwt = (old.match(/pjwt=([^;]+)/)    || [])[1] || "";
     const newPjwt = (cookie.match(/pjwt=([^;]+)/) || [])[1] || "";
 
-    // UA 跟随同步：中继服务器用这个 UA 去请求 NodeSeek
-    if (ua) $.setdata(ua, UA_KEY);
+    // 签到请求要和浏览器用同一个 UA + Cookie,有变化就跟随保存
+    if (ua && ua !== $.getdata(UA_KEY)) $.setdata(ua, UA_KEY);
+    if (cookie !== old) $.setdata(cookie, CK_KEY);
 
-    // pjwt 未变则静默，避免每次刷页都弹通知
-    if (oldPjwt && oldPjwt === newPjwt) {
+    // pjwt 未变则静默,避免每次刷页都弹通知
+    if (oldPjwt === newPjwt) {
         $.done(); return;
     }
 
-    $.setdata(cookie, CK_KEY);
     $.setdata("", "nodeseek_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
     $.msg("NodeSeek", "✅ NodeSeek Cookie 获取成功", "");
     $.done();
