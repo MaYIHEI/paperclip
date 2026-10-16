@@ -11,7 +11,7 @@
  *
  * ===== Loon =====
  * [Script]
- * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js?ver=r32, tag=节点 IP 质量检测, timeout=50, img-url=shield.lefthalf.filled.system, enable=true
+ * generic then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality/ipquality.js?ver=r32") with tag="节点 IP 质量检测", img_url="shield.lefthalf.filled.system", timeout=50
  */
 
 const SCRIPT_VERSION = "2026-07-22.r32";
