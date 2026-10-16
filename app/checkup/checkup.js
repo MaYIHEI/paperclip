@@ -5,7 +5,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-15
+ * @Updated: 2026-10-16
  *
  * ===== Loon =====
  * [Script]
@@ -33,7 +33,7 @@
 
 const $ = new Env("Cookie 体检");
 
-const SCRIPT_VERSION = "2026-10-15.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-16.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 // [显示名, 状态 key];没装或从未运行的脚本没有记录,自动跳过
@@ -73,7 +73,10 @@ const SCRIPTS = [
 
 const cookie = [], fail = [];
 let ok = 0;
+// 签到合集插件会传入各脚本开关,只报告打开的脚本
+const enabled = typeof $argument === "object" && $argument ? $argument : null;
 for (const [name, key] of SCRIPTS) {
+    if (enabled && enabled[key.replace(/_status$/, "")] !== true) continue;
     let r;
     try { r = JSON.parse($.getdata(key) || "null"); } catch (e) { r = null; }
     if (!r) continue;
