@@ -14,8 +14,8 @@
  * [MITM]
  * hostname = api.tuhu.cn
  * [Script]
- * http-request https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList) tag=途虎养车 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png
- * cron "17 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js, tag=途虎养车签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png, enable=true
+ * request if ${url} ~= /https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js") with tag="途虎养车 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png"
+ * cron "17 7 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js") with tag="途虎养车签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png"
  *
  * ===== Surge =====
  * [MITM]
