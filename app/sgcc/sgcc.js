@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Version: 2026-10-16.r5
+ * @Version: 2026-10-16.r6
  * @Updated: 2026-10-16
  *
  * ===== Loon =====
@@ -41,7 +41,7 @@
  */
 
 const $ = new Env("网上国网");
-const SCRIPT_VERSION = "2026-10-16.r5"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-16.r6"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const KEY_PHONE = "sgcc_phone";       // 账号(手机号)
@@ -51,6 +51,7 @@ const KEY_SESS = "sgcc_session";      // 登录凭证 {user,token,userId,provinc
 const KEY_DEV = "sgcc_device";        // 模拟设备 {seed,boot,install,tok}
 const KEY_PEND = "sgcc_sms_pending";  // 已发验证码 {user,codeKey,ts,used}
 const P_SIGN = "osg-omgmt1042/member/m1/0103514";
+const P_GOLD = "osg-omgmt1042/member/c1/q104051";
 // Loon 插件设置优先,没填则读 BoxJS
 const ARG = typeof $argument === "object" && $argument ? $argument : {};
 const DEBUG = ARG.debug === true || ARG.debug === "true" || $.getdata("sgcc_debug") === "true";
@@ -150,6 +151,11 @@ async function ensureLogin(force) {
 
 // ----- 签到(与 App 签到页同一请求)-----
 const signin = (sess) => call(P_SIGN, { sourceAddr: "0101-1015", timestamp: Date.now(), activityCode: "ACT20201212" }, { sess });
+// 可用签到金余额(签到页同一查询);只用于通知展示,查不到就不显示
+async function goldText(sess) {
+  try { const d = await call(P_GOLD, {}, { sess }); return String(d.rtnCode) === "1" && !isNaN(d.rtnData) ? `签到金余额 ${d.rtnData}` : ""; }
+  catch (e) { $.log(`[WARN] 查询签到金余额失败: ${e.message || e}`); return ""; }
+}
 
 // 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
 function saveStatus(s, msg) {
@@ -174,8 +180,10 @@ async function main() {
     sess = await ensureLogin(true); d = await signin(sess);
   }
   // rtnCode 1=签到成功(rtnData=获得签到金),102007=今日已签
-  if (String(d.rtnCode) === "1") { saveStatus("ok", "今日签到完成"); $.msg("✅ 网上国网签到", "今日签到完成 ✓", isNaN(d.rtnData) ? "" : `获得 ${d.rtnData} 签到金`); }
-  else if (String(d.rtnCode) === "102007") { saveStatus("ok", "今日已签到"); $.msg("✅ 网上国网签到", "今日已签到", ""); }
+  const code = String(d.rtnCode);
+  const gold = code === "1" || code === "102007" ? await goldText(sess) : "";
+  if (code === "1") { saveStatus("ok", "今日签到完成"); $.msg("✅ 网上国网签到", "今日签到完成 ✓", [isNaN(d.rtnData) ? "" : `获得 ${d.rtnData} 签到金`, gold].filter(Boolean).join(" · ")); }
+  else if (code === "102007") { saveStatus("ok", "今日已签到"); $.msg("✅ 网上国网签到", "今日已签到", gold); }
   else { saveStatus("fail", `${d.rtnMessage || ""} [${d.rtnCode}]`); $.msg("⚠️ 网上国网签到", "签到失败", `${d.rtnMessage || ""} [${d.rtnCode}]`); }
 }
 
