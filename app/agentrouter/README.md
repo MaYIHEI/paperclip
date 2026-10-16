@@ -80,7 +80,7 @@ accounts = input,"",tag=多账号（JSON）,desc=选填；填写后优先使用�
 debug = switch,false,tag=调试模式,desc=仅记录请求状态和签到判定
 
 [Script]
-cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js, argument=[{username},{password},{accounts},{debug}], tag=AgentRouter签到, timeout=300, img-url=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/icon.png, enable=true
+cron "0 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js", {${username}, ${password}, ${accounts}, ${debug}}) with tag="AgentRouter签到", img_url="https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/icon.png", timeout=300
 ```
 
 ### 其他平台
