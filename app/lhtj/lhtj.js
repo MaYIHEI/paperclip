@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-15
+ * @Updated: 2026-10-16
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,13 @@
 
 const $ = new Env('龙湖天街 App');
 
-const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
+// Loon 签到合集插件传入的设置优先,未传或留空时读 BoxJS
+if (typeof $argument === 'object' && $argument) {
+  const readStore = $.getdata.bind($);
+  $.getdata = (key) => ($argument[key] === undefined || $argument[key] === '' ? readStore(key) : String($argument[key]));
+}
+
+const SCRIPT_VERSION = "2026-10-16.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 // ── 持久化 key ──
