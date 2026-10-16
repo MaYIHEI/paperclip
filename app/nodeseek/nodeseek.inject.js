@@ -13,7 +13,7 @@
  * hostname = www.nodeseek.com
  * [Script]
  * # 注入签到脚本 + 抓签到结果（requires-body=true，匹配 HTML 页面和签到接口响应）
- * http-response ^https://www\.nodeseek\.com/ tag=NodeSeek Inject, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/nodeseek/nodeseek.inject.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/nodeseek.png
+ * response if ${url} ~= /^https:\/\/www\.nodeseek\.com\//i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/nodeseek/nodeseek.inject.js") with tag="NodeSeek Inject", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/nodeseek.png", requires_body=true
  *
  * ===== Surge =====
  * [MITM]
