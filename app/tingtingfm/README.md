@@ -24,9 +24,9 @@
 hostname = xunting.vbegin.com.cn
 
 [Script]
-http-request ^https:\/\/xunting\.vbegin\.com\.cn\/sns\/app tag=听听FM Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png
+request if ${url} ~= /^https:\/\/xunting\.vbegin\.com\.cn\/sns\/app/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js") with tag="听听FM Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png"
 
-cron "20 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js, tag=听听FM签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png, enable=true
+cron "20 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js") with tag="听听FM签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png"
 ```
 
 ## Surge
