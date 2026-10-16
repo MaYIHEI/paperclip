@@ -12,8 +12,8 @@
  * [MITM]
  * hostname = app.mixcapp.com
  * [Script]
- * http-request ^https:\/\/app\.mixcapp\.com\/mixc\/api\/v4\/member\/getPersonalData tag=一点万象 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png
- * cron "37 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.js, tag=一点万象签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png, enable=true
+ * request if ${url} ~= /^https:\/\/app\.mixcapp\.com\/mixc\/api\/v4\/member\/getPersonalData/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.cookie.js") with tag="一点万象 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png"
+ * cron "37 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.js") with tag="一点万象签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png"
  *
  * ===== Surge =====
  * [MITM]
