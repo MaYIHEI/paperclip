@@ -26,9 +26,9 @@
 hostname = a.china-smartech.com
 
 [Script]
-http-request https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm tag=北京华联 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bhg/bhg.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png
+request if ${url} ~= /https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bhg/bhg.js") with tag="北京华联 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png"
 
-cron "8 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bhg/bhg.js, tag=北京华联签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png, enable=true
+cron "8 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bhg/bhg.js") with tag="北京华联签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png"
 ```
 
 ## Surge
