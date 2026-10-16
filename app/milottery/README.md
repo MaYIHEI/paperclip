@@ -26,9 +26,9 @@
 hostname = shop-api.retail.mi.com
 
 [Script]
-http-request ^https:\/\/shop-api\.retail\.mi\.com\/mtop\/navi\/venue\/batch tag=小米抽奖 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/milottery/milottery.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png
+request if ${url} ~= /^https:\/\/shop-api\.retail\.mi\.com\/mtop\/navi\/venue\/batch/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/milottery/milottery.js") with tag="小米抽奖 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png", requires_body=true
 
-cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/milottery/milottery.js, tag=小米抽奖签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png, timeout=240, enable=true
+cron "30 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/milottery/milottery.js") with tag="小米抽奖签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png", timeout=240
 ```
 
 ## Surge
