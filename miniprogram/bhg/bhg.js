@@ -12,7 +12,7 @@
  * [MITM]
  * hostname = a.china-smartech.com
  * [Script]
- * request if ${url} ~= /https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bhg/bhg.js") with tag="北京华联 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png"
+ * request if ${url} ~= /https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm/i && ${request.header['referer']} ~= /wx1b1dda695dff82c8/ then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bhg/bhg.js") with tag="北京华联 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png"
  * cron "8 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bhg/bhg.js") with tag="北京华联签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png"
  *
  * ===== Surge =====
