@@ -8,12 +8,15 @@ Loon 专用插件文件,后缀 `.lpx`(Loon Plugin Extension,旧称 `.plugin`,内
 
 | 插件 | 功能 | 状态 |
 |---|---|---|
+| [`paperclip-checkin/`](./paperclip-checkin/) | 签到合集:全部在用签到脚本的定时签到 + Cookie 体检,每脚本一个开关,常用设置在插件里填 | 🧪 待验证 |
 | [`paperclip-cookie/`](./paperclip-cookie/) | 集中抓取仓库全部脚本的 Cookie(含已归档,25 个),每脚本独立开关(默认全关,按需开;仅抓取不含 cron) | 🧪 待验证 |
 | [`nodecheck/`](./nodecheck/) | 在节点/策略组页面检测代理出口、本机网络与远端 TCP 可达性，辅助判断节点阻断或离线 | 🧪 待验证 |
 | [`ipquality/`](./ipquality/) | 查询节点出口 IP、多源风险、代理属性及流媒体与 AI 服务可用性 | ✅ 维护中 |
 | [`agentrouter`](../app/agentrouter/) | AgentRouter 每日登录签到，插件内配置单账号或多账号 | 🧪 待验证 |
 
 **导入地址**:`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/paperclip-cookie/paperclip-cookie.lpx`
+
+签到合集（testing）:`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/paperclip-checkin/paperclip-checkin.lpx`
 
 节点阻断检测（testing）:`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/nodecheck/nodecheck.lpx`
 
