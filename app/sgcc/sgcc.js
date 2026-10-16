@@ -6,13 +6,13 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Version: 2026-10-16.r6
+ * @Version: 2026-10-16.r7
  * @Updated: 2026-10-16
  *
  * ===== Loon =====
  * [Argument]
- * phone = input,"",tag=手机号,desc=网上国网登录手机号;留空则读 BoxJS
- * password = input,"",tag=密码,desc=网上国网登录密码;留空则读 BoxJS
+ * phone = input,"",tag=手机号,desc=网上国网登录手机号
+ * password = input,"",tag=密码,desc=网上国网登录密码
  * sms = input,"",tag=短信验证码,desc=首次登录提示新设备验证时填写,再手动运行一次
  * debug = switch,false,tag=调试模式,desc=打印服务器返回
  *
@@ -41,7 +41,7 @@
  */
 
 const $ = new Env("网上国网");
-const SCRIPT_VERSION = "2026-10-16.r6"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-16.r7"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const KEY_PHONE = "sgcc_phone";       // 账号(手机号)
@@ -125,12 +125,12 @@ async function login(code, codeKey) {
   const life = Number(biz.tokenExpireTime) || 1296000;
   const sess = { user, token: String(biz.token), userId: String(ui.userId || biz.userId || "0"), province: String(ui.addressProvince || ""), exp: Date.now() + life * 1000 };
   setJ(KEY_SESS, sess); setJ(KEY_PEND, null); $.setdata("", KEY_SMS);
-  $.log(`[INFO] 登录成功,凭证有效 ${Math.round(life / 86400)} 天`);
+  $.log("[INFO] 登录成功");
   return sess;
 }
 async function ensureLogin(force) {
   const s = getJ(KEY_SESS);
-  if (!force && s && s.user === user && s.token && s.exp > Date.now() + 3600000) { $.log(`[INFO] 使用已保存的登录凭证(剩 ${Math.floor((s.exp - Date.now()) / 86400000)} 天)`); return s; }
+  if (!force && s && s.user === user && s.token && s.exp > Date.now() + 3600000) { $.log("[INFO] 使用已保存的登录凭证"); return s; }
   const sms = String(ARG.sms || $.getdata(KEY_SMS) || "").replace(/\D/g, "");
   const pend = getJ(KEY_PEND);
   const pendOk = pend && pend.user === user && Date.now() - pend.ts < 15 * 60000;
