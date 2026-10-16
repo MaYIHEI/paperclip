@@ -37,7 +37,7 @@ App 通道走顶象风控,固定整点签到不理想。脚本内置**当日随�
 hostname = gw2c-hw-open.longfor.com
 
 [Script]
-request if ${url} ~= /^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lhtj/lhtj.js") with tag="龙湖App Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png"
+request if ${url} ~= /^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$/i && ${request.header['x-lf-channel']} == "L0" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lhtj/lhtj.js") with tag="龙湖App Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png"
 
 cron "0-59/19 8-10 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lhtj/lhtj.js") with tag="龙湖App签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png"
 ```
