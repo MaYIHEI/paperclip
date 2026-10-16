@@ -38,7 +38,7 @@
 
 ```ini
 [Script]
-cron "0 12 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/checkup/checkup.js, tag=Cookie 体检, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enable=true
+cron "0 12 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/checkup/checkup.js") with tag="Cookie 体检", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png"
 ```
 
 ## Surge
