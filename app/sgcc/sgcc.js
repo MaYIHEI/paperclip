@@ -6,7 +6,8 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-15
+ * @Version: 2026-10-16.r5
+ * @Updated: 2026-10-16
  *
  * ===== Loon =====
  * [Argument]
@@ -40,7 +41,7 @@
  */
 
 const $ = new Env("网上国网");
-const SCRIPT_VERSION = "2026-10-16.r4"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-16.r5"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const KEY_PHONE = "sgcc_phone";       // 账号(手机号)
