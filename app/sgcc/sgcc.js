@@ -41,7 +41,7 @@
  */
 
 const $ = new Env("网上国网");
-const SCRIPT_VERSION = "2026-10-16.r7"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-16.r8"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const KEY_PHONE = "sgcc_phone";       // 账号(手机号)
@@ -54,6 +54,8 @@ const P_SIGN = "osg-omgmt1042/member/m1/0103514";
 const P_GOLD = "osg-omgmt1042/member/c1/q104051";
 // Loon 插件设置优先,没填则读 BoxJS
 const ARG = typeof $argument === "object" && $argument ? $argument : {};
+// 签到合集插件里的参数带 sgcc_ 前缀,去掉前缀后与本插件参数同名
+for (const key of Object.keys(ARG)) if (key.startsWith("sgcc_")) ARG[key.slice(5)] = ARG[key];
 const DEBUG = ARG.debug === true || ARG.debug === "true" || $.getdata("sgcc_debug") === "true";
 
 const getJ = (k) => { try { return JSON.parse($.getdata(k) || "null"); } catch (e) { return null; } };
