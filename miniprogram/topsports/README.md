@@ -26,11 +26,11 @@
 hostname = m.topsports.com.cn, wxmall.topsports.com.cn
 
 [Script]
-http-request ^https:\/\/m\.topsports\.com\.cn\/h5\/act\/signIn\/actInfo tag=滔搏 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png
-http-request ^https:\/\/wxmall\.topsports\.com\.cn\/shopMember\/ tag=滔搏 Auth, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png
-http-response ^https:\/\/m\.topsports\.com\.cn\/ tag=滔搏 H5, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png
+request if ${url} ~= /^https:\/\/m\.topsports\.com\.cn\/h5\/act\/signIn\/actInfo/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js") with tag="滔搏 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png"
+request if ${url} ~= /^https:\/\/wxmall\.topsports\.com\.cn\/shopMember\//i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js") with tag="滔搏 Auth", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png"
+response if ${url} ~= /^https:\/\/m\.topsports\.com\.cn\//i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js") with tag="滔搏 H5", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png"
 
-cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js, tag=滔搏签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png, enable=true
+cron "15 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/topsports/topsports.js") with tag="滔搏签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/topsports.png"
 ```
 
 ## Surge
