@@ -3,6 +3,7 @@
 #!author=RavelloH, MaYIHEI
 #!homepage=https://github.com/RavelloH
 #!tag=节点, 检测
+#!loon_version = 3.5.1(983)
 
 [Script]
-generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/nodecheck/nodecheck.js, tag=节点阻断检测, timeout=20, img-url=bolt.horizontal.icloud.fill.system, enable=true
+generic then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/nodecheck/nodecheck.js") with tag="节点阻断检测", img_url="bolt.horizontal.icloud.fill.system", timeout=20
