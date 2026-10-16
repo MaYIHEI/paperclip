@@ -13,8 +13,8 @@
  * [MITM]
  * hostname = pbaccess.video.qq.com, vip.video.qq.com
  * [Script]
- * http-request ^https:\/\/pbaccess\.video\.qq\.com\/ tag=腾讯视频 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png
- * cron "10 0 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js, tag=腾讯视频签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png, enable=true
+ * request if ${url} ~= /^https:\/\/pbaccess\.video\.qq\.com\//i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js") with tag="腾讯视频 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png"
+ * cron "10 0 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js") with tag="腾讯视频签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png"
  *
  * ===== Surge =====
  * [MITM]
