@@ -40,7 +40,7 @@
  */
 
 const $ = new Env("网上国网");
-const SCRIPT_VERSION = "2026-10-16.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-16.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const KEY_PHONE = "sgcc_phone";       // 账号(手机号)
@@ -162,11 +162,14 @@ async function main() {
   }
   if (!user || !pass) { saveStatus("cookie", "缺少账号密码"); $.msg("⚠️ 网上国网签到", "缺少账号密码", "在 Loon 插件设置或 BoxJS 填写网上国网手机号和密码"); return; }
 
+  const saved = getJ(KEY_SESS);
   let sess = await ensureLogin(false), d;
   try { d = await signin(sess); }
   catch (e) {
-    if (e.code !== "-200" && e.code !== "-201") throw e;
-    $.log("[INFO] 登录凭证失效,重新登录");
+    // 凭证失效时签到接口回 RK001(查询接口才回 -200/-201);用的是旧凭证才重登一次
+    const stale = e.code === "-200" || e.code === "-201" || /RK0\d/.test(e.message || "");
+    if (!stale || !saved || saved.token !== sess.token) throw e;
+    $.log(`[INFO] 登录凭证失效(${e.code}),重新登录`);
     sess = await ensureLogin(true); d = await signin(sess);
   }
   // rtnCode 1=签到成功(rtnData=获得签到金),102007=今日已签
@@ -465,6 +468,6 @@ function Env(t,e){class s{constructor(t){this.env=t}send(t,e="GET"){t="string"==
 main().catch((e) => {
   $.log("[ERROR] " + (e.code || "") + " " + (e.message || e));
   saveStatus(e.code === "4006" ? "cookie" : "fail", e.code === "4006" ? "需短信验证后重新登录" : `${e.message || e}${e.code ? ` [${e.code}]` : ""}`);
-  const rk = /RK0\d/.test(e.message || "") ? " | 被国网风控拦截:确认 Loon 对 sgcc.com.cn 走直连、未经境外代理后重试" : "";
+  const rk = /RK0\d/.test(e.message || "") ? " | 国网风控拦截:已重新登录仍失败,确认 Loon 对 sgcc.com.cn 走直连后稍后再试" : "";
   $.msg("⚠️ 网上国网签到", e.code === "4006" ? "首次登录需短信验证" : "登录/签到异常", (e.message || String(e)) + (e.code && e.code !== "4006" ? ` [${e.code}]` : "") + rk);
 }).finally(() => $.done());
