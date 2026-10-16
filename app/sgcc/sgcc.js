@@ -40,7 +40,7 @@
  */
 
 const $ = new Env("网上国网");
-const SCRIPT_VERSION = "2026-10-15.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-16.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const KEY_PHONE = "sgcc_phone";       // 账号(手机号)
@@ -56,7 +56,8 @@ const DEBUG = ARG.debug === true || ARG.debug === "true" || $.getdata("sgcc_debu
 
 const getJ = (k) => { try { return JSON.parse($.getdata(k) || "null"); } catch (e) { return null; } };
 const setJ = (k, v) => $.setdata(v == null ? "" : JSON.stringify(v), k);
-const post = (opt) => new Promise((ok) => $.post(opt, (err, resp, data) => ok({ err, status: resp && resp.status, data })));
+// 国网接口走直连:经境外代理出口可能触发网关风控(RK001)。Loon 用 node、Surge 用 policy、QX 用 opts.policy
+const post = (opt) => new Promise((ok) => $.post({ ...opt, node: "DIRECT", policy: "DIRECT", opts: { policy: "direct" } }, (err, resp, data) => ok({ err, status: resp && resp.status, data })));
 class SgError extends Error { constructor(code, msg) { super(msg || code); this.code = String(code || ""); } }
 
 const user = String(ARG.phone || $.getdata(KEY_PHONE) || "").replace(/\D/g, "").replace(/^86(?=1\d{10}$)/, "");
@@ -97,7 +98,10 @@ async function call(path, payload, { sess, loginP } = {}) {
   const r = await post({ url: SG_BASE + path, headers: headers(sess, loginP), body: JSON.stringify({ data, sign: sm3hex(skey + data + ts), skey, timestamp: ts }) });
   if (r.err) throw new SgError("net", "网络错误:" + r.err);
   let outer; try { outer = JSON.parse(r.data); } catch (e) { throw new SgError("net", "返回无法识别(HTTP " + r.status + ")"); }
-  if (!outer.respKey || !outer.encryptData) throw new SgError(outer.code || "net", outer.message || "返回异常");
+  if (!outer.respKey || !outer.encryptData) {
+    if (DEBUG) $.log(`[DEBUG] ${path} 网关返回 => ${String(r.data).slice(0, 300)}`);
+    throw new SgError(outer.code || "net", outer.message || "返回异常");
+  }
   const k2 = utf8dec(sm2DecryptKey(String(outer.respKey), CLIENT_PRIV));
   const resp = JSON.parse(utf8dec(sm4DecryptHex(String(outer.encryptData), k2)));
   if (DEBUG) $.log(`[DEBUG] ${path} => ${JSON.stringify(resp).slice(0, 300)}`);
@@ -124,7 +128,7 @@ async function login(code, codeKey) {
 }
 async function ensureLogin(force) {
   const s = getJ(KEY_SESS);
-  if (!force && s && s.user === user && s.token && s.exp > Date.now() + 3600000) return s;
+  if (!force && s && s.user === user && s.token && s.exp > Date.now() + 3600000) { $.log(`[INFO] 使用已保存的登录凭证(剩 ${Math.floor((s.exp - Date.now()) / 86400000)} 天)`); return s; }
   const sms = String(ARG.sms || $.getdata(KEY_SMS) || "").replace(/\D/g, "");
   const pend = getJ(KEY_PEND);
   const pendOk = pend && pend.user === user && Date.now() - pend.ts < 15 * 60000;
@@ -461,5 +465,6 @@ function Env(t,e){class s{constructor(t){this.env=t}send(t,e="GET"){t="string"==
 main().catch((e) => {
   $.log("[ERROR] " + (e.code || "") + " " + (e.message || e));
   saveStatus(e.code === "4006" ? "cookie" : "fail", e.code === "4006" ? "需短信验证后重新登录" : `${e.message || e}${e.code ? ` [${e.code}]` : ""}`);
-  $.msg("⚠️ 网上国网签到", e.code === "4006" ? "首次登录需短信验证" : "登录/签到异常", (e.message || String(e)) + (e.code && e.code !== "4006" ? ` [${e.code}]` : ""));
+  const rk = /RK0\d/.test(e.message || "") ? " | 被国网风控拦截:确认 Loon 对 sgcc.com.cn 走直连、未经境外代理后重试" : "";
+  $.msg("⚠️ 网上国网签到", e.code === "4006" ? "首次登录需短信验证" : "登录/签到异常", (e.message || String(e)) + (e.code && e.code !== "4006" ? ` [${e.code}]` : "") + rk);
 }).finally(() => $.done());
