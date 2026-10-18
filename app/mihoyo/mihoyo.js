@@ -7,7 +7,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-15
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
@@ -54,7 +54,7 @@
 
 const $ = new Env("米游社");
 
-const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 $.delete_cookie = false;
@@ -143,7 +143,7 @@ function loadCookies() {
     if (!$.webCookie || !$.webHeadersStr) missing.push('web 签到 cookie');
 
     if (missing.length > 0) {
-        saveStatus('cookie', `缺少${missing.join(' + ')}`);
+        saveStatus(missing.length === 2 ? 'none' : 'cookie', `缺少${missing.join(' + ')}`);
         $.msg(
             '米游社',
             `🚫 缺少 ${missing.join(' + ')}`,
@@ -299,7 +299,7 @@ function cleanHeaders(h) {
     return out;
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'mihoyo_status');
 }
