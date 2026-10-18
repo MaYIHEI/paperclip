@@ -56,7 +56,7 @@ const $ = new Env("追觅");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'dreame_data';
@@ -202,7 +202,7 @@ async function main() {
     }
 
     const body = [todayPoint, continueDays, total].filter(Boolean).join(' · ') || '签到成功';
-    saveStatus('ok', '签到成功');
+    saveStatus('ok', body);
     $.msg($.name, '✅ 追觅签到成功', body);
 }
 
