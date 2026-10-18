@@ -56,7 +56,7 @@ const $ = new Env("灵狐灵购");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'linghu_data';
@@ -196,7 +196,7 @@ async function main() {
     }
 
     const body = [redEnvelope, continueDays].filter(Boolean).join(' · ') || '签到成功';
-    saveStatus('ok', '签到成功');
+    saveStatus('ok', body);
     $.msg($.name, '✅ 灵狐灵购签到成功', body);
 }
 
