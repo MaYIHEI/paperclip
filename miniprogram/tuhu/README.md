@@ -93,7 +93,7 @@ script-providers:
 |---|---|
 | 2025-09-27 | [@FoKit](https://github.com/FoKit) 原版,[@Sliverkiss](https://github.com/Sliverkiss) 修复 blackBox 参数 |
 | 2026-05-08 | 适配途虎小程序 v7.62.3:原 token 抓取接口下线,改从「我的/积分中心」页抓取 |
-| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/checkup/)」一条通知查看是否需要重新抓取 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
