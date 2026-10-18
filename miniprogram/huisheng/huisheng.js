@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-15
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("惠省红包墙");
 
-const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 $.delete_cookie = false;
@@ -123,7 +123,7 @@ function loadCookies() {
     $.log(`[diag] headers 读到 ${$.headersStr.length} 字符,body 读到 ${$.listBody.length} 字符`);
 
     if (!$.headersStr || !$.listBody) {
-        saveStatus('cookie', '未抓取 Cookie');
+        saveStatus('none', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少鉴权数据', `headers=${$.headersStr.length}字符 body=${$.listBody.length}字符\n请先打开 cookie 抓取脚本,然后:\n1️⃣ 进微信"惠省"小程序\n2️⃣ 在首页停留 3 秒触发列表接口`);
         return false;
     }
@@ -329,7 +329,7 @@ function summarize(grantData) {
     $.log(`${title} ${subtitle}\n${body}`);
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'huisheng_status');
 }
