@@ -7,7 +7,7 @@
  * @Author: @773075692 <https://github.com/773075692/agentrouter-checkin>
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-16
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [Argument]
@@ -41,7 +41,7 @@
  */
 
 const $ = new Env("AgentRouter");
-const SCRIPT_VERSION = "2026-10-16.r1";
+const SCRIPT_VERSION = "2026-10-18.r1";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -77,7 +77,7 @@ async function run() {
 
     const accounts = readAccounts();
     if (!accounts.length) {
-        saveStatus("cookie", "未配置账号");
+        saveStatus("none", "未配置账号");
         $.msg($.name, "🚫 未配置账号", `请在 ${SETTINGS_PAGE} 的 AgentRouter 中分别填写账号和密码并保存`);
         return;
     }
@@ -217,7 +217,7 @@ async function checkin({ username, password }, quotaUnit) {
     }
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "agentrouter_status");
 }
