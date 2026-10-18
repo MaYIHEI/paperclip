@@ -45,7 +45,7 @@ const $ = new Env("AgentRouter");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-18.r5";
+const SCRIPT_VERSION = "2026-10-18.r6";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -65,7 +65,7 @@ run().catch((error) => {
 }).finally(() => $.done());
 
 async function run() {
-    const clear = IS_LOON ? null : $.getdata(CLEAR_KEY);
+    const clear = $.getdata(CLEAR_KEY);
     if (clear === "true" || clear === "1") {
         const userCleared = $.setdata("", USER_KEY);
         const passwordCleared = $.setdata("", PASSWORD_KEY);
