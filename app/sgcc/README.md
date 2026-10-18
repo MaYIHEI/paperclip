@@ -81,5 +81,5 @@ script-providers:
 
 ## 致谢
 
-- 登录协议与加密:[@stevenjoezhang](https://github.com/stevenjoezhang) 的 [hass-state-grid](https://github.com/stevenjoezhang/hass-state-grid)(MIT)
-- JavaScript 移植:[@githubdulong](https://github.com/githubdulong) 的 [Scriptable/SGCC.js](https://github.com/githubdulong/Script/blob/master/Scriptable/SGCC.js)([发布帖](https://t.me/scriptableJS/178))
+- 登录与加密代码:脑瓜([@anker1209](https://t.me/anker1209))的 [Scriptable/SGCC.js](https://github.com/githubdulong/Script/blob/master/Scriptable/SGCC.js)([发布帖](https://t.me/scriptableJS/178))。本脚本的加密、设备令牌与登录部分直接取自该脚本,做了精简和适配
+- 协议与设备令牌算法:[@stevenjoezhang](https://github.com/stevenjoezhang) 的开源项目 [hass-state-grid](https://github.com/stevenjoezhang/hass-state-grid)(MIT),许可证原文保留在 `sgcc.js` 中

@@ -4,7 +4,8 @@
  * 抓取:无需抓包,在 Loon 插件设置或 BoxJS 填写网上国网手机号和密码(首次登录按提示填短信验证码)
  * 签到:cron 每天 08:30 自动登录并签到,凭证到期自动重新登录
  *
- * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
+ * @Author: 脑瓜(@anker1209)、@stevenjoezhang —— 登录与加密协议,出处与许可证见文件中「国网 App 协议」一段
+ * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Version: 2026-10-16.r7
  * @Updated: 2026-10-18
@@ -202,8 +203,35 @@ async function main() {
 }
 
 /* ===== 国网 App 协议(加密 + Turing 设备令牌 + 登录参数)=====
- * 移植自 stevenjoezhang/hass-state-grid,MIT License, Copyright (c) 2026 stevenjoezhang
- * 经 githubdulong/Script Scriptable/SGCC.js 的 JS 版本整理 */
+ * 以下加密、设备令牌与登录参数代码取自 脑瓜(Telegram @anker1209)的 Scriptable 脚本 SGCC.js,
+ * 在此基础上做了精简和适配:
+ *   https://github.com/githubdulong/Script/blob/master/Scriptable/SGCC.js
+ *   发布帖:https://t.me/scriptableJS/178
+ * 协议与设备令牌算法源自 stevenjoezhang 的开源项目 hass-state-grid(MIT License),原许可证如下:
+ *   https://github.com/stevenjoezhang/hass-state-grid
+ *
+ * MIT License
+ *
+ * Copyright (c) 2026 stevenjoezhang
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 function utf8enc(s){const o=[];for(let i=0;i<s.length;i++){let c=s.charCodeAt(i);if(c>=0xd800&&c<0xdc00&&i+1<s.length){const d=s.charCodeAt(i+1);if(d>=0xdc00&&d<0xe000){c=0x10000+((c-0xd800)<<10)+(d-0xdc00);i++;}}if(c<0x80)o.push(c);else if(c<0x800)o.push(0xc0|(c>>6),0x80|(c&63));else if(c<0x10000)o.push(0xe0|(c>>12),0x80|((c>>6)&63),0x80|(c&63));else o.push(0xf0|(c>>18),0x80|((c>>12)&63),0x80|((c>>6)&63),0x80|(c&63));}return new Uint8Array(o);}
 function utf8dec(b){let s='';for(let i=0;i<b.length;){const c=b[i++];let cp;if(c<0x80)cp=c;else if(c<0xe0)cp=((c&31)<<6)|(b[i++]&63);else if(c<0xf0){cp=((c&15)<<12)|((b[i++]&63)<<6)|(b[i++]&63);}else{cp=((c&7)<<18)|((b[i++]&63)<<12)|((b[i++]&63)<<6)|(b[i++]&63);}if(cp>0xffff){cp-=0x10000;s+=String.fromCharCode(0xd800+(cp>>10),0xdc00+(cp&1023));}else s+=String.fromCharCode(cp);}return s;}
 function u8(x){ if(x instanceof Uint8Array) return x; if(typeof x==='string') return utf8enc(x); return new Uint8Array(x);}
