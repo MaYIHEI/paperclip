@@ -56,7 +56,7 @@ const $ = new Env("泡泡玛特");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const ckName = "ppmt_data";
 const userCookie = $.toObj($.isNode() ? process.env[ckName] : $.getdata(ckName)) || [];
@@ -73,6 +73,7 @@ async function main() {
                 let userInfo = await user.getUserInfo() || {};
                 const phoneStr = userInfo.phone || user.userName || '';
                 DoubleLog(`用户: ${phone_num(phoneStr)}\n签到: ${signMsg}`);
+                ($.okMsgs = $.okMsgs || []).push(signMsg);
                 $.succCount++;
             } else {
                 DoubleLog(`⛔️ 「${user.userName ?? `账号${user.index}`}」签到失败, 用户需要去登录`)
@@ -83,7 +84,7 @@ async function main() {
         }
     }
     const failed = $.userList.length - $.succCount;
-    saveStatus(failed ? 'cookie' : 'ok', failed ? `${failed} 个账号签到失败,需要重新登录` : `${$.succCount} 个账号签到完成`);
+    saveStatus(failed ? 'cookie' : 'ok', failed ? `${failed} 个账号签到失败,需要重新登录` : ($.okMsgs || []).join(' · ') || '签到成功');
     $.title = `共${$.userList.length}个账号,成功${$.succCount}个,失败${$.userList.length - 0 - $.succCount}个`
     await sendMsg($.notifyMsg.join("\n"), $.avatar ? { $media: $.avatar } : undefined);
 }
