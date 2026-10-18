@@ -56,7 +56,7 @@ const $ = new Env("WPS");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -200,6 +200,7 @@ async function main() {
     if (!ran) $.results.push("ℹ️ 所有任务均已关闭(插件设置或 BoxJS)");
 
     $.msg("WPS 任务汇总", "", $.results.join("\n")); // $.msg 已把汇总打到日志,不再重复 $.log
+    saveStatus("ok", $.results.map((r) => r.replace(/^\S+\s*/, "")).join(" · ")); // 汇总里显示各任务结果
 }
 
 // ============ 任务:每日签到(请求体加密)============
