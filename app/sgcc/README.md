@@ -62,13 +62,6 @@ script-providers:
     interval: 86400
 ```
 
-## 实现细节
-
-- **按 App 方式登录**:手机号 + 密码登录拿凭证,到期或失效自动重新登录;新设备首次登录需短信验证一次
-- **签到与 App 签到页同一请求**,通知显示签到结果、本次获得的签到金和签到金余额;今日已签会提示「今日已签到」
-- **数据全在本地**(Loon 插件设置 / BoxJS),仓库与脚本不含任何账号数据
-- 协议部分移植自 [stevenjoezhang/hass-state-grid](https://github.com/stevenjoezhang/hass-state-grid)(MIT)
-
 ## 维护记录
 
 | 日期 | 变更 |
@@ -83,5 +76,10 @@ script-providers:
 ## 已知限制
 
 - **🧪 待验证**:真账号登录、短信验证和每日签到尚未真机跑通;是否影响手机 App 登录状态待观察
-- **需要账号密码**:密码只存在本机,不要分享含账号密码的插件配置或 BoxJS 备份
+- **需要账号密码**:账号密码只存在本机(Loon 插件设置 / BoxJS),仓库和脚本不含任何账号数据;不要分享含账号密码的插件配置或 BoxJS 备份
 - **密码连续错误 5 次锁定 30 分钟**:填错时先改对再运行,不要反复重试
+
+## 致谢
+
+- 登录协议与加密:[@stevenjoezhang](https://github.com/stevenjoezhang) 的 [hass-state-grid](https://github.com/stevenjoezhang/hass-state-grid)(MIT)
+- JavaScript 移植:[@githubdulong](https://github.com/githubdulong) 的 [Scriptable/SGCC.js](https://github.com/githubdulong/Script/blob/master/Scriptable/SGCC.js)([发布帖](https://t.me/scriptableJS/178))
