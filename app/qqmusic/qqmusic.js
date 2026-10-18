@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-16
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
@@ -76,7 +76,7 @@ if (typeof $argument === "object" && $argument) {
     $.getdata = (key) => ($argument[key] === undefined || $argument[key] === "" ? readStore(key) : String($argument[key]));
 }
 
-const SCRIPT_VERSION = "2026-10-16.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -151,7 +151,7 @@ function getCookie() {
 async function checkin() {
     const snap = $.getjson(CK_KEY, null);
     if (!snap || !snap.authst || !snap.uin) {
-        saveStatus("cookie", "未抓取 Cookie");
+        saveStatus("none", "未抓取 Cookie");
         $.messages.push(
             "🚫 未抓到 Cookie\n" +
             "👉 打开 QQ 音乐 →「我的 / 会员 / 每日签到」或「金币中心 / 每日签到」一次"
@@ -248,7 +248,7 @@ async function checkLvzScore(snap, uin) {
     }
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "qqmusic_status");
 }
