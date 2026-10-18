@@ -169,7 +169,11 @@ function urlEncodeUnicode(s) {
 // ========== 签到逻辑 ==========
 const $ = new Env('万达电影');
 
-const SCRIPT_VERSION = '2026-10-18.r1'; // 去掉请求里的 timeout(Loon 误判为 ms 致秒超时)
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = '2026-10-18.r2'; // 去掉请求里的 timeout(Loon 误判为 ms 致秒超时)
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'wanda_data';
@@ -306,7 +310,7 @@ function doSign(ck, ts, check, bodyStr) {
     });
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'wanda_status');
 }
