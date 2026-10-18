@@ -8,7 +8,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-15
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
@@ -54,7 +54,7 @@
 
 const $ = new Env("扫描全能王");
 
-const SCRIPT_VERSION = "2026-10-15.r1";
+const SCRIPT_VERSION = "2026-10-18.r1";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY     = 'camscanner_data';
@@ -93,7 +93,7 @@ function debug(content, title = "debug") {
 
     const ckRaw = $.getdata(CK_KEY);
     if (!ckRaw) {
-        saveStatus('cookie', '未抓取 Cookie');
+        saveStatus('none', '未抓取 Cookie');
         $.msg('扫描全能王', '🚫 缺少 Cookie',
             '请先开启 Cookie 抓取脚本,然后打开扫描全能王 APP 任意页面停留几秒');
         $.done();
@@ -195,7 +195,7 @@ function debug(content, title = "debug") {
 
 // ── 错误判定 + 重试 ────────────────────────────────────────────────────────────
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'camscanner_status');
 }
