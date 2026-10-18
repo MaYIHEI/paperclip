@@ -8,7 +8,7 @@
  * @Modifier: @Sliverkiss(修复 blackBox 参数)
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>(适配新接口)
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-15
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
@@ -54,7 +54,7 @@
 
 const $ = new Env('途虎养车');
 
-const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 $.is_debug = ($.isNode() ? process.env['IS_DEDUG'] : $.getdata('is_debug')) || 'false';  // 调试模式
 $.token = ($.isNode() ? process.env['TUHU_TOKEN'] : $.getdata('tuhu_token')) || '';  // Token
@@ -112,7 +112,7 @@ async function main() {
         if ($.expired) saveStatus('cookie', `${$.expired} 个账号 Token 无效`);
         else saveStatus($.signOk ? 'ok' : 'fail', $.signOk ? '签到完成' : $.lastFail || '签到失败');
     } else {
-        saveStatus('cookie', '未抓取 Cookie');
+        saveStatus('none', '未抓取 Cookie');
         throw new Error('未找到 Token 变量 ❌');
     }
 }
@@ -209,7 +209,7 @@ async function checkin(type, name) {
     $.messages.push(msg), $.log(msg);
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'tuhu_status');
 }
