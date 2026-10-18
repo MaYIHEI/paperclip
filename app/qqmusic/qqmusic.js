@@ -74,7 +74,7 @@ const $ = new Env("QQ音乐");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r4"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r5"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -190,7 +190,9 @@ async function checkin() {
         const lockUntil = Date.now() + 10 * 60 * 1000;
         for (const source of timedSources) runState.timerSources[source].nextAt = lockUntil;
         saveRunState(runState);
+        const coinsBefore = $.coinGain || 0;
         await claimTimedTaskRewards(snap, uin, runState, timedSources);
+        if (($.coinGain || 0) > coinsBefore) runState.gain.timed = (runState.gain.timed || 0) + 1;
         saveRunState(runState);
     }
 
@@ -198,7 +200,16 @@ async function checkin() {
         runState.redPacketSlots.push(redPacketSlot);
         saveRunState(runState);
         await runRedPacketRain(snap, uin);
+        if ($.rainDone) runState.gain.rain = (runState.gain.rain || 0) + $.rainDone;
     }
+
+    // 汇总里显示当天累计:绿钻 + 每日任务、定时金币、红包雨拿到的金币;每日流程没成功时不写
+    if ($.lvzText) runState.gain.lvz = $.lvzText;
+    runState.gain.coins = (runState.gain.coins || 0) + ($.coinGain || 0);
+    saveRunState(runState);
+    const g = runState.gain;
+    const times = [g.timed && `定时 ${g.timed} 次`, g.rain && `红包雨 ${g.rain} 次`].filter(Boolean).join(" · ");
+    if (g.lvz) saveStatus("ok", `${g.lvz}${g.coins ? ` · 金币 +${g.coins}` : ""}${times ? `(${times})` : ""}`);
 }
 
 async function checkLvzScore(snap, uin) {
@@ -235,7 +246,8 @@ async function checkLvzScore(snap, uin) {
 
     // 每日流程以绿钻签到的鉴权结果代表 Cookie 状态;定时任务/红包雨不改写
     const lvzScore = data.Ret === 0 ? (data.Info && data.Info.Score) || 0 : 0;
-    saveStatus("ok", lvzScore ? `绿钻成长值 +${lvzScore}` : data.Ret === 20019 || /已.*领取|已签|重复/.test(data.Msg || "") ? "今日已签" : "每日签到已完成");
+    $.lvzText = lvzScore ? `绿钻 +${lvzScore}` : "绿钻已签";
+    saveStatus("ok", $.lvzText);
     if (data.Ret === 0) {
         const score = lvzScore;
         $.messages.push(`✅ 绿钻成长值签到成功${score ? `: 今日 +${score}` : ""}`);
@@ -312,6 +324,8 @@ async function checkCoinSignIn(snap, uin) {
         const awardData = awardReq && awardReq.data;
         if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && (awardData.retCode === 0 || awardData.retCode === 100004)) {
             $.messages.push(`${signedNow ? "✅ 金币中心签到成功" : "✅ 金币中心奖励已领取"}${reward}`);
+            const prize = Array.isArray(task.PrizeList) ? task.PrizeList[0] : null;
+            if (prize && !prize.Name) $.coinGain = ($.coinGain || 0) + Number(prize.Value || 0);
         } else {
             const code = awardReq ? awardReq.code : "?";
             const ret = awardData ? awardData.retCode : "?";
@@ -521,6 +535,8 @@ async function runRedPacketRain(snap, uin) {
         coins += Number(findFirstValue(drawRes.req_0.data, ["awardValue", "RewardGold", "rewardGold", "coinNum", "coin"]) || 0);
     }
     if (completed) $.messages.push(`✅ 红包雨 ${completed} 次${coins ? `: +${coins} 金币` : ""}`);
+    $.coinGain = ($.coinGain || 0) + coins;
+    $.rainDone = completed;
 }
 
 async function claimDailyTaskRewards(snap, uin) {
@@ -661,6 +677,7 @@ async function claimReadyTaskRewards(tasks, snap, uin) {
         const awardData = awardReq && awardReq.data;
         if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && awardData.retCode === 0) {
             const value = Number(awardData.awardValue || 0);
+            $.coinGain = ($.coinGain || 0) + value;
             claimed.push(`${task.Name || task.ID}${value ? ` +${value}` : ""}`);
             if (awardData.taskStatusInfo && typeof awardData.taskStatusInfo === "object") {
                 Object.assign(task, awardData.taskStatusInfo);
@@ -1400,6 +1417,7 @@ function getRunState(now = new Date()) {
             dailyAttempted: false,
             timerSources: makeTimerSources(),
             redPacketSlots: [],
+            gain: {},
         };
     }
     const oldTimerDone = Boolean(saved.timerDone);
@@ -1408,6 +1426,7 @@ function getRunState(now = new Date()) {
         dailyAttempted: Boolean(saved.dailyAttempted),
         timerSources: makeTimerSources(saved.timerSources, oldTimerDone),
         redPacketSlots: Array.isArray(saved.redPacketSlots) ? saved.redPacketSlots.map(String) : [],
+        gain: saved.gain && typeof saved.gain === "object" ? saved.gain : {},
     };
 }
 
