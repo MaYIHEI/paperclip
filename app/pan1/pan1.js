@@ -64,7 +64,7 @@ const $ = new Env("123社区");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "pan1_data";
@@ -166,7 +166,7 @@ async function run() {
 
     const message = String(data.message || data.msg || "").replace(/<br\s*\/?>/gi, " ").trim();
     if (String(data.code) === "0") {
-        saveStatus("ok", "签到成功");
+        saveStatus("ok", message || "签到成功");
         $.msg($.name, "✅ 签到成功", message || "经验和金币已到账");
     } else if (/已签到|已经签到|今日.*签|重复/i.test(message)) {
         saveStatus("ok", "今日已签到");
