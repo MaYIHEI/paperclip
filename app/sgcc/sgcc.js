@@ -45,7 +45,7 @@ const $ = new Env("网上国网");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const KEY_PHONE = "sgcc_phone";       // 账号(手机号)
@@ -186,7 +186,7 @@ async function main() {
   // rtnCode 1=签到成功(rtnData=获得签到金),102007=今日已签
   const code = String(d.rtnCode);
   const gold = code === "1" || code === "102007" ? await goldText(sess) : "";
-  if (code === "1") { saveStatus("ok", "今日签到完成"); $.msg("✅ 网上国网签到", "今日签到完成 ✓", [isNaN(d.rtnData) ? "" : `获得 ${d.rtnData} 签到金`, gold].filter(Boolean).join(" · ")); }
+  if (code === "1") { saveStatus("ok", isNaN(d.rtnData) ? "签到成功" : `+${d.rtnData} 签到金`); $.msg("✅ 网上国网签到", "今日签到完成 ✓", [isNaN(d.rtnData) ? "" : `获得 ${d.rtnData} 签到金`, gold].filter(Boolean).join(" · ")); }
   else if (code === "102007") { saveStatus("ok", "今日已签到"); $.msg("✅ 网上国网签到", "今日已签到", gold); }
   else { saveStatus("fail", `${d.rtnMessage || ""} [${d.rtnCode}]`); $.msg("⚠️ 网上国网签到", "签到失败", `${d.rtnMessage || ""} [${d.rtnCode}]`); }
 }
