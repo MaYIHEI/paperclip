@@ -7,7 +7,7 @@
  * @Author: @WowYiJiu
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-15
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
@@ -54,7 +54,7 @@
 
 const $ = new Env("腾讯视频");
 
-const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK = "tenvideo_cookie"; // 完整 cookie(含 vqq_refresh_token 等),刷新后滚动更新
@@ -98,7 +98,7 @@ function captureAuth() {
 async function checkin() {
     let cookie = $.getdata(CK);
     if (!cookie) {
-        saveStatus("cookie", "未抓取 Cookie");
+        saveStatus("none", "未抓取 Cookie");
         throw new Error(`[${SCRIPT_VERSION}] 未配置 Cookie,请先登录 v.qq.com 抓取`);
     }
 
@@ -154,7 +154,7 @@ async function checkin() {
     }
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "tenvideo_status");
 }
