@@ -44,3 +44,4 @@ https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/pape
 - 签到时间固定为各脚本 README 里的时间，不在插件里修改
 - 龙德广场与北京华联同一会员体系，两个都打开会各签一次，通常只开一个即可
 - 「清除 Cookie」仍在 BoxJS 操作
+- 网上国网、AgentRouter 也有各自的单独插件；用签到合集时请关掉单独插件，否则每天会签两次
