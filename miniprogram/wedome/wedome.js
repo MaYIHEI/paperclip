@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-15
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
 
 const $ = new Env("味多美");
 
-const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_OPENID = "wedome_openid";      // 公众号 openid(永久固定)
@@ -121,7 +121,7 @@ async function checkin() {
     const openid = ($.isNode() ? process.env.WEDOME_OPENID : $.getdata(CK_OPENID)) || "";
     $.log(`[检测] 版本=${SCRIPT_VERSION}  openid=${openid ? openid.slice(0, 4) + "…" + openid.slice(-4) : "空"}`);
     if (!openid) {
-        saveStatus("cookie", "未抓取 Cookie");
+        saveStatus("none", "未抓取 Cookie");
         throw new Error(`[${SCRIPT_VERSION}] 未配置 openid,请先进味多美小程序签到页抓取(或 BoxJS 填 wedome_openid)`);
     }
 
@@ -256,7 +256,7 @@ function debug(content, title = "debug") {
     $.log(`----- end -----\n`);
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "wedome_status");
 }
