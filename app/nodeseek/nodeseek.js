@@ -59,7 +59,7 @@ const $ = new Env("NodeSeek");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r2";
+const SCRIPT_VERSION = "2026-10-18.r3";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
@@ -104,7 +104,7 @@ if (!cookie.includes("pjwt=")) {
         }
         const msg = res.message || "";
         if (res.success === true) {
-            saveStatus("ok", "签到成功");
+            saveStatus("ok", msg || "签到成功");
             $.msg("NodeSeek", "✅ 签到成功", msg + (res.current != null ? "\n当前鸡腿 " + res.current : ""));
         } else if (/已.*签到|重复/.test(msg)) {
             saveStatus("ok", "今日已签到");
