@@ -45,7 +45,7 @@ const $ = new Env("AgentRouter");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-18.r3";
+const SCRIPT_VERSION = "2026-10-18.r4";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -109,7 +109,7 @@ async function run() {
     const failed = results.find((result) => result.title === "❌ 运行失败");
     if (loginFailed) saveStatus("cookie", "登录失败,请检查账号密码");
     else if (failed) saveStatus("fail", failed.content);
-    else saveStatus("ok", `${results.length} 个账号已处理`);
+    else saveStatus("ok", results.map((result) => result.content.split("\n")[0].replace(/^🎁\s*/, "")).join(" · "));
     if (results.length === 1) {
         $.msg($.name, results[0].title, `👤 账号：${maskAccount(accounts[0].username)}\n${results[0].content}`);
     } else {
