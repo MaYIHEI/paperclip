@@ -74,7 +74,7 @@ const $ = new Env("QQ音乐");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -234,9 +234,10 @@ async function checkLvzScore(snap, uin) {
     }
 
     // 每日流程以绿钻签到的鉴权结果代表 Cookie 状态;定时任务/红包雨不改写
-    saveStatus("ok", "每日签到已完成");
+    const lvzScore = data.Ret === 0 ? (data.Info && data.Info.Score) || 0 : 0;
+    saveStatus("ok", lvzScore ? `绿钻成长值 +${lvzScore}` : data.Ret === 20019 || /已.*领取|已签|重复/.test(data.Msg || "") ? "今日已签" : "每日签到已完成");
     if (data.Ret === 0) {
-        const score = (data.Info && data.Info.Score) || 0;
+        const score = lvzScore;
         $.messages.push(`✅ 绿钻成长值签到成功${score ? `: 今日 +${score}` : ""}`);
     } else if (data.Ret === 20019 || /已.*领取|已签|重复/.test(data.Msg || "")) {
         $.messages.push(`✨ 绿钻成长值今日已签到${data.Msg ? `(${data.Msg})` : ""}`);
