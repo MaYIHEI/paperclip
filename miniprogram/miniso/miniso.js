@@ -56,7 +56,7 @@ const $ = new Env('名创优品');
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_NAME = 'miniso_data';
@@ -164,7 +164,7 @@ async function signIn() {
         { activityId: ACTIVITY_ID, taskId: SIGNIN_TASK_ID }
     );
     if (res?.code === 200 && res?.success) {
-        saveStatus('ok', '每日签到成功');
+        saveStatus('ok', '+20 mini币');
         $.messages.push(`✅ 每日签到成功 (+20 mini币)`);
         $.signSuccess = true;
     } else if (/已完成|已签|已经/.test(res?.message || '')) {
