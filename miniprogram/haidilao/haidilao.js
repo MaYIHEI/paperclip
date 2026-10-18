@@ -56,7 +56,7 @@ const $ = new Env("海底捞");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const ckName = "hdl_data";
 const Notify = 1;
@@ -91,7 +91,7 @@ async function main() {
     const expired = userList.filter(u => !u.ckStatus).length;
     const signed = userList.some(u => /^[✅✨]/.test(u.signMsg));
     if (expired) saveStatus('cookie', `${expired} 个账号 token 失效`);
-    else saveStatus(signed ? 'ok' : 'fail', signed ? '签到完成' : (userList[0] && userList[0].signMsg) || '签到失败');
+    else saveStatus(signed ? 'ok' : 'fail', signed ? userList.filter(u => /^[✅✨]/.test(u.signMsg)).map(u => u.signMsg.replace(/^[✅✨]/, '')).join(' · ') : (userList[0] && userList[0].signMsg) || '签到失败');
 }
 
 class UserInfo {
