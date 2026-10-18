@@ -58,7 +58,7 @@ const $ = new Env("扫描全能王");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r2";
+const SCRIPT_VERSION = "2026-10-18.r3";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY     = 'camscanner_data';
@@ -186,7 +186,7 @@ function debug(content, title = "debug") {
         }
 
         const summary = prizes.map((p, i) => `第${i + 1}次: ${p}`).join(' · ');
-        saveStatus('ok', `今日抽奖完成 ${prizes.length}/${info.day_count} 次`);
+        saveStatus('ok', `抽奖 ${prizes.length} 次:${prizes.join('、')}`);
         $.msg('扫描全能王', `🎰 今日抽奖完成(${prizes.length}/${info.day_count} 次)`, summary);
     } catch (e) {
         $.log('[ERROR] ' + e);
