@@ -1,7 +1,7 @@
 /**
- * Cookie 体检 · 一条通知列出哪些签到脚本需要重新抓 Cookie
+ * 签到汇总 · 一条通知看完所有签到脚本今天的结果和奖励
  *
- * 体检:汇总各签到脚本最近一次运行结果;cron 每天一次,也可随时手动运行
+ * 汇总:读取各签到脚本最近一次运行结果;cron 每天 11:30,也可随时手动运行
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
@@ -9,29 +9,29 @@
  *
  * ===== Loon =====
  * [Script]
- * cron "0 12 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/checkup/checkup.js") with tag="Cookie 体检", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png"
+ * cron "30 11 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/summary/summary.js") with tag="签到汇总", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip-checkin.png"
  *
  * ===== Surge =====
  * [Script]
- * Cookie 体检 = type=cron,cronexp=0 12 * * *,timeout=30,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/checkup/checkup.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png
+ * 签到汇总 = type=cron,cronexp=30 11 * * *,timeout=30,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/summary/summary.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip-checkin.png
  *
  * ===== Quantumult X =====
  * [task_local]
- * 0 12 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/checkup/checkup.js, tag=Cookie 体检, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip.png, enabled=true
+ * 30 11 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/summary/summary.js, tag=签到汇总, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip-checkin.png, enabled=true
  *
  * ===== Stash =====
  * cron:
  *   script:
- *     - name: Cookie 体检
- *       cron: '0 12 * * *'
+ *     - name: 签到汇总
+ *       cron: '30 11 * * *'
  *       timeout: 30
  * script-providers:
- *   Cookie 体检:
- *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/checkup/checkup.js
+ *   签到汇总:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/summary/summary.js
  *     interval: 86400
  */
 
-const $ = new Env("Cookie 体检");
+const $ = new Env("Paperclip 签到汇总");
 
 const SCRIPT_VERSION = "2026-10-18.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
@@ -71,30 +71,39 @@ const SCRIPTS = [
     ["林里", "linli_status"],
 ];
 
-const cookie = [], fail = [];
-let ok = 0, unused = 0;
-// 签到合集插件会传入各脚本开关,只报告打开的脚本
+// 签到合集插件会传入各脚本开关,只汇总打开的脚本
 const enabled = typeof $argument === "object" && $argument ? $argument : null;
+const today = day(Date.now());
+const cookie = [], fail = [], ok = [];
+let unused = 0;
 for (const [name, key] of SCRIPTS) {
     if (enabled && enabled[key.replace(/_status$/, "")] !== true) continue;
     let r;
     try { r = JSON.parse($.getdata(key) || "null"); } catch (e) { r = null; }
     if (!r) continue;
-    const label = `${name}${day(r.t) === day(Date.now()) ? "" : `(${day(r.t)})`}`; // 不是今天的结果标上日期
-    if (r.s === "ok") ok++;
-    else if (r.s === "none") unused++; // 没抓过 Cookie 或没配账号,不算问题
+    if (r.s === "none") { unused++; continue; } // 没抓过 Cookie 或没配账号,不算问题
+    const label = `${name}${day(r.t) === today ? "" : `(${day(r.t)})`}`; // 不是今天的结果标上日期
+    if (r.s === "ok") ok.push(`${label} ${reward(r.msg)}`);
     else if (r.s === "cookie") cookie.push(label);
-    else fail.push(`${label}:${r.msg}`);
+    else fail.push(`${label}(${r.msg})`);
 }
 
-const bad = cookie.length + fail.length;
+const counts = [ok.length && `✅ ${ok.length} 成功`, cookie.length && `⚠️ ${cookie.length} 需重抓`, fail.length && `❌ ${fail.length} 失败`].filter(Boolean);
 const lines = [];
 if (cookie.length) lines.push(`需重新抓取:${cookie.join("、")}`);
-if (fail.length) lines.push(`签到失败:\n${fail.join("\n")}`);
+if (fail.length) lines.push(`失败:${fail.join("、")}`);
+lines.push(...ok);
 if (unused) lines.push(`未使用 ${unused} 个`);
-if (!ok && !bad && !unused) lines.push("暂无记录,签到脚本运行一次后会自动登记");
-$.msg($.name, bad ? `⚠️ ${bad} 个需要处理,${ok} 个正常` : ok ? `✅ 全部正常(${ok} 个)` : "", lines.join("\n"));
+if (!lines.length) lines.push("暂无记录,签到脚本运行一次后会自动登记");
+$.msg($.name, counts.join(" · "), lines.join("\n"));
 $.done();
+
+// 成功记录里去掉「签到成功」前缀,只留奖励;没有奖励时写「今日已签」/「签到成功」
+function reward(msg) {
+    const m = String(msg || "").trim();
+    if (/^今日已签/.test(m)) return "今日已签";
+    return m.replace(/^签到成功\s*/, "") || "签到成功";
+}
 
 // 北京时间 MM-DD
 function day(t) {
