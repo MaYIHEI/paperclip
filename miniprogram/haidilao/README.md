@@ -85,7 +85,7 @@ script-providers:
 | - | 原作者 [@Sliverkiss](https://gist.github.com/Sliverkiss) 初版 |
 | 2026-05-13 | 修复 Cookie 抓错字段,放宽重写匹配路径 |
 | 2026-05-24 | tag 统一为 `海底捞 Cookie` / `海底捞签到`,加 img-url 图标 |
-| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/checkup/)」一条通知查看是否需要重新抓取 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
