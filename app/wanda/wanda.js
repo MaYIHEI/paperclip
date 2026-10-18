@@ -173,7 +173,7 @@ const $ = new Env('万达电影');
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = '2026-10-18.r2'; // 去掉请求里的 timeout(Loon 误判为 ms 致秒超时)
+const SCRIPT_VERSION = '2026-10-18.r3'; // 去掉请求里的 timeout(Loon 误判为 ms 致秒超时)
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'wanda_data';
@@ -269,7 +269,7 @@ if (JSON.parse($.getdata('wanda_clear') || 'false')) {
         saveStatus('ok', '今日已签');
         $.msg($.name, `✨ ${user} 今日已签`, biz.bizMsg || '已签到过了');
     } else {
-        saveStatus('ok', '签到成功');
+        saveStatus('ok', inner.successMessage || '签到成功');
         $.msg($.name, `✅ ${user} 签到成功`, inner.successMessage || '签到成功');
     }
     $.log(`[OK] ${JSON.stringify(resp).slice(0, 300)}`);
