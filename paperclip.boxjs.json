@@ -1398,10 +1398,7 @@
       "keys": [
         "nodeseek_cookie",
         "nodeseek_ua",
-        "nodeseek_random",
-        "nodeseek_relay_url",
-        "nodeseek_relay_key",
-        "nodeseek_debug"
+        "nodeseek_random"
       ],
       "settings": [
         {
@@ -1420,39 +1417,6 @@
             }
           ],
           "desc": "签到奖励模式：固定 = 每次 +5 鸡腿；随机 = 1-10 随机"
-        },
-        {
-          "id": "nodeseek_relay_url",
-          "name": "中继地址",
-          "val": "",
-          "type": "text",
-          "placeholder": "http://IP:3001/attend",
-          "desc": "VPS 中继服务器地址"
-        },
-        {
-          "id": "nodeseek_relay_key",
-          "name": "中继密钥",
-          "val": "",
-          "type": "text",
-          "placeholder": "中继 API Key",
-          "desc": "中继服务器 API Key（x-api-key）"
-        },
-        {
-          "id": "nodeseek_debug",
-          "name": "调试模式",
-          "val": "false",
-          "type": "selects",
-          "items": [
-            {
-              "key": "false",
-              "label": "关闭"
-            },
-            {
-              "key": "true",
-              "label": "开启"
-            }
-          ],
-          "desc": "开启后打印中继响应和分类结果（不打印 Cookie / 密钥）"
         }
       ],
       "author": "@MaYIHEI",
@@ -1680,7 +1644,7 @@
     },
     {
       "id": "paperclip.agentrouter",
-      "name": "AgentRouter（Surge / QX / Stash）",
+      "name": "AgentRouter",
       "keys": [
         "agentrouter_username",
         "agentrouter_password",
@@ -1694,7 +1658,7 @@
           "val": "",
           "type": "text",
           "placeholder": "网站账号或邮箱",
-          "desc": "其他平台在此填写网站账号；Loon 请直接在插件设置中填写账号密码，不使用本页配置"
+          "desc": "网站账号或邮箱；Loon 单独插件里填了的话以插件为准，签到合集读这里"
         },
         {
           "id": "agentrouter_password",
