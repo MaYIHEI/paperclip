@@ -7,7 +7,7 @@
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Version: 2026-10-16.r7
- * @Updated: 2026-10-16
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [Argument]
@@ -41,7 +41,7 @@
  */
 
 const $ = new Env("网上国网");
-const SCRIPT_VERSION = "2026-10-16.r8"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const KEY_PHONE = "sgcc_phone";       // 账号(手机号)
@@ -159,7 +159,7 @@ async function goldText(sess) {
   catch (e) { $.log(`[WARN] 查询签到金余额失败: ${e.message || e}`); return ""; }
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
   $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "sgcc_status");
 }
@@ -169,7 +169,7 @@ async function main() {
     [KEY_SESS, KEY_DEV, KEY_PEND, KEY_SMS].forEach((k) => $.setdata("", k)); $.setdata("false", "sgcc_clear");
     $.msg("网上国网签到", "", "✅ 已清除登录凭证;账号密码保留"); return;
   }
-  if (!user || !pass) { saveStatus("cookie", "缺少账号密码"); $.msg("⚠️ 网上国网签到", "缺少账号密码", "在 Loon 插件设置或 BoxJS 填写网上国网手机号和密码"); return; }
+  if (!user || !pass) { saveStatus("none", "缺少账号密码"); $.msg("⚠️ 网上国网签到", "缺少账号密码", "在 Loon 插件设置或 BoxJS 填写网上国网手机号和密码"); return; }
 
   const saved = getJ(KEY_SESS);
   let sess = await ensureLogin(false), d;
