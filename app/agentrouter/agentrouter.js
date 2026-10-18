@@ -41,7 +41,7 @@
  */
 
 const $ = new Env("AgentRouter");
-const SCRIPT_VERSION = "2026-10-18.r1";
+const SCRIPT_VERSION = "2026-10-18.r2";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -50,8 +50,6 @@ const CLEAR_KEY = "agentrouter_clear";
 const DEBUG_KEY = "agentrouter_debug";
 const IS_LOON = $.isLoon();
 const PLUGIN = typeof $argument !== "undefined" && $argument && typeof $argument === "object" ? $argument : {};
-// 签到合集插件里的参数带 agentrouter_ 前缀,去掉前缀后与本插件参数同名
-for (const key of Object.keys(PLUGIN)) if (key.startsWith("agentrouter_")) PLUGIN[key.slice(12)] = PLUGIN[key];
 const SETTINGS_PAGE = IS_LOON ? "Loon 插件设置" : "BoxJS";
 const BASE_URL = "https://agentrouter.org";
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
