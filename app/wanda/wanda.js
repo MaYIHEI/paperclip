@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-15
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
@@ -169,7 +169,7 @@ function urlEncodeUnicode(s) {
 // ========== 签到逻辑 ==========
 const $ = new Env('万达电影');
 
-const SCRIPT_VERSION = '2026-10-15.r1'; // 去掉请求里的 timeout(Loon 误判为 ms 致秒超时)
+const SCRIPT_VERSION = '2026-10-18.r1'; // 去掉请求里的 timeout(Loon 误判为 ms 致秒超时)
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'wanda_data';
@@ -196,7 +196,7 @@ if (JSON.parse($.getdata('wanda_clear') || 'false')) {
 (async () => {
     const raw = $.getdata(CK_KEY);
     if (!raw) {
-        saveStatus('cookie', '未抓取 Cookie');
+        saveStatus('none', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少 Cookie',
             '请先开启 Cookie 抓取脚本,再打开万达电影 APP →「我的」');
         $.done();
@@ -306,7 +306,7 @@ function doSign(ck, ts, check, bodyStr) {
     });
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'wanda_status');
 }
