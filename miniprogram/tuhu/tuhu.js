@@ -58,7 +58,7 @@ const $ = new Env('途虎养车');
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 $.is_debug = ($.isNode() ? process.env['IS_DEDUG'] : $.getdata('is_debug')) || 'false';  // 调试模式
 $.token = ($.isNode() ? process.env['TUHU_TOKEN'] : $.getdata('tuhu_token')) || '';  // Token
@@ -114,7 +114,7 @@ async function main() {
         }
         $.log(`----- 所有账号执行完成 -----`);
         if ($.expired) saveStatus('cookie', `${$.expired} 个账号 Token 无效`);
-        else saveStatus($.signOk ? 'ok' : 'fail', $.signOk ? '签到完成' : $.lastFail || '签到失败');
+        else saveStatus($.signOk ? 'ok' : 'fail', $.signOk ? ($.rewardSum ? `+${$.rewardSum} 积分` : '今日已签') : $.lastFail || '签到失败');
     } else {
         saveStatus('none', '未抓取 Cookie');
         throw new Error('未找到 Token 变量 ❌');
@@ -203,6 +203,7 @@ async function checkin(type, name) {
 
     var result = await Request(opt);
     if (result?.data?.rewardIntegral || /已签/.test(result?.message || '')) $.signOk = true;
+    if (result?.data?.rewardIntegral) $.rewardSum = ($.rewardSum || 0) + Number(result.data.rewardIntegral);
     else $.lastFail = `${name}签到失败: ${result?.message || $.toStr(result)}`;
     if (result?.data?.rewardIntegral) {
         msg += `${name}任务: 签到成功, 积分 +${result?.data?.rewardIntegral}, 连续签到: ${result?.data?.continuousDays}/7天 ✅`;
