@@ -85,7 +85,7 @@ script-providers:
 | 2024-06-08 | 原作者 [@Sliverkiss](https://github.com/Sliverkiss) 初版 |
 | 2026-05-08 | 适配 v5.13.8 新接口与鉴权 |
 | 2026-05-08 | 修复 getUserInfo 返回为空时的异常 |
-| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/checkup/)」一条通知查看是否需要重新抓取 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
