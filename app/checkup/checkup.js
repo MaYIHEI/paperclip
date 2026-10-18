@@ -5,7 +5,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-16
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [Script]
@@ -33,7 +33,7 @@
 
 const $ = new Env("Cookie 体检");
 
-const SCRIPT_VERSION = "2026-10-16.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 // [显示名, 状态 key];没装或从未运行的脚本没有记录,自动跳过
@@ -72,7 +72,7 @@ const SCRIPTS = [
 ];
 
 const cookie = [], fail = [];
-let ok = 0;
+let ok = 0, unused = 0;
 // 签到合集插件会传入各脚本开关,只报告打开的脚本
 const enabled = typeof $argument === "object" && $argument ? $argument : null;
 for (const [name, key] of SCRIPTS) {
@@ -82,6 +82,7 @@ for (const [name, key] of SCRIPTS) {
     if (!r) continue;
     const label = `${name}${day(r.t) === day(Date.now()) ? "" : `(${day(r.t)})`}`; // 不是今天的结果标上日期
     if (r.s === "ok") ok++;
+    else if (r.s === "none") unused++; // 没抓过 Cookie 或没配账号,不算问题
     else if (r.s === "cookie") cookie.push(label);
     else fail.push(`${label}:${r.msg}`);
 }
@@ -90,7 +91,8 @@ const bad = cookie.length + fail.length;
 const lines = [];
 if (cookie.length) lines.push(`需重新抓取:${cookie.join("、")}`);
 if (fail.length) lines.push(`签到失败:\n${fail.join("\n")}`);
-if (!ok && !bad) lines.push("暂无记录,签到脚本运行一次后会自动登记");
+if (unused) lines.push(`未使用 ${unused} 个`);
+if (!ok && !bad && !unused) lines.push("暂无记录,签到脚本运行一次后会自动登记");
 $.msg($.name, bad ? `⚠️ ${bad} 个需要处理,${ok} 个正常` : ok ? `✅ 全部正常(${ok} 个)` : "", lines.join("\n"));
 $.done();
 
