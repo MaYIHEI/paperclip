@@ -70,13 +70,11 @@
 
 const $ = new Env("QQ音乐");
 
-// Loon 签到合集插件传入的设置优先,未传或留空时读 BoxJS
-if (typeof $argument === "object" && $argument) {
-    const readStore = $.getdata.bind($);
-    $.getdata = (key) => ($argument[key] === undefined || $argument[key] === "" ? readStore(key) : String($argument[key]));
-}
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -248,7 +246,7 @@ async function checkLvzScore(snap, uin) {
     }
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "qqmusic_status");
 }
