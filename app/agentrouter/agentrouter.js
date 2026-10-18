@@ -41,7 +41,11 @@
  */
 
 const $ = new Env("AgentRouter");
-const SCRIPT_VERSION = "2026-10-18.r2";
+
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+const SCRIPT_VERSION = "2026-10-18.r3";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -50,7 +54,7 @@ const CLEAR_KEY = "agentrouter_clear";
 const DEBUG_KEY = "agentrouter_debug";
 const IS_LOON = $.isLoon();
 const PLUGIN = typeof $argument !== "undefined" && $argument && typeof $argument === "object" ? $argument : {};
-const SETTINGS_PAGE = IS_LOON ? "Loon 插件设置" : "BoxJS";
+const SETTINGS_PAGE = IS_LOON ? "Loon 插件设置或 BoxJS" : "BoxJS";
 const BASE_URL = "https://agentrouter.org";
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
 
@@ -134,8 +138,9 @@ function readAccounts() {
             return { username: account.username.trim(), password: account.password };
         });
     }
-    const username = ((IS_LOON ? PLUGIN.username : $.getdata(USER_KEY)) || "").trim();
-    const password = (IS_LOON ? PLUGIN.password : $.getdata(PASSWORD_KEY)) || "";
+    // 插件里没填(例如在签到合集里运行)时读 BoxJS
+    const username = (PLUGIN.username || $.getdata(USER_KEY) || "").trim();
+    const password = PLUGIN.password || $.getdata(PASSWORD_KEY) || "";
     return username && password ? [{ username, password }] : [];
 }
 
@@ -215,7 +220,7 @@ async function checkin({ username, password }, quotaUnit) {
     }
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), "agentrouter_status");
 }
@@ -300,7 +305,7 @@ function request(method, path, headers, body, label) {
 }
 
 function debug(message) {
-    if (IS_LOON ? PLUGIN.debug === true : $.getdata(DEBUG_KEY) === "true") $.log(`[DEBUG] ${message}`);
+    if (PLUGIN.debug === true || $.getdata(DEBUG_KEY) === "true") $.log(`[DEBUG] ${message}`);
 }
 
 function Env(s) {
