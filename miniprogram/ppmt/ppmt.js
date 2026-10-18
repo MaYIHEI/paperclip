@@ -7,7 +7,7 @@
  * @Author: @Sliverkiss
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-15
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
@@ -52,7 +52,7 @@
  */
 const $ = new Env("泡泡玛特");
 
-const SCRIPT_VERSION = "2026-10-15.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-18.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const ckName = "ppmt_data";
 const userCookie = $.toObj($.isNode() ? process.env[ckName] : $.getdata(ckName)) || [];
@@ -149,7 +149,7 @@ class UserInfo {
     }
 }
 
-// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败
+// 记录本次结果,供「Cookie 体检」汇总:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
 function saveStatus(s, msg) {
     $.setdata(JSON.stringify({ s, msg: String(msg).slice(0, 100), t: Date.now() }), 'ppmt_status');
 }
@@ -287,7 +287,7 @@ async function loadCryptoJS() {
                 $.msg($.name, "", "✅ Cookie 已清除，请重新抓取");
                 return;
             }
-            if (!userCookie.length) saveStatus('cookie', '未抓取 Cookie');
+            if (!userCookie.length) saveStatus('none', '未抓取 Cookie');
             $.CryptoJS = await loadCryptoJS();
             await checkEnv();
             await main();
