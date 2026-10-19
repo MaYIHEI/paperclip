@@ -5,7 +5,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-10
+ * @Updated: 2026-10-19
  */
 
 const $ = new Env('万达电影 [Cookie]');
@@ -35,15 +35,24 @@ const CK_KEY = 'wanda_data';
             return;
         }
 
-        const data = { token, user, shumei };
+        const dev = {
+            ua: h['user-agent'], model: h['x-ry-model'],
+            sysVer: h['x-ry-system-ver'], ver: h['x-ry-version'],
+        };
+        const data = { token, user, shumei, dev };
 
-        // token 没变就不重复写/通知
+        // token 没变就不重复通知,设备信息有变时静默更新
         const old = $.getdata(CK_KEY);
         if (old) {
             try {
                 const o = JSON.parse(old);
                 if (o.token === token && o.user === user) {
-                    $.log('[INFO] token 未变,跳过更新');
+                    if (JSON.stringify(o.dev) !== JSON.stringify(dev) || o.shumei !== shumei) {
+                        $.setdata(JSON.stringify(data), CK_KEY);
+                        $.log('[INFO] token 未变,已更新设备信息');
+                    } else {
+                        $.log('[INFO] token 未变,跳过更新');
+                    }
                     $.done();
                     return;
                 }
