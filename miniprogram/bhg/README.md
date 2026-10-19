@@ -89,5 +89,4 @@ script-providers:
 
 ## 已知限制
 
-- 单脚本架构(`$request` 是否存在区分抓 cookie / cron)
 - mall_id 跟随抓取时所选门店;换门店签到需重进对应门店签到页重抓(账户级共享,通常无需更换)
