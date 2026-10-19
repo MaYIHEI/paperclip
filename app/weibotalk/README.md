@@ -98,7 +98,6 @@ script-providers:
 
 ## 已知限制
 
-- X-Validator 时效未知,持续观察 cron 稳定性
 - 关注超话多时建议把 `wb_request_time` 调到 1000+ 避免触发风控
 
 ## 致谢
