@@ -29,6 +29,7 @@
 | [`agentrouter/`](./agentrouter/) | AgentRouter - 每日登录签到 | 🧪 待验证 |
 | [`sgcc/`](./sgcc/) | 网上国网(国家电网 95598) - 积分每日签到(手机号 + 密码自动登录,无需抓包) | 🧪 待验证 |
 | [`baidunetdisk/`](./baidunetdisk/) | 百度网盘 - 会员成长值签到 + 每日答题(助力 SVIP 升级) | 🧪 待验证 |
+| [`laifen/`](./laifen/) | 徕芬 - 会员每日签到(积分) | 🧪 待验证 |
 | [`summary/`](./summary/) | 签到汇总 - 一条通知看完所有签到脚本的结果、奖励和需要重抓的 Cookie | 🧪 待验证 |
 | [`cmccbj/`](./cmccbj/) | 北京移动 - 「签到赢好礼」每日签到(送流量/积分) | 📦 已归档 |
 | [`lvcchong/`](./lvcchong/) | 驴充充(充电桩) - 积分中心每日签到 | 📦 已归档 |
