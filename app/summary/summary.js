@@ -33,7 +33,7 @@
 
 const $ = new Env("Paperclip 签到汇总");
 
-const SCRIPT_VERSION = "2026-10-19.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-19.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 // [显示名, 状态 key];没装或从未运行的脚本没有记录,自动跳过
@@ -66,7 +66,6 @@ const SCRIPTS = [
     ["名创优品", "miniso_status"],
     ["龙德广场", "longde_status"],
     ["龙湖天街", "lhtj_status"],
-    ["松山棉店", "songshan_status"],
     ["味多美", "wedome_status"],
     ["北京华联", "bhg_status"],
     ["林里", "linli_status"],
