@@ -95,6 +95,4 @@ script-providers:
 
 ## 已知限制
 
-- token 有效期未实测,失效后需重新打开 APP 触发 `get_user_attribute` 重新抓取。
 - `cs_ept_d` / `client_id` 可能分散在不同请求,首次抓取后需在 APP 内多停留几秒等其自动补全。
-- 抽奖为概率制,中奖 `item` 由服务端决定,脚本只负责把机会用满。
