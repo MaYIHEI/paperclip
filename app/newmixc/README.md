@@ -91,4 +91,3 @@ script-providers:
 ## 已知限制
 
 - **单商场签到**:脚本按 cookie 里的 `mallNo` 签到一家。多家万象会员需切换商场重抓
-- Token 时效较长但风控未知,签到失败提示「未登录」时重抓 cookie
