@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-18
+ * @Updated: 2026-10-19
  *
  * ===== Loon =====
  * [MITM]
@@ -56,7 +56,7 @@ const $ = new Env("WPS");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r4"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-19.r5"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -411,20 +411,29 @@ async function taskFragment() {
         }
 
         // 2) 签到:有序列就复用(is_new_sign_series=false),无序列才新建
-        const isNew = !seriesId;
-        const reqObj = {
-            component_uniq_number: {
-                activity_number: FLZX.activity_number,
-                page_number: FLZX.page_number,
-                component_number: comp.component_number,
-                component_node_id: comp.component_node_id,
-            },
-            component_type: comp.type,
-            component_action: "fragment_collect.sign_in",
-            fragment_collect: { sign_date: today, series_id: seriesId, is_new_sign_series: isNew },
+        const signIn = async (sid, isNew) => {
+            const reqObj = {
+                component_uniq_number: {
+                    activity_number: FLZX.activity_number,
+                    page_number: FLZX.page_number,
+                    component_number: comp.component_number,
+                    component_node_id: comp.component_node_id,
+                },
+                component_type: comp.type,
+                component_action: "fragment_collect.sign_in",
+                fragment_collect: { sign_date: today, series_id: sid, is_new_sign_series: isNew },
+            };
+            const r = await httpReq("POST", COMPONENT, { body: JSON.stringify(reqObj) });
+            return { r, j: safeJson(r.body) };
         };
-        const r = await httpReq("POST", COMPONENT, { body: JSON.stringify(reqObj) });
-        const j = safeJson(r.body);
+        let isNew = !seriesId;
+        let { r, j } = await signIn(seriesId, isNew);
+        // 上一个序列周期已结束 → 服务端回「sign date <今天> not in series」,这时才新建序列
+        if (!isNew && /not in se/i.test((r.body || ""))) {
+            debug(`${tag} 旧序列已结束,新建序列: ${r.body.slice(0, 200)}`);
+            isNew = true;
+            ({ r, j } = await signIn("", true));
+        }
         if (!j) {
             $.results.push(`❌ ${tag}:无响应`);
             debug(`${tag} 响应: ${r.body.slice(0, 300)}`);
