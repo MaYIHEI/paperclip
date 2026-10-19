@@ -87,11 +87,6 @@ script-providers:
 | 2026-05-24 | tag 统一为 `海底捞 Cookie` / `海底捞签到`,加 img-url 图标 |
 | 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |
 
-## 已知限制
-
-- token 时效未知,如返回未授权请重抓
-- 单脚本同时承担「抓 token」和「签到」两个角色(通过 `$request` 是否存在区分),架构沿用原作
-
 ## 致谢
 
 - 原作者: [@Sliverkiss](https://gist.github.com/Sliverkiss)
