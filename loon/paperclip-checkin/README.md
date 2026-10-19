@@ -38,6 +38,7 @@ https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/pape
 | 2026-10-16 | 初版：31 个签到脚本 + Cookie 体检，常用设置在插件里填 |
 | 2026-10-18 | 签到开关默认全开；账号和任务设置移回 BoxJS，插件只留开关 |
 | 2026-10-18 | Cookie 体检并入「统一通知」：各脚本静默，11:30 一条签到汇总（含奖励明细） |
+| 2026-10-19 | 加入徕芬；松山棉店归档移除 |
 
 ## 已知限制
 

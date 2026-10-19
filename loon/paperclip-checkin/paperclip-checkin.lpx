@@ -36,13 +36,12 @@ huisheng = switch,true,tag=【惠省红包墙】领券
 miniso = switch,true,tag=【名创优品】签到
 longde = switch,true,tag=【龙德广场】签到
 lhtj = switch,true,tag=【龙湖天街】签到
-songshan = switch,true,tag=【松山棉店】签到
 wedome = switch,true,tag=【味多美】签到
 bhg = switch,true,tag=【北京华联】签到
 linli = switch,true,tag=【林里】签到
 
 [Script]
-cron "30 11 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/summary/summary.js", {${weibotalk}, ${tenvideo}, ${mihoyo}, ${newmixc}, ${mishop}, ${milottery}, ${youpin}, ${lhtj_app}, ${qqmusic}, ${wanda}, ${tingtingfm}, ${wps}, ${camscanner}, ${dreame}, ${linghu}, ${nodeseek}, ${pan1}, ${agentrouter}, ${sgcc}, ${baidunetdisk}, ${laifen}, ${ppmt}, ${tuhu}, ${haidilao}, ${huisheng}, ${miniso}, ${longde}, ${lhtj}, ${songshan}, ${wedome}, ${bhg}, ${linli}}) with tag="签到汇总", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip-checkin.png", enable=${merge}
+cron "30 11 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/summary/summary.js", {${weibotalk}, ${tenvideo}, ${mihoyo}, ${newmixc}, ${mishop}, ${milottery}, ${youpin}, ${lhtj_app}, ${qqmusic}, ${wanda}, ${tingtingfm}, ${wps}, ${camscanner}, ${dreame}, ${linghu}, ${nodeseek}, ${pan1}, ${agentrouter}, ${sgcc}, ${baidunetdisk}, ${laifen}, ${ppmt}, ${tuhu}, ${haidilao}, ${huisheng}, ${miniso}, ${longde}, ${lhtj}, ${wedome}, ${bhg}, ${linli}}) with tag="签到汇总", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip-checkin.png", enable=${merge}
 cron "0 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/weibotalk/weibotalk.js", {${merge}}) with tag="微博超话签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png", enable=${weibotalk}
 cron "10 0 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/tenvideo/tenvideo.js", {${merge}}) with tag="腾讯视频签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png", enable=${tenvideo}
 cron "13 6 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/mihoyo/mihoyo.js", {${merge}}) with tag="米游社签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png", enable=${mihoyo}
@@ -73,7 +72,6 @@ cron "5 0 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/papercli
 cron "37 7 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/miniso/miniso.js", {${merge}}) with tag="名创优品签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png", enable=${miniso}
 cron "5 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/longde/longde.js", {${merge}}) with tag="龙德广场签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/longde.png", enable=${longde}
 cron "0 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/lhtj/lhtj.js", {${merge}}) with tag="龙湖天街签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png", enable=${lhtj}
-cron "20 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/songshan/songshan.js", {${merge}}) with tag="松山棉店签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/songshan.png", enable=${songshan}
 cron "10 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/wedome/wedome.js", {${merge}}) with tag="味多美签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png", enable=${wedome}
 cron "8 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/bhg/bhg.js", {${merge}}) with tag="北京华联签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png", enable=${bhg}
 cron "0 10 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js", {${merge}}) with tag="林里签到兑换", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png", enable=${linli}
