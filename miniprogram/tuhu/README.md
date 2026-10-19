@@ -98,7 +98,6 @@ script-providers:
 ## 已知限制
 
 - **依赖第三方 blackBox 服务**: `tuhu.xn--ug8h.eu.org` 由 [@Sliverkiss](https://github.com/Sliverkiss) 维护,如该服务下线签到会失败
-- **token 抓取需手动触发**: 每次 token 失效后需要重新进入小程序「我的」或「积分中心」页面刷新
 
 ## 致谢
 
