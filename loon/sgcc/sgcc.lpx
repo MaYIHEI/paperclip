@@ -1,5 +1,5 @@
 #!name=网上国网签到
-#!desc=版本 2026-10-16.r7 · 每天 8:30 自动登录并签到,无需抓包。在插件设置填手机号和密码;首次登录按通知把短信验证码填进来再手动运行一次。已在用「Paperclip · 签到合集」的不用再开本插件。🧪 待验证
+#!desc=版本 2026-10-16.r7 · 每天 8:30 自动登录并签到,无需抓包。在插件设置填手机号和密码;首次登录按通知把短信验证码填进来再手动运行一次。已在用「Paperclip · 签到合集」的不用再开本插件。
 #!author=脑瓜, stevenjoezhang, MaYIHEI
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/app/sgcc
 #!icon=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png
