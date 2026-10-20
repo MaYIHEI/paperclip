@@ -19,8 +19,8 @@
  * [MITM]
  * hostname = %APPEND% shop-api.retail.mi.com
  * [Script]
- * 小米商城 Cookie = type=http-request, pattern=^https:\/\/shop-api\.retail\.mi\.com\/mtop\/mf\/act\/infinite\/(do|done), requires-body=0, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.cookie.js, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png
- * 小米商城签到 = type=cron, cronexp=15 8 * * *, timeout=60, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.js, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png, script-update-interval=0
+ * 小米商城 Cookie = type=http-request,pattern=^https:\/\/shop-api\.retail\.mi\.com\/mtop\/mf\/act\/infinite\/(do|done),requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.cookie.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png
+ * 小米商城签到 = type=cron,cronexp=15 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png
  *
  * ===== Quantumult X =====
  * [MITM]
@@ -31,6 +31,11 @@
  * 15 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.js, tag=小米商城签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png, enabled=true
  *
  * ===== Stash =====
+ * cron:
+ *   script:
+ *     - name: 小米商城签到
+ *       cron: '15 8 * * *'
+ *       timeout: 60
  * http:
  *   mitm:
  *     - "shop-api.retail.mi.com"
@@ -39,11 +44,10 @@
  *       name: 小米商城 Cookie
  *       type: request
  *       require-body: false
- * cronjob:
- *   - name: 小米商城签到
- *     cronexp: "15 8 * * *"
- *     timeout: 60
- *     script-path: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.js
+ * script-providers:
+ *   小米商城签到:
+ *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.js
+ *     interval: 86400
  */
 
 const $ = new Env('小米商城');
