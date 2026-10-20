@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-27
+ * @Updated: 2026-07-27
  */
 
 const $ = new Env("米游社 [Cookie]");
@@ -63,7 +63,7 @@ const KEY_WEB_HEADERS     = 'mhy_web_headers';
     // 抓取 2: web 签到 cookie + headers
     // 米哈游已不再把 cookie_token 放进「请求 Cookie」,改为在 luna 接口的「响应 Set-Cookie」里下发,
     // 所以这里从 $response 的 Set-Cookie 抠 cookie_token_v2 + account_mid_v2 + account_id_v2 拼成 web cookie。
-    if (/api-takumi\.mihoyo\.com\/event\/luna\/[a-z0-9]+\/(info|home|sign)/.test(url)) {
+    if (/api-takumi\.mihoyo\.com\/event\/luna\/(?:[a-z0-9]+\/)?(info|home|sign)(?:[/?]|$)/.test(url)) {
         try {
             const setCookie = readSetCookie($response && $response.headers);
             const want = ['cookie_token_v2', 'account_mid_v2', 'account_id_v2'];
