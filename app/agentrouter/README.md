@@ -9,12 +9,12 @@
 ## 文件
 
 - `agentrouter.js` — 定时签到脚本。
-- `agentrouter.lpx` — Loon 定时任务插件。
+- Loon 插件见 [`loon/agentrouter`](../../loon/agentrouter/)。
 - `icon.png` — AgentRouter 官网图标。
 
 ## 使用步骤
 
-1. 在 Loon 导入或更新 [AgentRouter 插件](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/agentrouter/agentrouter.lpx)。
+1. 在 Loon 导入或更新 [AgentRouter 插件](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/agentrouter/agentrouter.lpx)。
 2. 打开插件设置，单账号填写账号和密码；多账号按下方示例填写「多账号（JSON）」，保存。
 3. 手动运行一次「AgentRouter签到」核对结果，之后每天 **09:00（设备时间）**自动运行。
 
@@ -68,7 +68,7 @@ AgentRouter
 
 ## Loon
 
-[插件地址](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/agentrouter/agentrouter.lpx) · 无需 MITM、重写或 BoxJS。
+[插件地址](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/agentrouter/agentrouter.lpx) · 无需 MITM、重写或 BoxJS。
 
 以下内容用于插件内部配置，直接导入插件即可：
 

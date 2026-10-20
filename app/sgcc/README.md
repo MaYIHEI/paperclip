@@ -9,7 +9,7 @@
 ## 文件
 
 - `sgcc.js` — cron 签到脚本(手机号 + 密码自动登录并签到,无需抓包)
-- `sgcc.lpx` — Loon 插件(cron + 账号设置)
+- Loon 插件见 [`loon/sgcc`](../../loon/sgcc/)
 
 ## 使用步骤
 
@@ -23,7 +23,7 @@
 推荐导入插件,在插件设置里填手机号、密码:
 
 ```
-https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/sgcc/sgcc.lpx
+https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/sgcc/sgcc.lpx
 ```
 
 或手动添加:
