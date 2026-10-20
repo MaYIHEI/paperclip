@@ -24,9 +24,9 @@
 hostname = xunting.vbegin.com.cn
 
 [Script]
-http-request ^https:\/\/xunting\.vbegin\.com\.cn\/sns\/app tag=听听FM Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png
+request if ${url} ~= /^https:\/\/xunting\.vbegin\.com\.cn\/sns\/app/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js") with tag="听听FM Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png"
 
-cron "20 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js, tag=听听FM签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png, enable=true
+cron "20 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js") with tag="听听FM签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png"
 ```
 
 ## Surge
@@ -87,8 +87,4 @@ script-providers:
 | 日期 | 变更 |
 |---|---|
 | 2026-06-18 | 初版 |
-
-## 已知限制
-
-- **`s_k` 时效**：会话密钥随 APP 登录态签发，实测较长效、daily cron 稳定。失效时签到会收到「🚫 会话密钥失效」通知，重进「任务中心」抓一次即可。
-- token 为一次性，cron 每次会先 `POST /sns/app` 换新，无需手动维护。
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |

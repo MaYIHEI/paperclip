@@ -8,14 +8,14 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-20
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = api-cs.intsig.net
  * [Script]
- * http-request ^https:\/\/api-cs\.intsig\.net\/user\/cs\/get_user_attribute tag=扫描全能王 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png
- * cron "15 10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.js, tag=扫描全能王签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png, enable=true
+ * request if ${url} ~= /^https:\/\/api-cs\.intsig\.net\/user\/cs\/get_user_attribute/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.cookie.js") with tag="扫描全能王 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png"
+ * cron "15 10 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.js") with tag="扫描全能王签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -54,7 +54,11 @@
 
 const $ = new Env("扫描全能王");
 
-const SCRIPT_VERSION = "2026-06-20.r3";
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r4";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY     = 'camscanner_data';
@@ -93,6 +97,7 @@ function debug(content, title = "debug") {
 
     const ckRaw = $.getdata(CK_KEY);
     if (!ckRaw) {
+        saveStatus('none', '未抓取 Cookie');
         $.msg('扫描全能王', '🚫 缺少 Cookie',
             '请先开启 Cookie 抓取脚本,然后打开扫描全能王 APP 任意页面停留几秒');
         $.done();
@@ -101,6 +106,7 @@ function debug(content, title = "debug") {
 
     let ck;
     try { ck = JSON.parse(ckRaw); } catch (e) {
+        saveStatus('cookie', 'Cookie 格式错误');
         $.msg('扫描全能王', '🚫 Cookie 格式错误', '请重新抓取');
         $.done();
         return;
@@ -108,6 +114,7 @@ function debug(content, title = "debug") {
 
     const { token, cs_ept_d, client_id } = ck;
     if (!token || !cs_ept_d || !client_id) {
+        saveStatus('cookie', 'Cookie 不完整');
         $.msg('扫描全能王', '🚫 Cookie 不完整',
             `缺少: ${[!token && 'token', !cs_ept_d && 'cs_ept_d', !client_id && 'client_id'].filter(Boolean).join(',')} — 请重新抓取`);
         $.done();
@@ -118,6 +125,7 @@ function debug(content, title = "debug") {
         // 1. 查今日剩余次数
         const infoRes = await getLotteryInfo(token, cs_ept_d);
         if (isTokenError(infoRes)) {
+            saveStatus('cookie', 'Token 已失效');
             $.msg('扫描全能王', '🚫 Token 已失效',
                 '请重新打开扫描全能王 APP 任意页面停留几秒,重新抓取 Cookie');
             $.done();
@@ -125,6 +133,7 @@ function debug(content, title = "debug") {
         }
         const info = infoRes && infoRes.data ? infoRes.data : null;
         if (!info || info.day_count == null) {
+            saveStatus('fail', `查询次数失败 ${JSON.stringify(infoRes)}`);
             $.msg('扫描全能王', '⚠️ 查询次数失败',
                 `服务端返回: ${JSON.stringify(infoRes).slice(0, 120)}`);
             $.done();
@@ -133,6 +142,7 @@ function debug(content, title = "debug") {
         $.log(`[INFO] 今日剩余: ${info.day_count} 次 / 本周累计: ${info.week_count} 次`);
 
         if (info.day_count <= 0) {
+            saveStatus('ok', '今日已抽完');
             $.msg('扫描全能王', '✅ 今日已抽完', `本周累计 ${info.week_count} 次`);
             $.done();
             return;
@@ -146,6 +156,7 @@ function debug(content, title = "debug") {
             // 2a. 拿 lottery_code(原生接口,需签名);遇限频(109)重试一次
             const codeRes = await withRetry(() => getLotteryCode(token, client_id));
             if (isTokenError(codeRes)) {
+                saveStatus('cookie', 'Token 已失效');
                 $.msg('扫描全能王', '🚫 Token 已失效', '请重新抓取 Cookie');
                 $.done();
                 return;
@@ -175,9 +186,11 @@ function debug(content, title = "debug") {
         }
 
         const summary = prizes.map((p, i) => `第${i + 1}次: ${p}`).join(' · ');
+        saveStatus('ok', `抽奖 ${prizes.length} 次:${prizes.join('、')}`);
         $.msg('扫描全能王', `🎰 今日抽奖完成(${prizes.length}/${info.day_count} 次)`, summary);
     } catch (e) {
         $.log('[ERROR] ' + e);
+        saveStatus('fail', String(e));
         $.msg('扫描全能王', '⚠️ 脚本运行异常', String(e).slice(0, 100));
     }
 
@@ -185,6 +198,21 @@ function debug(content, title = "debug") {
 })();
 
 // ── 错误判定 + 重试 ────────────────────────────────────────────────────────────
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === 'ok' && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata('camscanner_status') || 'null'); } catch (e) {}
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'camscanner_status');
+}
 
 // intsig 约定:成功 ret 为 0 或 "200"(类型不统一,统一转字符串比对)
 // ret 105/116 或 err 含 token = 凭据失效;ret 109 = 请求频繁(限频)

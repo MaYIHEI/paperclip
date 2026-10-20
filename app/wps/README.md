@@ -61,9 +61,9 @@ WPS Office 每日签到 + 福利中心多项任务,送 WPS 积分与超级会员
 hostname = personal-act.wps.cn
 
 [Script]
-http-request ^https:\/\/personal-act\.wps\.cn\/activity-rubik\/activity\/page_info tag=WPS Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png
+request if ${url} ~= /^https:\/\/personal-act\.wps\.cn\/activity-rubik\/activity\/page_info/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.cookie.js") with tag="WPS Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png"
 
-cron "0 10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js, tag=WPS签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png, enable=true
+cron "0 10 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js") with tag="WPS签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png"
 ```
 
 ## Surge
@@ -131,10 +131,10 @@ script-providers:
 | 2026-06-20 | 修复会员试用:旧接口失效(报已完成但未申请),改 preview 拿当天奖品三档全部申领 |
 | 2026-06-20 | 通知文案统一:已签到/已打卡/已申领/已领取/已达上限/已领完/没资格,逐项状态写清 |
 | 2026-06-20 | 接入 BoxJS;每个任务支持单独开关(默认全开)+ 调试模式 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
 - **活动期相关**:福利中心相关配置绑定当前「WPS618 天天领福利」活动,**活动换期需更新** `wps.js` 顶部常量。
 - **限量爆款**:界面「任选 1 个」,每天限 1 次,脚本只领其中一项。
-- 福利中心奖励发放细节需在「未完成」状态实测确认。
-- **小程序打卡**:复用同一个 `wps_sid`,无需额外抓取;奖品为权益包体验类(价值有限),首次需真账号实测确认服务端是否接受。
+- **小程序打卡**:复用同一个 `wps_sid`,无需额外抓取

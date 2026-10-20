@@ -6,14 +6,14 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-27
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = m.xiaomiyoupin.com
  * [Script]
- * http-request ^https:\/\/m\.xiaomiyoupin\.com\/mtop\/act\/redPacketSign\/getActInfo tag=有品 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/youpin/youpin.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/youpin.png
- * cron "5 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/youpin/youpin.js, tag=有品签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/youpin.png, enable=true
+ * request if ${url} ~= /^https:\/\/m\.xiaomiyoupin\.com\/mtop\/act\/redPacketSign\/getActInfo/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/youpin/youpin.js") with tag="有品 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/youpin.png"
+ * cron "5 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/youpin/youpin.js") with tag="有品签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/youpin.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -52,7 +52,11 @@
 
 const $ = new Env("小米有品");
 
-const SCRIPT_VERSION = "2026-06-20.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY  = 'youpin_data';
@@ -75,6 +79,7 @@ if (typeof $request !== "undefined") {
         try {
             await main();
         } catch (e) {
+            saveStatus('fail', String(e));
             $.msg($.name, '❌ 运行异常', String(e));
         } finally {
             $.done();
@@ -106,6 +111,7 @@ function getCookie() {
 
     const ck = { serviceToken, youpinSession, distinctId, userAgent: ua };
     $.setdata(JSON.stringify(ck), CK_KEY);
+    $.setdata('', 'youpin_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
 
     $.msg(
         $.name,
@@ -119,6 +125,7 @@ function getCookie() {
 async function main() {
     const raw = $.getdata(CK_KEY);
     if (!raw) {
+        saveStatus('none', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少 Cookie',
             '请先开启重写规则，打开有品 APP 进「我的 → 签到有礼」页面');
         return;
@@ -128,11 +135,13 @@ async function main() {
     try {
         ck = JSON.parse(raw);
     } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg($.name, '🚫 Cookie 解析失败', '请清空后重新触发抓取');
         return;
     }
 
     if (!ck.serviceToken) {
+        saveStatus('cookie', 'serviceToken 为空');
         $.msg($.name, '🚫 serviceToken 为空', '请重新进「签到有礼」页面');
         return;
     }
@@ -145,12 +154,14 @@ async function main() {
         const r = await post(`${BASE}/mtop/act/redPacketSign/getActInfo`, headers,
             [{}, { actId: ACT_ID }]);
         if (!r || r.code !== 0) {
+            saveStatus('fail', `状态查询失败 code=${r && r.code} ${r && (r.msg || r.message)}`);
             $.msg($.name, '❌ 状态查询失败',
                 `code=${r && r.code} msg=${r && (r.msg || r.message)}`);
             return;
         }
         actData = r.data;
     } catch (e) {
+        saveStatus('fail', `状态请求异常 ${e}`);
         $.msg($.name, '❌ 状态请求异常', String(e));
         return;
     }
@@ -159,6 +170,7 @@ async function main() {
     const alreadySigned = signInfo && signInfo.sign === true;
 
     if (alreadySigned) {
+        saveStatus('ok', '今日已签到');
         $.msg($.name, '✨ 今日已签到', `连签第 ${(signInfo.dayIndex || 0) + 1} 天`);
         return;
     }
@@ -169,12 +181,14 @@ async function main() {
         signResult = await post(`${BASE}/mtop/act/redPacketSign/clickSign`, headers,
             [{}, { actId: ACT_ID }]);
     } catch (e) {
+        saveStatus('fail', `签到请求异常 ${e}`);
         $.msg($.name, '❌ 签到请求异常', String(e));
         return;
     }
 
     if (!signResult || signResult.code !== 0) {
         const errMsg = (signResult && (signResult.msg || signResult.message)) || JSON.stringify(signResult).slice(0, 200);
+        saveStatus('fail', errMsg);
         $.msg($.name, '❌ 签到失败', errMsg);
         return;
     }
@@ -187,6 +201,7 @@ async function main() {
     let body = `💰 获得红包 ¥${amount}`;
     if (tip && tip !== '签到成功！') body += `\n${tip}`;
 
+    saveStatus('ok', `签到成功 红包 ¥${amount}`);
     $.msg($.name, '✅ 签到成功', body);
 }
 
@@ -204,6 +219,21 @@ function normalizeCookie(raw) {
         line.replace(/^cookie:\s*/i, '').split(';')
     );
     return parts.map(s => s.trim()).filter(Boolean).join('; ');
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === 'ok' && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata('youpin_status') || 'null'); } catch (e) {}
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'youpin_status');
 }
 
 function parseCookieField(cookieStr, field) {

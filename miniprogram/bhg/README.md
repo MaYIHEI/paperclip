@@ -26,9 +26,9 @@
 hostname = a.china-smartech.com
 
 [Script]
-http-request https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm tag=北京华联 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bhg/bhg.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png
+request if ${url} ~= /https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm/i && ${request.header['referer']} ~= /wx1b1dda695dff82c8/ then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bhg/bhg.js") with tag="北京华联 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png"
 
-cron "8 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bhg/bhg.js, tag=北京华联签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png, enable=true
+cron "8 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/bhg/bhg.js") with tag="北京华联签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png"
 ```
 
 ## Surge
@@ -85,8 +85,8 @@ script-providers:
 | 日期 | 变更 |
 |---|---|
 | 2026-06-16 | 初版 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
-- 单脚本架构(`$request` 是否存在区分抓 cookie / cron)
 - mall_id 跟随抓取时所选门店;换门店签到需重进对应门店签到页重抓(账户级共享,通常无需更换)

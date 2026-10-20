@@ -6,6 +6,8 @@
 
 万达电影 APP 每日签到,签到送成长值 +1。
 
+> 2026-10-19 起改用 APP 签名,更新后请重开万达 APP「我的」重新抓取一次 Cookie。脚本以签到日历显示今天已签为准报成功,收到「签到未生效」请在 APP 内手动签到。
+
 > **全自包含,无需任何外部服务**(签名本地离线计算,不依赖 Worker/VPS)。
 
 ## 文件
@@ -29,9 +31,9 @@
 hostname = user-api-prd-mx.wandafilm.com
 
 [Script]
-http-request ^https:\/\/user-api-prd-mx\.wandafilm\.com\/user\/user_info tag=万达电影 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wanda/wanda.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wanda.png
+request if ${url} ~= /^https:\/\/user-api-prd-mx\.wandafilm\.com\/user\/user_info/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wanda/wanda.cookie.js") with tag="万达电影 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wanda.png"
 
-cron "20 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wanda/wanda.js, tag=万达电影签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wanda.png, enable=true
+cron "20 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wanda/wanda.js") with tag="万达电影签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wanda.png"
 ```
 
 ## Surge
@@ -88,7 +90,5 @@ script-providers:
 | 日期 | 变更 |
 |---|---|
 | 2026-06-10 | 初版,全自包含无需外部服务 |
-
-## 已知限制
-
-- **token 时效**:实测可支撑 daily cron 稳定运行;若某天签到失败(403),按通知「重开万达 APP 我的页重抓 Cookie」即可。
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |
+| 2026-10-19 | 改用 APP 签名恢复签到;以签到日历判断是否真正签上,不再误报成功 |

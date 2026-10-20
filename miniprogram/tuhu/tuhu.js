@@ -8,14 +8,14 @@
  * @Modifier: @Sliverkiss(修复 blackBox 参数)
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>(适配新接口)
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-08
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = api.tuhu.cn
  * [Script]
- * http-request https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList) tag=途虎养车 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png
- * cron "17 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js, tag=途虎养车签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png, enable=true
+ * request if ${url} ~= /https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js") with tag="途虎养车 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png"
+ * cron "17 7 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js") with tag="途虎养车签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -54,7 +54,11 @@
 
 const $ = new Env('途虎养车');
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 $.is_debug = ($.isNode() ? process.env['IS_DEDUG'] : $.getdata('is_debug')) || 'false';  // 调试模式
 $.token = ($.isNode() ? process.env['TUHU_TOKEN'] : $.getdata('tuhu_token')) || '';  // Token
@@ -109,7 +113,10 @@ async function main() {
             await getIntegral();
         }
         $.log(`----- 所有账号执行完成 -----`);
+        if ($.expired) saveStatus('cookie', `${$.expired} 个账号 Token 无效`);
+        else saveStatus($.signOk ? 'ok' : 'fail', $.signOk ? ($.rewardSum ? `+${$.rewardSum} 积分` : '今日已签') : $.lastFail || '签到失败');
     } else {
+        saveStatus('none', '未抓取 Cookie');
         throw new Error('未找到 Token 变量 ❌');
     }
 }
@@ -162,6 +169,7 @@ async function whoami() {
         msg += `\n当前用户: ${nickName}`;
     } else if (/token无效/.test($.toStr(result))) {
         $.is_login = false;
+        $.expired = ($.expired || 0) + 1;
         msg += `${$.toStr(result)} ❌`;
     } else {
         $.log($.toStr(result));
@@ -194,6 +202,9 @@ async function checkin(type, name) {
     };
 
     var result = await Request(opt);
+    if (result?.data?.rewardIntegral || /已签/.test(result?.message || '')) $.signOk = true;
+    if (result?.data?.rewardIntegral) $.rewardSum = ($.rewardSum || 0) + Number(result.data.rewardIntegral);
+    else $.lastFail = `${name}签到失败: ${result?.message || $.toStr(result)}`;
     if (result?.data?.rewardIntegral) {
         msg += `${name}任务: 签到成功, 积分 +${result?.data?.rewardIntegral}, 连续签到: ${result?.data?.continuousDays}/7天 ✅`;
     } else {
@@ -201,6 +212,21 @@ async function checkin(type, name) {
     }
 
     $.messages.push(msg), $.log(msg);
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === 'ok' && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata('tuhu_status') || 'null'); } catch (e) {}
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'tuhu_status');
 }
 
 // 获取用户积分
@@ -263,6 +289,7 @@ function GetCookie() {
             $.tokenArr.push($.newToken);
             $.log(`开始新增用户数据 ${$.newToken}`);
             $.setdata($.toStr($.tokenArr), 'tuhu_token');
+            $.setdata('', 'tuhu_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
             $.msg($.name, `✅ 途虎养车 Cookie 获取成功`, ``);
         } else {
             $.log(`无需更新 Token: ${$.newToken}`);

@@ -8,14 +8,14 @@
  * @Author: @Evilbutcher (https://github.com/evilbutcher) / @toulanboy (https://github.com/toulanboy/scripts)
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-11
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = api.weibo.cn
  * [Script]
- * http-request ^https:\/\/api\.weibo\.cn\/2\/(statuses\/container_timeline_topicsub|page\/button) tag=微博超话 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png
- * cron "0 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.js, tag=微博超话签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png, enable=true
+ * request if ${url} ~= /^https:\/\/api\.weibo\.cn\/2\/(statuses\/container_timeline_topicsub|page\/button)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.cookie.js") with tag="微博超话 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png", requires_body=true
+ * cron "0 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.js") with tag="微博超话签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -54,7 +54,11 @@
 
 const $ = new Env("微博超话");
 
-const SCRIPT_VERSION = "2026-05-11.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 $.delete_cookie = false;
@@ -146,6 +150,7 @@ function loadCookies() {
     if (!$.checkinUrl || !$.checkinHeadersStr) missing.push('签到 cookie');
 
     if (missing.length > 0) {
+        saveStatus(missing.length === 2 ? 'none' : 'cookie', `缺少${missing.join(' + ')}`);
         $.msg(
             '微博超话',
             `🚫 缺少 ${missing.join(' + ')}`,
@@ -159,6 +164,7 @@ function loadCookies() {
         $.checkinHeaders = JSON.parse($.checkinHeadersStr);
         return true;
     } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg('微博超话', '🚫 Cookie 解析失败', '请清空 cookie 后重新抓取');
         return false;
     }
@@ -204,6 +210,7 @@ function fetchTopicPage(sinceId) {
                 if (obj.errmsg || obj.errno) {
                     const em = obj.errmsg || `errno: ${obj.errno}`;
                     $.log(`[列表] 微博错误: ${em}`);
+                    $.listError = em;
                     let hint = '\n\n🔍 风控签名(X-Validator)可能已过期。\n请重新抓 cookie:\n1️⃣ 进 我的→超话社区→我的→关注\n2️⃣ 进任一超话签到一次';
                     $.msg('微博超话', '🚨 拉取关注列表失败', `${em}${hint}`);
                     resolve(null);
@@ -325,15 +332,33 @@ function cleanHeaders(h) {
     return out;
 }
 
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === 'ok' && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata('weibotalk_status') || 'null'); } catch (e) {}
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'weibotalk_status');
+}
+
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 function sendSummary() {
     const total = $.successNum + $.alreadyNum + $.failNum;
     const title = `${$.name}: 新签 ${$.successNum},已签 ${$.alreadyNum},失败 ${$.failNum} (共${total})`;
     if ($.message.length === 0) {
+        // 关注列表被微博拒绝 = 风控签名过期,需要重抓;其他情况(没关注超话/网络)算失败
+        saveStatus($.listError ? 'cookie' : 'fail', $.listError ? `拉取关注列表失败:${$.listError}` : '没有签到任何超话');
         $.msg(title, '', '⚠️ 没有签到任何超话,请检查 cookie 或关注列表');
         return;
     }
+    saveStatus($.successNum + $.alreadyNum > 0 ? 'ok' : 'fail', `新签 ${$.successNum},已签 ${$.alreadyNum},失败 ${$.failNum}`);
     for (let i = 0; i < $.message.length; i += $.msg_max_num) {
         const chunk = $.message.slice(i, i + $.msg_max_num).join('\n');
         const subtitle = `第 ${Math.floor(i / $.msg_max_num) + 1} 页 / 共 ${Math.ceil($.message.length / $.msg_max_num)} 页`;

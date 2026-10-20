@@ -6,14 +6,14 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-26
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = pan.baidu.com
  * [Script]
- * http-request ^https:\/\/pan\.baidu\.com\/coins\/taskcenter\/signinlist tag=百度网盘 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png
- * cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js, tag=百度网盘签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png, enable=true
+ * request if ${url} ~= /^https:\/\/pan\.baidu\.com\/coins\/taskcenter\/signinlist/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js") with tag="百度网盘 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png"
+ * cron "15 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js") with tag="百度网盘签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -52,7 +52,11 @@
 
 const $ = new Env("百度网盘");
 
-const SCRIPT_VERSION = "2026-06-26.r9"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY    = 'baidunetdisk_data';
@@ -92,6 +96,7 @@ if (typeof $request !== "undefined") {
         try {
             await main();
         } catch (e) {
+            saveStatus('fail', String(e));
             $.msg($.name, '❌ 运行异常', String(e));
         } finally {
             $.done();
@@ -109,6 +114,7 @@ function getCookie() {
         return;
     }
     $.setdata(cookie, CK_KEY);
+    $.setdata('', 'baidunetdisk_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
     const uid = (cookie.match(/BDUSS=([^;]{0,8})/) || [])[1] || '';
     $.msg($.name, '✅ 百度网盘 Cookie 获取成功', `BDUSS: ${uid}…`);
 }
@@ -117,6 +123,7 @@ function getCookie() {
 async function main() {
     const cookie = $.getdata(CK_KEY);
     if (!cookie) {
+        saveStatus('none', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少 Cookie',
             '请先开启重写规则,打开网盘「我的 → 签到 / 会员」页面');
         return;
@@ -126,10 +133,12 @@ async function main() {
     const signRes = await api(`/rest/2.0/membership/level?${COMMON}&method=signin`, cookie);
     debug('[signin] ' + signRes.slice(0, 200));
     if (!signRes) {
+        saveStatus('fail', '签到无响应');
         $.msg($.name, '❌ 签到失败', '无响应\n(若 Cookie 失效,请重新打开网盘签到页抓取)');
         return;
     }
     if (/("errno"|"error_code")\s*:\s*-?(6|2|110)\b/.test(signRes) || /not login|登录/.test(signRes)) {
+        saveStatus('cookie', '登录失效');
         $.msg($.name, '🚫 登录失效', '请重新打开网盘「我的 → 签到 / 会员」页抓 Cookie');
         return;
     }
@@ -158,7 +167,23 @@ async function main() {
     // 3. 查会员成长值 / 等级 → 距 SVIP10 进度
     const tail = await growthTail(cookie, (signPts || 0) + answerPts);
 
+    saveStatus('ok', `${signTip}${answerTip}`);
     $.msg($.name, '✅ 百度网盘成长值签到', `${signTip}${answerTip}${tail}`);
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === 'ok' && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata('baidunetdisk_status') || 'null'); } catch (e) {}
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'baidunetdisk_status');
 }
 
 // 拼「会员成长值 / 等级 / 距下一级 + 估算天数」尾巴(失败不影响主结果)

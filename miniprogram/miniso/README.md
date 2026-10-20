@@ -24,9 +24,9 @@
 hostname = member-center.miniso.com
 
 [Script]
-http-request ^https:\/\/member-center\.miniso\.com\/userinfo\/userinfo\/GetUserInfoV3 tag=名创优品 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png
+request if ${url} ~= /^https:\/\/member-center\.miniso\.com\/userinfo\/userinfo\/GetUserInfoV3/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js") with tag="名创优品 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png"
 
-cron "37 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js, tag=名创优品签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png, enable=true
+cron "37 7 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js") with tag="名创优品签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png"
 ```
 
 ## Surge
@@ -89,7 +89,4 @@ script-providers:
 | 2026-05 | 初版 |
 | 2026-05-24 | tag 统一为 `名创优品 Cookie` / `名创优品签到`,加 img-url 图标 |
 | 2026-06-17 | 抓取接口换成进「我的」页即触发,修间歇抓不到 |
-
-## 已知限制
-
-- mini 币每日上限较低,主要为打卡奖励
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |

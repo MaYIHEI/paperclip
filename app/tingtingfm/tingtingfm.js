@@ -6,14 +6,14 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-18
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = xunting.vbegin.com.cn
  * [Script]
- * http-request ^https:\/\/xunting\.vbegin\.com\.cn\/sns\/app tag=听听FM Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png
- * cron "20 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js, tag=听听FM签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png, enable=true
+ * request if ${url} ~= /^https:\/\/xunting\.vbegin\.com\.cn\/sns\/app/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js") with tag="听听FM Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png"
+ * cron "20 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tingtingfm/tingtingfm.js") with tag="听听FM签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tingtingfm.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -52,7 +52,11 @@
 
 const $ = new Env("听听FM");
 
-const SCRIPT_VERSION = "2026-06-18.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'tingtingfm_data';        // 存的是含 s_k 会话密钥的完整 User-Agent
@@ -74,6 +78,7 @@ if (typeof $request !== "undefined") {
         try {
             await main();
         } catch (e) {
+            saveStatus('fail', String(e && e.message || e));
             $.msg($.name, '❌ 运行异常', String(e && e.message || e));
         } finally {
             $.done();
@@ -93,6 +98,7 @@ function getCookie() {
         return;
     }
     $.setdata(ua, CK_KEY);
+    $.setdata('', 'tingtingfm_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
     $.msg($.name, '✅ 听听FM Cookie 获取成功', `s_k: ${maskToken(m[1])}`);
 }
 
@@ -100,6 +106,7 @@ function getCookie() {
 async function main() {
     const ua = $.getdata(CK_KEY);
     if (!ua) {
+        saveStatus('none', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少 Cookie',
             '请先开启重写规则，打开听听FM APP 进「我的 → 任务中心」页面');
         return;
@@ -108,6 +115,7 @@ async function main() {
     // 1. 用 s_k(在 UA 里)换取本次会话 token —— token 每次现生成、不可长期缓存
     const token = await login(ua);
     if (!token) {
+        saveStatus(token === false ? 'fail' : 'cookie', token === false ? '网络错误' : '会话密钥已过期');
         $.msg($.name, '🚫 会话密钥失效',
             's_k 已过期，请重新打开听听FM「任务中心」重抓 Cookie');
         return;
@@ -119,6 +127,7 @@ async function main() {
     if (DEBUG) $.log(`[sign] resp=${JSON.stringify(r).slice(0, 400)}`);
 
     if (!r || r.status !== 200 || r.error) {
+        saveStatus('fail', (r && r.error) ? String(r.error) : '无响应');
         $.msg($.name, '❌ 签到失败', (r && r.error) ? String(r.error) : '无响应');
         return;
     }
@@ -128,6 +137,7 @@ async function main() {
     const point = await getPoint(token, ua);
     const pointStr = point != null ? ` · 金币 ${point}` : '';
 
+    saveStatus('ok', log ? `签到成功 +${log.grow || 0} 成长值` : '今日已签到');
     if (log) {
         $.msg($.name, '✅ 签到成功',
             `+${log.grow || 0} 成长值 · +${log.coin || 0} 金币${pointStr}`);
@@ -144,7 +154,7 @@ function login(ua) {
     return new Promise((resolve) => {
         $.post({ url: `${BASE}/sns/app`, headers: buildHeaders(ua), body: '' },
             (err, _resp, body) => {
-                if (err) { $.log(`[login] 错误: ${JSON.stringify(err)}`); return resolve(null); }
+                if (err) { $.log(`[login] 错误: ${JSON.stringify(err)}`); return resolve(false); } // false = 网络错误,区别于密钥失效
                 try {
                     const j = JSON.parse(body);
                     resolve(j && j.status === 200 ? j.data : null);
@@ -191,6 +201,21 @@ function getPoint(token, ua) {
             } catch (e) { resolve(null); }
         });
     });
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === 'ok' && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata('tingtingfm_status') || 'null'); } catch (e) {}
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'tingtingfm_status');
 }
 
 function buildHeaders(ua) {

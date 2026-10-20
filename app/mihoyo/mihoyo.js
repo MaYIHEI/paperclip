@@ -7,14 +7,14 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-27
+ * @Updated: 2026-10-20
  *
  * ===== Loon =====
  * [MITM]
  * hostname = api-takumi.miyoushe.com, api-takumi.mihoyo.com
  * [Script]
- * http-response ^https:\/\/api-takumi\.(miyoushe|mihoyo)\.com\/(binding\/api\/getUserGameRolesByStoken|event\/luna\/) tag=米游社 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png
- * cron "13 6 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.js, tag=米游社签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png, enable=true
+ * response if ${url} ~= /^https:\/\/api-takumi\.(miyoushe|mihoyo)\.com\/(binding\/api\/getUserGameRolesByStoken|event\/luna\/)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.cookie.js") with tag="米游社 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png", requires_body=true
+ * cron "13 6 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.js") with tag="米游社签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -54,7 +54,11 @@
 
 const $ = new Env("米游社");
 
-const SCRIPT_VERSION = "2026-07-27.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-20.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 $.delete_cookie = false;
@@ -87,6 +91,7 @@ const GAMES = {
         // 用存储的游戏角色列表 (cookie 抓取时已从 stoken 接口响应里抠出来,绕过 DS 校验)
         const roles = $.gameRoles || [];
         if (roles.length === 0) {
+            saveStatus('cookie', '未获取到游戏角色');
             $.msg('米游社', '🚫 未获取到游戏角色', '请重新抓 cookie:\n打开米游社 APP "我的" 页面');
             return;
         }
@@ -144,6 +149,7 @@ function loadCookies() {
     if (!$.webCookie || !$.webHeadersStr) missing.push('web 签到 cookie');
 
     if (missing.length > 0) {
+        saveStatus(missing.length === 2 ? 'none' : 'cookie', `缺少${missing.join(' + ')}`);
         $.msg(
             '米游社',
             `🚫 缺少 ${missing.join(' + ')}`,
@@ -157,6 +163,7 @@ function loadCookies() {
         $.webHeaders = JSON.parse($.webHeadersStr);
         return true;
     } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg('米游社', '🚫 Cookie 解析失败', '请清空 cookie 后重新抓取');
         return false;
     }
@@ -186,6 +193,7 @@ async function signOne(cfg, role) {
             // cookie 失效给提示
             if (info.retcode === -100 || /token|登录|登錄/.test(info.message || '')) {
                 $.message.push(`💡 web cookie 可能已过期,请重抓签到页面 cookie`);
+                $.cookieExpired = true;
             }
             return;
         }
@@ -304,11 +312,28 @@ function cleanHeaders(h) {
     return out;
 }
 
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === 'ok' && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata('mihoyo_status') || 'null'); } catch (e) {}
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'mihoyo_status');
+}
+
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 function sendSummary() {
     const total = $.successNum + $.alreadyNum + $.failNum;
     const title = `${$.name}: 成功 ${$.successNum},已签 ${$.alreadyNum},失败 ${$.failNum} (共${total})`;
+    if ($.cookieExpired) saveStatus('cookie', 'web Cookie 已过期');
+    else saveStatus($.successNum + $.alreadyNum > 0 ? 'ok' : 'fail', `成功 ${$.successNum},已签 ${$.alreadyNum},失败 ${$.failNum}`);
     if ($.message.length === 0) {
         $.msg(title, '', '⚠️ 没有签到任何游戏,请检查 cookie 或游戏角色绑定');
         return;

@@ -17,17 +17,20 @@
 | [`milottery/`](./milottery/) | 小米商城 - 签到、活动任务与自动抽奖 | ✅ 维护中 |
 | [`youpin/`](./youpin/) | 小米有品 - 每日签到红包 | ✅ 维护中 |
 | [`lhtj/`](./lhtj/) | 龙湖天街 App - 每日签到 + 幸运抽奖 | ✅ 维护中 |
-| [`qqmusic/`](./qqmusic/) | QQ 音乐 - 绿钻成长值每日签到(免签名通道 + refresh_key 自动续期) | ✅ 维护中 |
-| [`wanda/`](./wanda/) | 万达电影 - 每日签到(成长值,签名引擎内嵌,无需 Worker) | ✅ 维护中 |
+| [`qqmusic/`](./qqmusic/) | QQ 音乐 - 绿钻/金币签到 + 每日任务、红包雨与抽奖(自动续期) | ✅ 维护中 |
+| [`wanda/`](./wanda/) | 万达电影 - 每日签到(成长值) | ✅ 维护中 |
 | [`tingtingfm/`](./tingtingfm/) | 听听FM - 任务中心每日签到(成长值 + 金币) | ✅ 维护中 |
 | [`wps/`](./wps/) | WPS Office - 每日签到 + 福利中心(打卡/抽奖/试用申请/限量爆款) | ✅ 维护中 |
 | [`camscanner/`](./camscanner/) | 扫描全能王 - 幸运大转盘每日抽奖(看视频转盘,每日 3 次) | ✅ 维护中 |
 | [`dreame/`](./dreame/) | 追觅商城 - 每日签到得积分 / 成长值(连签奖励) | ✅ 维护中 |
 | [`linghu/`](./linghu/) | 灵狐灵购 - 每日签到领红包(连签奖励) | ✅ 维护中 |
-| [`nodeseek/`](./nodeseek/) | NodeSeek - 每日签到(VPS 中继绕过 CF) | ✅ 维护中 |
-| [`sgcc/`](./sgcc/) | 网上国网(国家电网 95598) - 积分每日签到(复用签到请求 + 本地抓 Cookie) | 🧪 待验证 |
-| [`baidunetdisk/`](./baidunetdisk/) | 百度网盘 - 会员成长值签到 + 每日答题(助力 SVIP 升级) | 🧪 待验证 |
-| [`agentrouter/`](./agentrouter/) | AgentRouter - 每日登录签到、奖励与账户明细 | 🧪 待验证 |
+| [`nodeseek/`](./nodeseek/) | NodeSeek - 每日签到 | ✅ 维护中 |
+| [`pan1/`](./pan1/) | 123网盘社区 - 每日签到(经验 + 金币) | ✅ 维护中 |
+| [`agentrouter/`](./agentrouter/) | AgentRouter - 每日登录签到 | ✅ 维护中 |
+| [`sgcc/`](./sgcc/) | 网上国网(国家电网 95598) - 积分每日签到(手机号 + 密码自动登录,无需抓包) | ✅ 维护中 |
+| [`baidunetdisk/`](./baidunetdisk/) | 百度网盘 - 会员成长值签到 + 每日答题(助力 SVIP 升级) | ✅ 维护中 |
+| [`laifen/`](./laifen/) | 徕芬 - 会员每日签到(积分) | ✅ 维护中 |
+| [`summary/`](./summary/) | 签到汇总 - 一条通知看完所有签到脚本的结果、奖励和需要重抓的 Cookie | ✅ 维护中 |
 | [`cmccbj/`](./cmccbj/) | 北京移动 - 「签到赢好礼」每日签到(送流量/积分) | 📦 已归档 |
 | [`lvcchong/`](./lvcchong/) | 驴充充(充电桩) - 积分中心每日签到 | 📦 已归档 |
 

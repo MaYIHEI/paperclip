@@ -25,9 +25,9 @@
 hostname = app.mixcapp.com
 
 [Script]
-http-request ^https:\/\/app\.mixcapp\.com\/mixc\/api\/v4\/member\/getPersonalData tag=一点万象 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png
+request if ${url} ~= /^https:\/\/app\.mixcapp\.com\/mixc\/api\/v4\/member\/getPersonalData/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.cookie.js") with tag="一点万象 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png"
 
-cron "37 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.js, tag=一点万象签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png, enable=true
+cron "37 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/newmixc/newmixc.js") with tag="一点万象签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/newmixc.png"
 ```
 
 ## Surge
@@ -86,8 +86,8 @@ script-providers:
 | 2026-05-23 | 初版,适配万象 H5 网关签名 |
 | 2026-05-23 | 改名 `yidian` → `newmixc`(对齐英文命名规范),CK_KEY `yidian_data` → `newmixc_data`,中文显示名保持「一点万象」不变 |
 | 2026-05-24 | tag 统一为 `一点万象 Cookie` / `一点万象签到`,加 img-url 图标 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
 - **单商场签到**:脚本按 cookie 里的 `mallNo` 签到一家。多家万象会员需切换商场重抓
-- Token 时效较长但风控未知,签到失败提示「未登录」时重抓 cookie

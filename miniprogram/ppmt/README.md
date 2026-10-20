@@ -24,9 +24,9 @@
 hostname = popvip.paquapp.com
 
 [Script]
-http-response ^https:\/\/popvip\.paquapp\.com\/miniapp\/v2\/(svip_lite\/user_info|wechat_message\/template_info) tag=泡泡玛特 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png
+response if ${url} ~= /^https:\/\/popvip\.paquapp\.com\/miniapp\/v2\/(svip_lite\/user_info|wechat_message\/template_info)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js") with tag="泡泡玛特 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png", requires_body=true
 
-cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js, tag=泡泡玛特签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png, enable=true
+cron "0 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js") with tag="泡泡玛特签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png"
 ```
 
 ## Surge
@@ -85,6 +85,7 @@ script-providers:
 | 2024-06-08 | 原作者 [@Sliverkiss](https://github.com/Sliverkiss) 初版 |
 | 2026-05-08 | 适配 v5.13.8 新接口与鉴权 |
 | 2026-05-08 | 修复 getUserInfo 返回为空时的异常 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 

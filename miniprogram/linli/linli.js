@@ -1,27 +1,27 @@
 /**
- * 林里 · 每日签到与鸭币兑换
+ * 林里 · 每日签到
  *
  * 首次抓取:打开「林里」小程序 → 进入签到页,自动抓取 Cookie
  * 后续更新:Cookie 到期前后打开小程序首页或鸭币商城,自动保存新 Cookie
- * 定时任务:每日签到;BoxJS 可分别开启免单券 / 周边兑换
+ * 定时任务:每日签到
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-07-16
+ * @Updated: 2026-10-19
  *
  * ===== Loon =====
  * [MITM]
  * hostname = webapi.qmai.cn
  * [Script]
- * http-request ^https:\/\/webapi\.qmai\.cn\/web\/(cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar)|catering\/common\/common-info|mall-apiserver\/integral\/(home\/index|item\/goods(\/detail)?)) tag=林里 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
- * cron "0 10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js, tag=林里签到兑换, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png, enable=true
+ * request if ${url} ~= /^https:\/\/webapi\.qmai\.cn\/web\/(cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar)|catering\/common\/common-info|mall-apiserver\/integral\/(home\/index|item\/goods(\/detail)?))/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js") with tag="林里 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png", requires_body=true
+ * cron "0 10 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js") with tag="林里签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png"
  *
  * ===== Surge =====
  * [MITM]
  * hostname = webapi.qmai.cn
  * [Script]
  * 林里 Cookie = type=http-request,pattern=^https:\/\/webapi\.qmai\.cn\/web\/(cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar)|catering\/common\/common-info|mall-apiserver\/integral\/(home\/index|item\/goods(\/detail)?)),requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
- * 林里签到兑换 = type=cron,cronexp=0 10 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
+ * 林里签到 = type=cron,cronexp=0 10 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png
  *
  * ===== Quantumult X =====
  * [MITM]
@@ -29,12 +29,12 @@
  * [rewrite_local]
  * ^https:\/\/webapi\.qmai\.cn\/web\/(cmk-center\/sign\/(activityInfo|userSignStatistics|userSignRecordCalendar)|catering\/common\/common-info|mall-apiserver\/integral\/(home\/index|item\/goods(\/detail)?)) url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js
  * [task_local]
- * 0 10 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js, tag=林里签到兑换, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png, enabled=true
+ * 0 10 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js, tag=林里签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png, enabled=true
  *
  * ===== Stash =====
  * cron:
  *   script:
- *     - name: 林里签到兑换
+ *     - name: 林里签到
  *       cron: '0 10 * * *'
  *       timeout: 60
  * http:
@@ -46,28 +46,25 @@
  *       type: request
  *       require-body: true
  * script-providers:
- *   林里签到兑换:
+ *   林里签到:
  *     url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/linli/linli.js
  *     interval: 86400
  */
 
 const $ = new Env("林里");
 
-const SCRIPT_VERSION = "2026-07-16.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-19.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "linli_data";
 const CK_CLEAR = "linli_clear";
 const CK_DEBUG = "linli_debug";
-const TASK_COUPON = "linli_task_exchange_coupon";
-const TASK_TOY = "linli_task_exchange_toy";
 const SIGN_BASE = "https://webapi.qmai.cn/web/cmk-center/sign";
-const MALL_BASE = "https://webapi.qmai.cn/web/mall-apiserver/integral";
 const DROP_HEADERS = ["content-length", "host", "connection", "accept-encoding"];
-const EXCHANGE_TARGETS = [
-    { key: TASK_COUPON, id: "1281777364363137025", name: "单杯免单券" },
-    { key: TASK_TOY, id: "1283198338438545409", name: "林里鸭游乐园周边" },
-];
 
 $.is_debug = ($.isNode() ? process.env.IS_DEBUG : $.getdata(CK_DEBUG)) || "false";
 $.messages = [];
@@ -106,6 +103,7 @@ function captureCookie() {
         if (!saved || checked.activityId !== data.activityId) {
             throw new Error("Cookie 写入失败");
         }
+        if (oldToken !== token) $.setdata("", "linli_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         if (!oldToken) {
             $.msg($.name, "✅ 林里 Cookie 获取成功", "可关闭抓包,定时自动签到");
         } else if (oldToken !== token) {
@@ -128,6 +126,7 @@ function loadAuth() {
     const raw = $.isNode() ? process.env.LINLI_DATA : $.getdata(CK_KEY);
     const auth = parseJSON(raw, null);
     if (!auth || !auth.headers || !auth.activityId || !auth.storeId || !auth.appid) {
+        saveStatus("none", "未抓取 Cookie");
         throw new Error("未配置 Cookie,请进入林里小程序签到页抓取");
     }
     return auth;
@@ -141,6 +140,7 @@ async function checkin(auth) {
     assertAuth(before);
 
     if (isSigned(before)) {
+        saveStatus("ok", "今日已签到");
         $.messages.push(formatStatus("✨ 今日已签到", before));
         return;
     }
@@ -155,6 +155,7 @@ async function checkin(auth) {
 
     if (sign && sign.status === true) {
         const rewards = rewardText(sign.data && sign.data.rewardDetailList);
+        saveStatus("ok", `签到成功${rewards ? ` ${rewards}` : ""}`);
         const after = await api(SIGN_BASE + "/userSignStatistics", headers, common);
         debug(after, "userSignStatistics(after)");
         $.messages.push(formatStatus(`✅ 签到成功${rewards ? `: ${rewards}` : ""}`, after));
@@ -163,67 +164,12 @@ async function checkin(auth) {
 
     const message = String((sign && sign.message) || "");
     if (/已签到|重复签到/.test(message)) {
+        saveStatus("ok", "今日已签到");
         $.messages.push("✨ 今日已签到");
         return;
     }
+    saveStatus("fail", `签到失败: ${message || short(sign)}`);
     throw new Error(`签到失败: ${message || short(sign)}`);
-}
-
-async function exchange(auth) {
-    const targets = EXCHANGE_TARGETS.filter((item) => taskOn(item.key));
-    if (!targets.length) return;
-
-    const headers = cleanHeaders(auth.headers);
-    for (const target of targets) {
-        const detail = await api(MALL_BASE + "/item/goods/detail", headers, {
-            goodsId: target.id,
-            appid: auth.appid,
-        });
-        debug(detail, `exchange detail: ${target.name}`);
-        assertAuth(detail);
-        if (!detail || detail.status !== true || !detail.data) {
-            $.messages.push(`❌ ${target.name}: 商品信息获取失败`);
-            continue;
-        }
-
-        const goods = detail.data;
-        const period = goods.timeCycleExtraVo || {};
-        if (period.saleIng !== true) {
-            $.log(`[exchange] ${target.name} 当前不在售卖时间,跳过`);
-            continue;
-        }
-        if (Number(goods.userOrderLimit) > 0 && Number(goods.userOrderTimes) >= Number(goods.userOrderLimit)) {
-            $.messages.push(`✨ ${target.name}: 已兑换`);
-            continue;
-        }
-        if (Number(goods.remainStocks) <= 0) {
-            $.messages.push(`⛔ ${target.name}: 已售罄`);
-            continue;
-        }
-        if (Number(goods.userPoints) < Number(goods.pointsPrice)) {
-            $.messages.push(`❌ ${target.name}: 鸭币不足`);
-            continue;
-        }
-
-        const order = await api(MALL_BASE + "/order/create", headers, {
-            goodsId: target.id,
-            appid: auth.appid,
-        });
-        debug(order, `exchange order: ${target.name}`);
-        assertAuth(order);
-        if (order && order.status === true && order.data) {
-            $.messages.push(`✅ ${target.name}: 兑换成功`);
-            continue;
-        }
-        const message = String((order && order.message) || "未知错误");
-        if (/已兑换|已购买|超过.*限制|限购/.test(message)) {
-            $.messages.push(`✨ ${target.name}: 已兑换`);
-        } else if (/售罄|库存|抢光/.test(message)) {
-            $.messages.push(`⛔ ${target.name}: 已售罄`);
-        } else {
-            $.messages.push(`❌ ${target.name}: ${message}`);
-        }
-    }
 }
 
 function api(url, headers, body) {
@@ -243,15 +189,29 @@ function api(url, headers, body) {
     });
 }
 
-function taskOn(key) {
-    const value = $.isNode() ? process.env[key.toUpperCase()] : $.getdata(key);
-    return value === true || value === 1 || value === "true" || value === "1";
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === "ok" && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata("linli_status") || "null"); } catch (e) {}
+        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), "linli_status");
 }
 
 function assertAuth(res) {
-    if (!res) throw new Error("网络无响应,请稍后重试");
+    if (!res) {
+        saveStatus("fail", "网络无响应");
+        throw new Error("网络无响应,请稍后重试");
+    }
     const message = String(res.message || "");
     if ([9001, 10008, 41000].includes(Number(res.code)) || /token|登录|鉴权|未授权|失效|过期/i.test(message)) {
+        saveStatus("cookie", `Cookie 已失效: ${message || `code=${res.code}`}`);
         throw new Error(`Cookie 已失效,请重新进入签到页抓取: ${message || `code=${res.code}`}`);
     }
 }
@@ -311,7 +271,6 @@ if (typeof $request !== "undefined") {
     (async () => {
         if (maybeClear()) return;
         const auth = loadAuth();
-        await exchange(auth);
         await checkin(auth);
     })().catch((e) => {
         $.messages.push(`❌ ${e.message || e}`);

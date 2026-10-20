@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png" width="80" alt="百度网盘" />
 </p>
 
-# 百度网盘 🧪
+# 百度网盘
 
 百度网盘会员成长值每日签到 + 每日答题,助力 SVIP 升级。
 
@@ -24,9 +24,9 @@
 hostname = pan.baidu.com
 
 [Script]
-http-request ^https:\/\/pan\.baidu\.com\/coins\/taskcenter\/signinlist tag=百度网盘 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png
+request if ${url} ~= /^https:\/\/pan\.baidu\.com\/coins\/taskcenter\/signinlist/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js") with tag="百度网盘 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png"
 
-cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js, tag=百度网盘签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png, enable=true
+cron "15 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/baidunetdisk/baidunetdisk.js") with tag="百度网盘签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png"
 ```
 
 ## Surge
@@ -84,13 +84,11 @@ script-providers:
 |---|---|
 | 2026-06-24 | 初版,基于百度网盘抓包验证 |
 | 2026-06-26 | 改为会员成长值签到 + 每日答题(纯 Cookie,免风控);移除金币中心方案;签到实测通过 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
-- **签到已实测可用,多日稳定性待观察**:首次真机签到成功,完整定时链路尚未长期跑过
 - **本脚本只做「会员成长值签到」这一套**:它与 APP「金币中心签到」是**两套独立系统、各自连签**(不冲突、可同时签);金币中心那条(成长值更高)受风控限制,脚本做不了,需手动开 APP 完成
-- Cookie(BDUSS/STOKEN)长期有效但非永久,失效后需重新打开 APP 进签到 / 会员页抓取
-- 「距 SVIP10 还差 X(约 N 天)」是按当前每日节奏的估算,续费等大额成长值无法预测,仅供参考
 
 ## 致谢
 

@@ -6,14 +6,14 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-18
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = media.meituan.com
  * [Script]
- * http-request ^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon tag=惠省红包墙 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png
- * cron "5 0 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.js, tag=惠省红包墙签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png, enable=true
+ * request if ${url} ~= /^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.cookie.js") with tag="惠省红包墙 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png", requires_body=true
+ * cron "5 0 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.js") with tag="惠省红包墙签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -52,7 +52,11 @@
 
 const $ = new Env("惠省红包墙");
 
-const SCRIPT_VERSION = "2026-05-18.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 $.delete_cookie = false;
@@ -77,6 +81,7 @@ const KEY_LIST_BODY = 'huisheng_list_body';
         const tabs = buildGrantTabs(listResp);
         const totalCoupons = tabs.reduce((s, t) => s + t.rightCodes.length, 0);
         if (totalCoupons === 0) {
+            saveStatus('ok', '没有可领的券');
             $.msg($.name, '⚠️ 没有可领的券', '可能今日已领或活动已结束');
             return;
         }
@@ -92,6 +97,7 @@ const KEY_LIST_BODY = 'huisheng_list_body';
         summarize(grantResp);
     } catch (e) {
         $.log(`❌ 执行异常: ${e.message || e}`);
+        saveStatus('fail', String(e.message || e));
         $.msg($.name, '❌ 执行异常', String(e.message || e));
     }
 })()
@@ -121,6 +127,7 @@ function loadCookies() {
     $.log(`[diag] headers 读到 ${$.headersStr.length} 字符,body 读到 ${$.listBody.length} 字符`);
 
     if (!$.headersStr || !$.listBody) {
+        saveStatus('none', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少鉴权数据', `headers=${$.headersStr.length}字符 body=${$.listBody.length}字符\n请先打开 cookie 抓取脚本,然后:\n1️⃣ 进微信"惠省"小程序\n2️⃣ 在首页停留 3 秒触发列表接口`);
         return false;
     }
@@ -129,6 +136,7 @@ function loadCookies() {
         $.listBodyObj = JSON.parse($.listBody);
         return true;
     } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg($.name, '🚫 数据解析失败', '请清空 cookie 后重新抓取');
         return false;
     }
@@ -154,9 +162,10 @@ function listActivityCoupon() {
         if ($.debug) $.log(`[list] headers: ${$.toStr(headers)}\n[list] body: ${body}`);
 
         $.post(opts, (err, resp, data) => {
-            if (err) { $.log(`[list] 网络错误: ${$.toStr(err)}`); resolve(null); return; }
+            if (err) { $.log(`[list] 网络错误: ${$.toStr(err)}`); saveStatus('fail', '拉券列表网络错误'); resolve(null); return; }
             if (resp && resp.statusCode !== 200) {
                 $.log(`[list] HTTP ${resp.statusCode}: ${(data || '').substring(0, 200)}`);
+                saveStatus('cookie', `拉券列表失败 HTTP ${resp.statusCode}`);
                 $.msg($.name, '❌ 拉券列表失败', `HTTP ${resp.statusCode},可能 mtgsig 已过期。请重新抓 cookie。`);
                 resolve(null); return;
             }
@@ -164,6 +173,7 @@ function listActivityCoupon() {
                 const obj = JSON.parse(data);
                 if (obj.code !== 200) {
                     $.log(`[list] 业务失败: ${obj.code} ${obj.msg}`);
+                    saveStatus('cookie', `拉券列表失败 ${obj.code} ${obj.msg}`);
                     $.msg($.name, '❌ 拉券列表失败', `${obj.code} ${obj.msg}\n\n可能 mtgsig/token 已失效,请重新抓 cookie`);
                     resolve(null); return;
                 }
@@ -209,9 +219,10 @@ function grantActivityCoupon(listResp, tabs) {
         if ($.debug) $.log(`[grant] body: ${body}`);
 
         $.post(opts, (err, resp, data) => {
-            if (err) { $.log(`[grant] 网络错误: ${$.toStr(err)}`); resolve(null); return; }
+            if (err) { $.log(`[grant] 网络错误: ${$.toStr(err)}`); saveStatus('fail', '领券网络错误'); resolve(null); return; }
             if (resp && resp.statusCode !== 200) {
                 $.log(`[grant] HTTP ${resp.statusCode}: ${(data || '').substring(0, 300)}`);
+                saveStatus('fail', `领券失败 HTTP ${resp.statusCode}`);
                 $.msg($.name, '❌ 领券失败', `HTTP ${resp.statusCode}`);
                 resolve(null); return;
             }
@@ -219,6 +230,7 @@ function grantActivityCoupon(listResp, tabs) {
                 const obj = JSON.parse(data);
                 if (obj.code !== 200) {
                     $.log(`[grant] 业务失败: ${obj.code} ${obj.msg}`);
+                    saveStatus('fail', `领券失败 ${obj.code} ${obj.msg}`);
                     $.msg($.name, '❌ 领券失败', `${obj.code} ${obj.msg}`);
                     resolve(null); return;
                 }
@@ -316,8 +328,24 @@ function summarize(grantData) {
     const subtitle = $.failNum > 0 ? `失败 ${$.failNum} 张` : '';
     // 通知 body 折叠前 15 条
     const body = $.couponNames.slice(0, 15).join('、') + ($.couponNames.length > 15 ? ` 等 ${$.couponNames.length} 张` : '');
+    saveStatus('ok', `领到 ${$.successNum} 张${subtitle ? `,${subtitle}` : ''}`);
     $.msg($.name, title, body || subtitle);
     $.log(`${title} ${subtitle}\n${body}`);
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === 'ok' && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata('huisheng_status') || 'null'); } catch (e) {}
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'huisheng_status');
 }
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }

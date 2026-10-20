@@ -7,7 +7,7 @@
  * @Author: @773075692 <https://github.com/773075692/agentrouter-checkin>
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-09-12
+ * @Updated: 2026-10-20
  *
  * ===== Loon =====
  * [Argument]
@@ -17,7 +17,7 @@
  * debug = switch,false,tag=调试模式,desc=仅记录请求状态和签到判定
  *
  * [Script]
- * cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/agentrouter/agentrouter.js, argument=[{username},{password},{accounts},{debug}], tag=AgentRouter签到, timeout=300, img-url=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/agentrouter/icon.png, enable=true
+ * cron "0 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/agentrouter/agentrouter.js", {${username}, ${password}, ${accounts}, ${debug}}) with tag="AgentRouter签到", img_url="https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/agentrouter/icon.png", timeout=300
  *
  * ===== Surge =====
  * [Script]
@@ -41,7 +41,11 @@
  */
 
 const $ = new Env("AgentRouter");
-const SCRIPT_VERSION = "2026-09-12.r8";
+
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+const SCRIPT_VERSION = "2026-10-20.r7";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -50,17 +54,18 @@ const CLEAR_KEY = "agentrouter_clear";
 const DEBUG_KEY = "agentrouter_debug";
 const IS_LOON = $.isLoon();
 const PLUGIN = typeof $argument !== "undefined" && $argument && typeof $argument === "object" ? $argument : {};
-const SETTINGS_PAGE = IS_LOON ? "Loon 插件设置" : "BoxJS";
+const SETTINGS_PAGE = IS_LOON ? "Loon 插件设置或 BoxJS" : "BoxJS";
 const BASE_URL = "https://agentrouter.org";
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
 
 run().catch((error) => {
     // 只输出脚本主动生成的错误，不转储账号、请求和原始响应。
+    saveStatus("fail", error.message);
     $.msg($.name, "❌ 运行失败", error.message);
 }).finally(() => $.done());
 
 async function run() {
-    const clear = IS_LOON ? null : $.getdata(CLEAR_KEY);
+    const clear = $.getdata(CLEAR_KEY);
     if (clear === "true" || clear === "1") {
         const userCleared = $.setdata("", USER_KEY);
         const passwordCleared = $.setdata("", PASSWORD_KEY);
@@ -74,6 +79,7 @@ async function run() {
 
     const accounts = readAccounts();
     if (!accounts.length) {
+        saveStatus("none", "未配置账号");
         $.msg($.name, "🚫 未配置账号", `请在 ${SETTINGS_PAGE} 的 AgentRouter 中分别填写账号和密码并保存`);
         return;
     }
@@ -98,6 +104,12 @@ async function run() {
             results.push({ title: "❌ 运行失败", content: error.message });
         }
     }
+    // 登录失败 = 账号密码需要更新,对应体检里的「需重新抓取」
+    const loginFailed = results.some((result) => result.title === "❌ 登录失败");
+    const failed = results.find((result) => result.title === "❌ 运行失败");
+    if (loginFailed) saveStatus("cookie", "登录失败,请检查账号密码");
+    else if (failed) saveStatus("fail", failed.content);
+    else saveStatus("ok", results.map((result) => result.content.split("\n")[0].replace(/^🎁\s*/, "")).join(" · "));
     if (results.length === 1) {
         $.msg($.name, results[0].title, `👤 账号：${maskAccount(accounts[0].username)}\n${results[0].content}`);
     } else {
@@ -126,8 +138,9 @@ function readAccounts() {
             return { username: account.username.trim(), password: account.password };
         });
     }
-    const username = ((IS_LOON ? PLUGIN.username : $.getdata(USER_KEY)) || "").trim();
-    const password = (IS_LOON ? PLUGIN.password : $.getdata(PASSWORD_KEY)) || "";
+    // 插件里没填(例如在签到合集里运行)时读 BoxJS
+    const username = (PLUGIN.username || $.getdata(USER_KEY) || "").trim();
+    const password = PLUGIN.password || $.getdata(PASSWORD_KEY) || "";
     return username && password ? [{ username, password }] : [];
 }
 
@@ -207,6 +220,21 @@ async function checkin({ username, password }, quotaUnit) {
     }
 }
 
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === "ok" && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata("agentrouter_status") || "null"); } catch (e) {}
+        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), "agentrouter_status");
+}
+
 function maskAccount(username) {
     const name = username.split("@")[0];
     return name.length > 4 ? `${name.slice(0, 2)}***${name.slice(-2)}` : `${name.slice(0, 1)}***`;
@@ -218,8 +246,8 @@ function formatAmount(label, value, quotaUnit) {
 }
 
 function formatCheckinReward(content, isNew) {
-    // 系统日志的 quota 不是奖励；只解析实测详情中明确标注的美元金额。
-    const match = content.trim().match(/^每日签到成功，\s*增加额度\s*\$\s*(\d+(?:\.\d+)?)\s*额度$/);
+    // 系统日志的 quota 不是奖励；只解析实测详情中明确标注的美元金额（官网半角 $、全角 ＄ 都出现过）。
+    const match = content.trim().match(/^每日签到成功，\s*增加额度\s*[$＄]\s*(\d+(?:\.\d+)?)\s*额度$/);
     const amount = match ? Number(match[1]) : NaN;
     const label = isNew ? "🎁 本次奖励" : "🎁 今日奖励";
     if (!Number.isFinite(amount)) return `${label}：金额未识别，请到网站核对`;
@@ -287,7 +315,7 @@ function request(method, path, headers, body, label) {
 }
 
 function debug(message) {
-    if (IS_LOON ? PLUGIN.debug === true : $.getdata(DEBUG_KEY) === "true") $.log(`[DEBUG] ${message}`);
+    if (PLUGIN.debug === true || $.getdata(DEBUG_KEY) === "true") $.log(`[DEBUG] ${message}`);
 }
 
 function Env(s) {

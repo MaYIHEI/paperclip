@@ -30,9 +30,9 @@
 hostname = scrm-b.zjian.net
 
 [Script]
-http-response ^https:\/\/scrm-b\.zjian\.net\/api\/member\/(minaLogin|find) tag=味多美 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png
+response if ${url} ~= /^https:\/\/scrm-b\.zjian\.net\/api\/member\/(minaLogin|find)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js") with tag="味多美 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png", requires_body=true
 
-cron "10 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js, tag=味多美签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png, enable=true
+cron "10 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js") with tag="味多美签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png"
 ```
 
 ## Surge
@@ -95,6 +95,7 @@ script-providers:
 | 2026-06-10 | 长期稳定,🧪→✅ 维护中 |
 | 2026-06-13 | 🐞 修复天天误报签到成功:改为按签到前后积分差判成败 |
 | 2026-06-14 | ✅ 验证生效:隔夜积分 +2 真实到账 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 

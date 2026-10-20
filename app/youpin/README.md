@@ -24,9 +24,9 @@
 hostname = m.xiaomiyoupin.com
 
 [Script]
-http-request ^https:\/\/m\.xiaomiyoupin\.com\/mtop\/act\/redPacketSign\/getActInfo tag=有品 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/youpin/youpin.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/youpin.png
+request if ${url} ~= /^https:\/\/m\.xiaomiyoupin\.com\/mtop\/act\/redPacketSign\/getActInfo/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/youpin/youpin.js") with tag="有品 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/youpin.png"
 
-cron "5 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/youpin/youpin.js, tag=有品签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/youpin.png, enable=true
+cron "5 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/youpin/youpin.js") with tag="有品签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/youpin.png"
 ```
 
 ## Surge
@@ -83,8 +83,4 @@ script-providers:
 | 日期 | 变更 |
 |---|---|
 | 2026-05-27 | 初版，基于 YouPin 5.32.0 抓包 |
-
-## 已知限制
-
-- **签到接口未实测**：`fetch` 为命名推断，首次 cron 跑时验证；若失败，在未签状态下抓包「签到」按钮的实际请求路径后告知作者修复
-- 活动 ID 硬编码，Xiaomi 更换活动时需更新 `ACT_ID` 常量
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |

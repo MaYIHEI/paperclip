@@ -7,14 +7,14 @@
  * @Author: @Sliverkiss
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-24
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = superapp-public.kiwa-tech.com
  * [Script]
- * http-request ^https:\/\/superapp-public\.kiwa-tech\.com\/activity\/wxapp\/signin\/(query|querySite|querySwitch|queryFragment|signin) tag=海底捞 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/haidilao/haidilao.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/haidilao.png
- * cron "23 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/haidilao/haidilao.js, tag=海底捞签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/haidilao.png, enable=true
+ * request if ${url} ~= /^https:\/\/superapp-public\.kiwa-tech\.com\/activity\/wxapp\/signin\/(query|querySite|querySwitch|queryFragment|signin)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/haidilao/haidilao.js") with tag="海底捞 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/haidilao.png"
+ * cron "23 7 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/haidilao/haidilao.js") with tag="海底捞签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/haidilao.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -52,7 +52,11 @@
  */
 const $ = new Env("海底捞");
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const ckName = "hdl_data";
 const Notify = 1;
@@ -84,6 +88,10 @@ async function main() {
         }
     }
     await Promise.all(taskall);
+    const expired = userList.filter(u => !u.ckStatus).length;
+    const signed = userList.some(u => /^[✅✨]/.test(u.signMsg));
+    if (expired) saveStatus('cookie', `${expired} 个账号 token 失效`);
+    else saveStatus(signed ? 'ok' : 'fail', signed ? userList.filter(u => /^[✅✨]/.test(u.signMsg)).map(u => u.signMsg.replace(/^[✅✨]/, '')).join(' · ') : (userList[0] && userList[0].signMsg) || '签到失败');
 }
 
 class UserInfo {
@@ -213,6 +221,7 @@ async function getCookie() {
             existing.push(token);
             const newVal = existing.join('@');
             $.setdata(newVal, ckName);
+            $.setdata('', 'haidilao_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
             $.msg($.name, '✅ 海底捞 Cookie 获取成功', `共 ${existing.length} 个账号`);
             $.log(`[INFO] 新增 token: ${token}`);
         } else {
@@ -222,6 +231,21 @@ async function getCookie() {
         $.log(`[ERROR] getCookie: ${e}`);
         $.msg($.name, '', `❌ 获取 Token 失败: ${e.message || e}`);
     }
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === 'ok' && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata('haidilao_status') || 'null'); } catch (e) {}
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'haidilao_status');
 }
 
 function ObjectKeys2LowerCase(obj) {
@@ -239,14 +263,14 @@ function ObjectKeys2LowerCase(obj) {
         $.notifyMsg.push("✅ Cookie 已清除，请重新抓取");
         return;
     }
-    if (!(await checkEnv())) { throw new Error(`❌未检测到ck，请添加环境变量`); }
+    if (!(await checkEnv())) { saveStatus('none', '未抓取 Cookie'); throw new Error(`❌未检测到ck，请添加环境变量`); }
     if (userList.length > 0) {
         await main();
     }
 })()
     .catch((e) => $.notifyMsg.push(e.message || e))
     .finally(async () => {
-        if ($.barkKey) {
+        if ($.barkKey && !$.merge) {
             await BarkNotify($, $.barkKey, $.name, $.notifyMsg.join('\n'));
         }
         await SendMsg($.notifyMsg.join('\n'));

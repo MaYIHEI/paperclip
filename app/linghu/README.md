@@ -24,9 +24,9 @@
 hostname = cn-yx-wxmall.dreame.tech
 
 [Script]
-http-request ^https:\/\/cn-yx-wxmall\.dreame\.tech\/main\/my\/info tag=灵狐灵购 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/linghu/linghu.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linghu.png
+request if ${url} ~= /^https:\/\/cn-yx-wxmall\.dreame\.tech\/main\/my\/info/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/linghu/linghu.js") with tag="灵狐灵购 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linghu.png", requires_body=true
 
-cron "33 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/linghu/linghu.js, tag=灵狐灵购签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linghu.png, enable=true
+cron "33 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/linghu/linghu.js") with tag="灵狐灵购签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linghu.png"
 ```
 
 ## Surge
@@ -83,9 +83,4 @@ script-providers:
 | 日期 | 变更 |
 |---|---|
 | 2026-06-22 | 初版,基于灵狐灵购抓包验证 |
-
-## 已知限制
-
-- **未经多日真机验证**:签到逻辑已抓包比对,完整流程尚未在真机定时任务下长期跑过;首次 cron 跑时留意通知结果
-- Cookie(sessid)有效期约 90 天,失效后需重新打开 APP 抓取
-- 客户端版本标识为抓包时的固定值,APP 大版本更新后若签到失败,需重新抓包对照更新脚本常量
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |

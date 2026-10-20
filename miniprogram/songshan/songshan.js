@@ -6,14 +6,14 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-04
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = xapi.weimob.com
  * [Script]
- * http-request ^https:\/\/xapi\.weimob\.com\/api3\/onecrm\/mactivity\/sign\/misc\/sign\/activity\/(c\/signMainInfo|core\/c\/(getActivityInfo|sign)) tag=松山棉店 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/songshan/songshan.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/songshan.png
- * cron "20 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/songshan/songshan.js, tag=松山棉店签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/songshan.png, enable=true
+ * request if ${url} ~= /^https:\/\/xapi\.weimob\.com\/api3\/onecrm\/mactivity\/sign\/misc\/sign\/activity\/(c\/signMainInfo|core\/c\/(getActivityInfo|sign))/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/songshan/songshan.js") with tag="松山棉店 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/songshan.png", requires_body=true
+ * cron "20 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/songshan/songshan.js") with tag="松山棉店签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/songshan.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -52,7 +52,11 @@
 
 const $ = new Env("松山棉店");
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_HEADERS = "songshan_headers"; // 签到请求头(JSON)
@@ -85,6 +89,7 @@ function getCookie() {
 
         $.setdata(JSON.stringify(headers), CK_HEADERS);
         $.setdata(body, CK_BODY);
+        $.setdata("", "songshan_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
 
         $.msg($.name, "✅ 松山棉店 Cookie 获取成功", "可关闭抓包,主脚本自动签到");
     } catch (e) {
@@ -110,6 +115,7 @@ async function checkin() {
     debug(res, "sign");
 
     if (!res) {
+        saveStatus("fail", "签到无响应");
         $.messages.push("❌ 签到失败: 无响应");
         return;
     }
@@ -119,18 +125,37 @@ async function checkin() {
         const extra = res.data.extraReward || {};
         const pName = res.data.pointName || "积分";
         const got = (fixed.points || 0) + (extra.points || 0);
+        saveStatus("ok", `签到成功 +${got} ${pName}`);
         $.messages.push(`✅ 签到成功: +${got} ${pName}`);
         return;
     }
     // 已签到 / token 失效等
     const msg = res.errmsg || $.toStr(res);
     if (/已签|重复|已经签到/.test(msg)) {
+        saveStatus("ok", "今日已签到");
         $.messages.push("✨ 今日已签到");
     } else if (/登录|token|鉴权|未授权|失效|过期/.test(msg)) {
+        saveStatus("cookie", `token 失效: ${msg}`);
         $.messages.push(`❌ token 失效,请重新抓取: ${msg}`);
     } else {
+        saveStatus("fail", `errcode=${res.errcode} ${msg}`);
         $.messages.push(`❌ 签到失败: errcode=${res.errcode} ${msg}`);
     }
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === "ok" && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata("songshan_status") || "null"); } catch (e) {}
+        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), "songshan_status");
 }
 
 // ============ 请求 ============
@@ -204,11 +229,13 @@ if (typeof $request !== "undefined") {
         const rawHeaders = $.isNode() ? process.env.SONGSHAN_HEADERS : $.getdata(CK_HEADERS);
         $.body = $.isNode() ? process.env.SONGSHAN_BODY : $.getdata(CK_BODY);
         if (!rawHeaders || !$.body) {
+            saveStatus("none", "未抓取 Cookie");
             throw new Error("未配置签到凭据,请先进小程序签到页点一次签到抓取");
         }
         try {
             $.headers = JSON.parse(rawHeaders);
         } catch (e) {
+            saveStatus("cookie", "Cookie 解析失败");
             throw new Error("已存请求头损坏,请重新抓取");
         }
         await checkin();

@@ -8,7 +8,7 @@
  * @Updated: 2026-05-18
  *
  * [Script]
- * http-request ^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon tag=惠省红包墙 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png
+ * request if ${url} ~= /^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.cookie.js") with tag="惠省红包墙 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png", requires_body=true
  *
  * [MITM]
  * hostname = media.meituan.com
@@ -39,6 +39,7 @@ const KEY_LIST_BODY = 'huisheng_list_body';
         $.log(`[OK] headers ${Object.keys(headers).length} 个,body ${body.length} 字符;写入返回 H=${okH} B=${okB};读回验证 H=${verifyH} B=${verifyB}`);
 
         if (verifyH > 0 && verifyB > 0) {
+            $.setdata('', 'huisheng_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
             $.msg('惠省', '✅ 惠省 Cookie 获取成功', `headers ${verifyH} 字符 / body ${verifyB} 字符\n可关闭本脚本,主脚本可跑`);
         } else {
             $.msg('惠省', '⚠️ 写入异常', `存储读回为空 (H=${verifyH} B=${verifyB})\n检查 Loon 持久化存储权限`);

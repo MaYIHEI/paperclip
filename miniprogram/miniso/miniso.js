@@ -6,14 +6,14 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-17
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = member-center.miniso.com
  * [Script]
- * http-request ^https:\/\/member-center\.miniso\.com\/userinfo\/userinfo\/GetUserInfoV3 tag=名创优品 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png
- * cron "37 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js, tag=名创优品签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png, enable=true
+ * request if ${url} ~= /^https:\/\/member-center\.miniso\.com\/userinfo\/userinfo\/GetUserInfoV3/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js") with tag="名创优品 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png"
+ * cron "37 7 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/miniso/miniso.js") with tag="名创优品签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/miniso.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -52,7 +52,11 @@
 
 const $ = new Env('名创优品');
 
-const SCRIPT_VERSION = "2026-06-17.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_NAME = 'miniso_data';
@@ -77,10 +81,14 @@ $.alreadyDone = 0;
 // ============= 主流程 =============
 async function main() {
     if (!$.userData) {
+        saveStatus('none', '未抓取 Cookie');
         throw new Error('未配置账号 Cookie,请先打开名创优品小程序的"任务中心"页面抓取 ❌');
     }
     const { openid, unionid, uid, skey, weappcode, appcode } = $.userData;
-    if (!openid || !skey) throw new Error('Cookie 不完整,请重新抓取 ❌');
+    if (!openid || !skey) {
+        saveStatus('cookie', 'Cookie 不完整');
+        throw new Error('Cookie 不完整,请重新抓取 ❌');
+    }
 
     $.log(`📱 用户 uid=${uid} openid=${openid.substring(0, 8)}...`);
 
@@ -88,6 +96,7 @@ async function main() {
     const jwtPayload = parseJWT(skey);
     if (jwtPayload && jwtPayload.exp && jwtPayload.exp * 1000 < Date.now()) {
         const expDate = new Date(jwtPayload.exp * 1000).toISOString().slice(0, 10);
+        saveStatus('cookie', `Cookie 已过期(${expDate})`);
         throw new Error(`Cookie 已过期(${expDate}),请重新抓取 ❌`);
     }
     if (jwtPayload && jwtPayload.PHONE) {
@@ -155,14 +164,32 @@ async function signIn() {
         { activityId: ACTIVITY_ID, taskId: SIGNIN_TASK_ID }
     );
     if (res?.code === 200 && res?.success) {
+        saveStatus('ok', '+20 mini币');
         $.messages.push(`✅ 每日签到成功 (+20 mini币)`);
         $.signSuccess = true;
     } else if (/已完成|已签|已经/.test(res?.message || '')) {
+        saveStatus('ok', '今日已签到');
         $.messages.push(`✨ 今日已签到`);
         $.signSuccess = true;
     } else {
+        saveStatus('fail', `签到失败: ${res?.message || JSON.stringify(res)}`);
         $.messages.push(`❌ 签到失败: ${res?.message || JSON.stringify(res)}`);
     }
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === 'ok' && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata('miniso_status') || 'null'); } catch (e) {}
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'miniso_status');
 }
 
 // 查任务列表,返回所有未完成的浏览任务(taskType=5)
@@ -385,6 +412,7 @@ function getCookie() {
 
         const newData = { openid, unionid, uid, skey, weappcode, appcode };
         $.setjson(newData, CK_NAME);
+        $.setdata('', 'miniso_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
 
         const phone = (parseJWT(skey) || {}).PHONE || '';
         const masked = phone ? phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : openid.substring(0, 8) + '...';

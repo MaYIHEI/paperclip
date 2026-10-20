@@ -37,9 +37,9 @@ App 通道走顶象风控,固定整点签到不理想。脚本内置**当日随�
 hostname = gw2c-hw-open.longfor.com
 
 [Script]
-http-request ^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$ tag=龙湖App Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lhtj/lhtj.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png
+request if ${url} ~= /^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$/i && ${request.header['x-lf-channel']} == "L0" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lhtj/lhtj.js") with tag="龙湖App Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png"
 
-cron "0-59/19 8-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lhtj/lhtj.js, tag=龙湖App签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png, enable=true
+cron "0-59/19 8-10 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/lhtj/lhtj.js") with tag="龙湖App签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png"
 ```
 
 ## Surge
@@ -107,9 +107,10 @@ script-providers:
 |---|---|
 | 2026-06-10 | 初版,App(L0)通道签到 + 抽奖,内置当日随机签到时间 |
 | 2026-06-10 | 风控码 8040012/8040013 提示改为「账号已被风控,重抓无效,暂停脚本手动养号」 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
-- **顶象 `x-lf-dxrisk-token` 时效未实测** —— App 通道核心风险点。抓的是顶象 SDK 实时生成的会话指纹,若服务端严格校验时效,跨天 cron 会返回 `8040012/8040013`。一旦风控,建议暂停脚本、手动签到养号一段时间再恢复。这也是小程序版当初劝退 App 通道的原因,本版先做实测验证
+- **风控**:签到返回 `8040012/8040013` 时建议暂停脚本、手动签到一段时间再恢复
 - **签到与抽奖跨端共享次数**:同账号每天签到一次、抽奖次数当日领当日清,App / 小程序 / H5 共用
 - **随机时间依赖密集 cron**:`lhtj_app_random=true` 时必须用 `0-59/19 8-10 * * *` 这类密集 cron;若配单点 cron 又开随机,可能当天摇到的目标点错过后整天不再触发

@@ -9,18 +9,15 @@ NodeSeek 每日签到。
 ## 文件
 
 - `nodeseek.cookie.js` — Cookie 抓取脚本（http-request 重写）
-- `nodeseek.js` — 签到主脚本（cron，通过中继服务器）
+- `nodeseek.js` — 签到主脚本（cron）
 - `nodeseek.inject.js` — 浏览器注入签到（备用方案，无需 cron）
 
 ## 使用步骤
 
 1. 按下方对应平台配置，开启重写脚本 + cron
-2. 用 Safari 打开 [nodeseek.com](https://www.nodeseek.com) → 停留片刻
+2. 用浏览器打开 [nodeseek.com](https://www.nodeseek.com) 并登录 → 停留片刻
 3. 收到 `✅ NodeSeek Cookie 获取成功` 通知即抓取成功
-4. 在 BoxJS 的 NodeSeek 面板中填写「中继地址」和「中继密钥」（需自行搭建中继服务器）
-5. cron 会按计划自动签到
-
-> 中继服务器需自行搭建，不可共用他人的（各账号需使用独立 IP）。详见 [RELAY.md](RELAY.md)。
+4. cron 会按计划自动签到
 
 ## Loon
 
@@ -29,9 +26,9 @@ NodeSeek 每日签到。
 hostname = www.nodeseek.com
 
 [Script]
-http-request ^https://www\.nodeseek\.com/ tag=NodeSeek Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/nodeseek/nodeseek.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/nodeseek.png
+request if ${url} ~= /^https:\/\/www\.nodeseek\.com\//i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/nodeseek/nodeseek.cookie.js") with tag="NodeSeek Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/nodeseek.png"
 
-cron "0 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/nodeseek/nodeseek.js, tag=NodeSeek签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/nodeseek.png, enable=true
+cron "0 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/nodeseek/nodeseek.js") with tag="NodeSeek签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/nodeseek.png"
 ```
 
 ## Surge
@@ -93,8 +90,9 @@ script-providers:
 | 2026-07-07 | 重复签到单独提示“今日已签到”，中继响应按 UTF-8 解码 |
 | 2026-07-07 | 优化中继超时诊断，补中继健康检查说明 |
 | 2026-06-25 | 初版，VPS 中继方案签到 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |
+| 2026-10-16 | 改为手机直接签到，不再需要中继服务器 |
 
 ## 已知限制
 
-- 需自建 VPS 中继服务器并在 BoxJS 填写中继地址和密钥
-- Loon cron 请求通常不走代理；若提示中继连接超时，先用手机 Safari 打开 `http://你的VPS_IP:3001/health` 确认端口可直连
+- 如提示「被 Cloudflare 拦截」，用浏览器重新打开 nodeseek.com 刷新 Cookie 后再运行

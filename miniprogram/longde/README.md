@@ -26,9 +26,9 @@
 hostname = a.china-smartech.com
 
 [Script]
-http-request https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm tag=龙德广场 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/longde/longde.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/longde.png
+request if ${url} ~= /https:\/\/a\.china-smartech\.com\/restful\/mall\/\d+\/checkInForm/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/longde/longde.js") with tag="龙德广场 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/longde.png"
 
-cron "5 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/longde/longde.js, tag=龙德广场签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/longde.png, enable=true
+cron "5 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/longde/longde.js") with tag="龙德广场签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/longde.png"
 ```
 
 ## Surge
@@ -86,8 +86,4 @@ script-providers:
 |---|---|
 | 2026-05-23 | 初版 |
 | 2026-05-24 | tag 统一为 `龙德广场 Cookie` / `龙德广场签到`,加 img-url 图标 |
-
-## 已知限制
-
-- 单脚本架构(`$request` 是否存在区分抓 cookie / cron)
-- Cookie 长效,抓一次通常长期有效,基本无需重抓
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |

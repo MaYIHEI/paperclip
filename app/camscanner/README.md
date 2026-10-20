@@ -25,9 +25,9 @@
 hostname = api-cs.intsig.net
 
 [Script]
-http-request ^https:\/\/api-cs\.intsig\.net\/user\/cs\/get_user_attribute tag=扫描全能王 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png
+request if ${url} ~= /^https:\/\/api-cs\.intsig\.net\/user\/cs\/get_user_attribute/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.cookie.js") with tag="扫描全能王 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png"
 
-cron "15 10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.js, tag=扫描全能王签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png, enable=true
+cron "15 10 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/camscanner/camscanner.js") with tag="扫描全能王签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/camscanner.png"
 ```
 
 ## Surge
@@ -91,9 +91,8 @@ script-providers:
 |---|---|
 | 2026-06-20 | 初版:幸运大转盘每日自动抽奖 |
 | 2026-06-20 | 接入 BoxJS;补清除 Cookie + 调试模式开关 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
-- token 有效期未实测,失效后需重新打开 APP 触发 `get_user_attribute` 重新抓取。
 - `cs_ept_d` / `client_id` 可能分散在不同请求,首次抓取后需在 APP 内多停留几秒等其自动补全。
-- 抽奖为概率制,中奖 `item` 由服务端决定,脚本只负责把机会用满。

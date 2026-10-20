@@ -7,14 +7,14 @@
  * @Author: @Sliverkiss
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-11
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = popvip.paquapp.com
  * [Script]
- * http-response ^https:\/\/popvip\.paquapp\.com\/miniapp\/v2\/(svip_lite\/user_info|wechat_message\/template_info) tag=泡泡玛特 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png
- * cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js, tag=泡泡玛特签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png, enable=true
+ * response if ${url} ~= /^https:\/\/popvip\.paquapp\.com\/miniapp\/v2\/(svip_lite\/user_info|wechat_message\/template_info)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js") with tag="泡泡玛特 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png", requires_body=true
+ * cron "0 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/ppmt/ppmt.js") with tag="泡泡玛特签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -52,7 +52,11 @@
  */
 const $ = new Env("泡泡玛特");
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const ckName = "ppmt_data";
 const userCookie = $.toObj($.isNode() ? process.env[ckName] : $.getdata(ckName)) || [];
@@ -69,6 +73,7 @@ async function main() {
                 let userInfo = await user.getUserInfo() || {};
                 const phoneStr = userInfo.phone || user.userName || '';
                 DoubleLog(`用户: ${phone_num(phoneStr)}\n签到: ${signMsg}`);
+                ($.okMsgs = $.okMsgs || []).push(signMsg);
                 $.succCount++;
             } else {
                 DoubleLog(`⛔️ 「${user.userName ?? `账号${user.index}`}」签到失败, 用户需要去登录`)
@@ -78,6 +83,8 @@ async function main() {
             DoubleLog(`⛔️ 账号 ${user.userName || user.index} 处理异常: ${e.message || e}`);
         }
     }
+    const failed = $.userList.length - $.succCount;
+    saveStatus(failed ? 'cookie' : 'ok', failed ? `${failed} 个账号签到失败,需要重新登录` : ($.okMsgs || []).join(' · ') || '签到成功');
     $.title = `共${$.userList.length}个账号,成功${$.succCount}个,失败${$.userList.length - 0 - $.succCount}个`
     await sendMsg($.notifyMsg.join("\n"), $.avatar ? { $media: $.avatar } : undefined);
 }
@@ -147,6 +154,21 @@ class UserInfo {
     }
 }
 
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === 'ok' && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata('ppmt_status') || 'null'); } catch (e) {}
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'ppmt_status');
+}
+
 // 解析 JWT payload
 function parseJWT(token) {
     try {
@@ -208,6 +230,7 @@ async function getCookie() {
         index >= 0 ? userCookie[index] = newData : userCookie.push(newData);
 
         $.setjson(userCookie, ckName);
+        $.setdata('', 'ppmt_status'); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         $.msg($.name, `✅ 泡泡玛特 Cookie 获取成功`, `账号 ${phone_num(newData.userName)}`);
 
     } catch (e) {
@@ -279,6 +302,7 @@ async function loadCryptoJS() {
                 $.msg($.name, "", "✅ Cookie 已清除，请重新抓取");
                 return;
             }
+            if (!userCookie.length) saveStatus('none', '未抓取 Cookie');
             $.CryptoJS = await loadCryptoJS();
             await checkEnv();
             await main();

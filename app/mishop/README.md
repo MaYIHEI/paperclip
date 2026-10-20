@@ -27,9 +27,9 @@
 hostname = shop-api.retail.mi.com
 
 [Script]
-http-request ^https:\/\/shop-api\.retail\.mi\.com\/mtop\/mf\/act\/infinite\/(do|done) tag=小米商城 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png
+request if ${url} ~= /^https:\/\/shop-api\.retail\.mi\.com\/mtop\/mf\/act\/infinite\/(do|done)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.cookie.js") with tag="小米商城 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png"
 
-cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.js, tag=小米商城签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png, enable=true
+cron "15 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.js") with tag="小米商城签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png"
 ```
 
 ## Surge
@@ -86,8 +86,4 @@ script-providers:
 | 日期 | 变更 |
 |---|---|
 | 2026-05-27 | 初版 |
-
-## 已知限制
-
-- 米金签到任务 ID 硬编码。如果小米官方换 actId / taskId,需要重新抓 `venue/page` 拿新 ID
-- `serviceToken` 时效未知,理论上和 APP 登录态同生命周期。如签到失败提示 "未登录"/"token 失效",重抓即可
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |

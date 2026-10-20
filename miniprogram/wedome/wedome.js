@@ -6,14 +6,14 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-07
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = scrm-b.zjian.net
  * [Script]
- * http-response ^https:\/\/scrm-b\.zjian\.net\/api\/member\/(minaLogin|find) tag=味多美 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png
- * cron "10 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js, tag=味多美签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png, enable=true
+ * response if ${url} ~= /^https:\/\/scrm-b\.zjian\.net\/api\/member\/(minaLogin|find)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js") with tag="味多美 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png", requires_body=true
+ * cron "10 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/wedome/wedome.js") with tag="味多美签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wedome.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -52,7 +52,11 @@
 
 const $ = new Env("味多美");
 
-const SCRIPT_VERSION = "2026-06-13.r8"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_OPENID = "wedome_openid";      // 公众号 openid(永久固定)
@@ -92,6 +96,7 @@ function captureOpenid() {
             return;
         }
         $.setdata(openid, CK_OPENID);
+        $.setdata("", "wedome_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         // member/find 响应同时带 name,signIn body 需要
         const mname = j.data.member.name || "";
         if (mname) $.setdata(mname, CK_NAME);
@@ -120,6 +125,7 @@ async function checkin() {
     const openid = ($.isNode() ? process.env.WEDOME_OPENID : $.getdata(CK_OPENID)) || "";
     $.log(`[检测] 版本=${SCRIPT_VERSION}  openid=${openid ? openid.slice(0, 4) + "…" + openid.slice(-4) : "空"}`);
     if (!openid) {
+        saveStatus("none", "未抓取 Cookie");
         throw new Error(`[${SCRIPT_VERSION}] 未配置 openid,请先进味多美小程序签到页抓取(或 BoxJS 填 wedome_openid)`);
     }
 
@@ -129,6 +135,7 @@ async function checkin() {
     const token = login && login.data && login.data.token;
     const memberId = login && login.data && login.data.memberId;
     if (!token || !memberId) {
+        saveStatus(login ? "cookie" : "fail", login ? "openid 失效" : "请求异常");
         throw new Error(`[${SCRIPT_VERSION}] loginByOpenid 失败(openid 失效?重进小程序重抓): ${$.toStr(login).slice(0, 160)}`);
     }
     $.log(`[登录] token 末6=${token.slice(-6)}  memberId=${memberId}`);
@@ -138,6 +145,7 @@ async function checkin() {
     debug(act, "get");
     const activityId = act && act.data && act.data.id;
     if (!activityId) {
+        saveStatus("fail", "取签到活动失败");
         throw new Error(`[${SCRIPT_VERSION}] 取 activityId 失败: ${$.toStr(act).slice(0, 160)}`);
     }
     const lastActId = $.getdata(CK_ACTID) || "";
@@ -185,12 +193,15 @@ async function checkin() {
     const changedNote = actChanged ? " ⚠️ activityId 已变更" : "";
     if (delta != null && delta > 0) {
         $.setdata(activityId, CK_ACTID);
+        saveStatus("ok", `签到成功 +${delta} 积分`);
         $.messages.push(`✅ 签到成功 (+${delta} 积分)${changedNote}`);
     } else if (signedToday) {
         // 积分没动但今天确有签到记录 → 多为当天 cron 已签过,正常
         $.setdata(activityId, CK_ACTID);
+        saveStatus("ok", "今日已签到");
         $.messages.push(`✨ 今日已签到${check.data.index ? `,第 ${check.data.index} 天` : ""}`);
     } else {
+        saveStatus("fail", "签到失败,积分未变");
         $.messages.push(`${tag} ❌ 签到失败,积分未变${memberName ? "" : "(memberName 为空)"}`);
     }
     if (p1 != null) $.messages.push(`💰 当前积分: ${p1}`);
@@ -247,6 +258,21 @@ function debug(content, title = "debug") {
     $.log(`\n----- ${title} -----`);
     $.log(typeof content === "string" ? content : $.toStr(content));
     $.log(`----- end -----\n`);
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === "ok" && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata("wedome_status") || "null"); } catch (e) {}
+        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), "wedome_status");
 }
 
 async function sendMsg(message) {

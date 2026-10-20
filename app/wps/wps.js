@@ -6,14 +6,14 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-27
+ * @Updated: 2026-10-19
  *
  * ===== Loon =====
  * [MITM]
  * hostname = personal-act.wps.cn
  * [Script]
- * http-request ^https:\/\/personal-act\.wps\.cn\/activity-rubik\/activity\/page_info tag=WPS Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.cookie.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png
- * cron "0 10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js, tag=WPS签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png, enable=true
+ * request if ${url} ~= /^https:\/\/personal-act\.wps\.cn\/activity-rubik\/activity\/page_info/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.cookie.js") with tag="WPS Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png"
+ * cron "0 10 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/wps/wps.js") with tag="WPS签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/wps.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -52,7 +52,11 @@
 
 const $ = new Env("WPS");
 
-const SCRIPT_VERSION = "2026-06-27.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-19.r5"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -67,6 +71,21 @@ function taskOff(k) {
 function debug(content) {
     if (($.getdata("wps_debug") || "false") !== "true") return;
     $.log(`[DEBUG] ${typeof content === "string" ? content : JSON.stringify(content)}`);
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === "ok" && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata("wps_status") || "null"); } catch (e) {}
+        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), "wps_status");
 }
 
 // ===== 接口 =====
@@ -119,6 +138,7 @@ if (JSON.parse($.getdata("wps_clear") || "false")) {
 } else {
     main().catch((e) => {
         $.log(`[ERROR] 主流程异常: ${e}`);
+        saveStatus("fail", String(e));
         $.msg("WPS", "❌ 运行异常", String(e));
     }).finally(() => $.done());
 }
@@ -126,6 +146,7 @@ if (JSON.parse($.getdata("wps_clear") || "false")) {
 async function main() {
     const sid = $.getdata(CK_KEY);
     if (!sid) {
+        saveStatus("none", "未抓取 Cookie");
         $.msg("WPS", "🚫 缺少 Cookie", "请先开启 cookie 抓取脚本,打开 WPS APP 进任意活动页停留 1 秒");
         return;
     }
@@ -141,12 +162,14 @@ async function main() {
             const j = JSON.parse(r.body);
             if (j.result !== "ok" || !j.userid) {
                 // 服务端明确判失效 = 真·登录态失效,不重试
+                saveStatus("cookie", "wps_sid 已过期");
                 $.msg("WPS", "🚫 登录态失效", "wps_sid 已过期,请重新抓取(打开 WPS 进活动页)");
                 $.log(`[ERROR] islogin 非 ok: ${r.body.slice(0, 200)}`);
                 return;
             }
             uid = j.userid;
             $.log(`[INFO] user_id 已获取(${String(uid).slice(0, 3)}***)`);
+            saveStatus("ok", "登录态有效");
         } catch (e) {
             lastErr = e; // 网络超时 / 连接失败 / 响应非 JSON → 值得重试
             $.log(`[WARN] islogin 网络错误(${attempt + 1}/2): ${e}`);
@@ -154,6 +177,7 @@ async function main() {
     }
     if (!uid) {
         // 重试后仍失败:是网络问题,不是 Cookie 失效——别误导用户去重抓
+        saveStatus("fail", "网络异常,未能校验登录态");
         $.msg("WPS", "⚠️ 网络异常", "islogin 请求超时(非 Cookie 失效),稍后会自动重试或手动运行一次");
         $.log(`[ERROR] islogin 重试后仍失败: ${lastErr}`);
         return;
@@ -183,9 +207,10 @@ async function main() {
         if (ran++ > 0) await sleep(jitter(ACTION_GAP)); // 任务间随机间隔避风控
         await run();
     }
-    if (!ran) $.results.push("ℹ️ 所有任务均已在 BoxJS 关闭");
+    if (!ran) $.results.push("ℹ️ 所有任务均已关闭(插件设置或 BoxJS)");
 
     $.msg("WPS 任务汇总", "", $.results.join("\n")); // $.msg 已把汇总打到日志,不再重复 $.log
+    saveStatus("ok", $.results.map((r) => r.replace(/^\S+\s*/, "")).join(" · ")); // 汇总里显示各任务结果
 }
 
 // ============ 任务:每日签到(请求体加密)============
@@ -386,20 +411,29 @@ async function taskFragment() {
         }
 
         // 2) 签到:有序列就复用(is_new_sign_series=false),无序列才新建
-        const isNew = !seriesId;
-        const reqObj = {
-            component_uniq_number: {
-                activity_number: FLZX.activity_number,
-                page_number: FLZX.page_number,
-                component_number: comp.component_number,
-                component_node_id: comp.component_node_id,
-            },
-            component_type: comp.type,
-            component_action: "fragment_collect.sign_in",
-            fragment_collect: { sign_date: today, series_id: seriesId, is_new_sign_series: isNew },
+        const signIn = async (sid, isNew) => {
+            const reqObj = {
+                component_uniq_number: {
+                    activity_number: FLZX.activity_number,
+                    page_number: FLZX.page_number,
+                    component_number: comp.component_number,
+                    component_node_id: comp.component_node_id,
+                },
+                component_type: comp.type,
+                component_action: "fragment_collect.sign_in",
+                fragment_collect: { sign_date: today, series_id: sid, is_new_sign_series: isNew },
+            };
+            const r = await httpReq("POST", COMPONENT, { body: JSON.stringify(reqObj) });
+            return { r, j: safeJson(r.body) };
         };
-        const r = await httpReq("POST", COMPONENT, { body: JSON.stringify(reqObj) });
-        const j = safeJson(r.body);
+        let isNew = !seriesId;
+        let { r, j } = await signIn(seriesId, isNew);
+        // 上一个序列周期已结束 → 服务端回「sign date <今天> not in series」,这时才新建序列
+        if (!isNew && /not in se/i.test((r.body || ""))) {
+            debug(`${tag} 旧序列已结束,新建序列: ${r.body.slice(0, 200)}`);
+            isNew = true;
+            ({ r, j } = await signIn("", true));
+        }
         if (!j) {
             $.results.push(`❌ ${tag}:无响应`);
             debug(`${tag} 响应: ${r.body.slice(0, 300)}`);

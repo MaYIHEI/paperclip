@@ -2,7 +2,7 @@
   "id": "MaYIHEI.paperclip",
   "name": "Paperclip",
   "author": "@MaYIHEI",
-  "icon": "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/paperclip.png",
+  "icon": "https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip-boxjs.png",
   "repo": "https://github.com/MaYIHEI/paperclip",
   "apps": [
     {
@@ -70,34 +70,6 @@
       "icons": [
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tuhu.png",
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tuhu.png"
-      ]
-    },
-    {
-      "id": "paperclip.bibisheng",
-      "name": "微信支付笔笔省 (已归档)",
-      "keys": [
-        "bbs_session_token",
-        "bbs_appid",
-        "bbs_module",
-        "bbs_page"
-      ],
-      "settings": [],
-      "author": "@MaYIHEI",
-      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/bibisheng",
-      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.js",
-      "scripts": [
-        {
-          "name": "主签到",
-          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.js"
-        },
-        {
-          "name": "抓 Cookie",
-          "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/bibisheng/bibisheng.cookie.js"
-        }
-      ],
-      "icons": [
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/bibisheng.png",
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/bibisheng.png"
       ]
     },
     {
@@ -737,66 +709,6 @@
       ]
     },
     {
-      "id": "paperclip.casetify",
-      "name": "CASETiFY (已归档)",
-      "keys": [
-        "casetify_token",
-        "casetify_hqtoken",
-        "is_debug"
-      ],
-      "settings": [],
-      "author": "@MaYIHEI",
-      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/casetify",
-      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/casetify/casetify.js",
-      "icons": [
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/casetify.png",
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/casetify.png"
-      ]
-    },
-    {
-      "id": "paperclip.songshan",
-      "name": "松山棉店",
-      "keys": [
-        "songshan_headers",
-        "songshan_body",
-        "songshan_clear",
-        "songshan_debug"
-      ],
-      "settings": [
-        {
-          "id": "songshan_clear",
-          "name": "清除 Cookie",
-          "val": false,
-          "type": "boolean",
-          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
-        },
-        {
-          "id": "songshan_debug",
-          "name": "调试模式",
-          "val": "false",
-          "type": "selects",
-          "items": [
-            {
-              "key": "false",
-              "label": "关闭"
-            },
-            {
-              "key": "true",
-              "label": "开启"
-            }
-          ],
-          "desc": "开启后打印签到请求体和响应"
-        }
-      ],
-      "author": "@MaYIHEI",
-      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/songshan",
-      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/songshan/songshan.js",
-      "icons": [
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/songshan.png",
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/songshan.png"
-      ]
-    },
-    {
       "id": "paperclip.wedome",
       "name": "味多美",
       "keys": [
@@ -844,22 +756,6 @@
       "icons": [
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/wedome.png",
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/wedome.png"
-      ]
-    },
-    {
-      "id": "paperclip.topsports",
-      "name": "滔搏 (已归档)",
-      "keys": [
-        "topsports_cookie",
-        "topsports_debug"
-      ],
-      "settings": [],
-      "author": "@MaYIHEI",
-      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/topsports",
-      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/topsports/topsports.js",
-      "icons": [
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/topsports.png",
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/topsports.png"
       ]
     },
     {
@@ -996,37 +892,6 @@
       "icons": [
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tingtingfm.png",
         "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/tingtingfm.png"
-      ]
-    },
-    {
-      "id": "paperclip.lvcchong",
-      "name": "驴充充 (已归档)",
-      "keys": [
-        "lvcchong_mp_auth"
-      ],
-      "settings": [],
-      "author": "@MaYIHEI",
-      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/lvcchong",
-      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/lvcchong/lvcchong.js",
-      "icons": [
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/lvcchong.png",
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/lvcchong.png"
-      ]
-    },
-    {
-      "id": "paperclip.lvcchong_app",
-      "name": "驴充充 App (已归档)",
-      "keys": [
-        "lvcchong_auth",
-        "lvcchong_notify_ts"
-      ],
-      "settings": [],
-      "author": "@MaYIHEI",
-      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/lvcchong",
-      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/lvcchong/lvcchong.js",
-      "icons": [
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/lvcchong.png",
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/lvcchong.png"
       ]
     },
     {
@@ -1241,18 +1106,46 @@
       "id": "paperclip.sgcc",
       "name": "网上国网",
       "keys": [
-        "sgcc_data",
-        "sgcc_signin",
+        "sgcc_phone",
+        "sgcc_password",
+        "sgcc_sms",
+        "sgcc_session",
+        "sgcc_device",
+        "sgcc_sms_pending",
         "sgcc_clear",
         "sgcc_debug"
       ],
       "settings": [
         {
+          "id": "sgcc_phone",
+          "name": "手机号",
+          "val": "",
+          "type": "text",
+          "placeholder": "网上国网登录手机号",
+          "desc": "脚本用手机号 + 密码按 App 方式登录，凭证到期自动重新登录；Loon 插件设置里填了的话以插件为准"
+        },
+        {
+          "id": "sgcc_password",
+          "name": "密码",
+          "val": "",
+          "type": "text",
+          "placeholder": "网上国网登录密码",
+          "desc": "没设过密码的先在 App 里设置；不要分享含账号密码的 BoxJS 备份"
+        },
+        {
+          "id": "sgcc_sms",
+          "name": "短信验证码",
+          "val": "",
+          "type": "text",
+          "placeholder": "6 位验证码",
+          "desc": "首次登录提示新设备验证时，把收到的验证码填这里再手动运行一次签到脚本；登录成功后自动清空"
+        },
+        {
           "id": "sgcc_clear",
-          "name": "清除 Cookie",
+          "name": "清除登录凭证",
           "val": false,
           "type": "boolean",
-          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie 与签到请求，完成后自动复位为关闭；之后重新开 App 进积分签到页抓取"
+          "desc": "设为开启后，运行一次签到脚本会清空登录凭证与模拟设备（账号密码保留），完成后自动复位为关闭；下次运行重新登录"
         },
         {
           "id": "sgcc_debug",
@@ -1272,7 +1165,7 @@
           "desc": "开启后打印每次签到的请求/响应日志"
         }
       ],
-      "author": "@MaYIHEI",
+      "author": "@脑瓜, @stevenjoezhang, 移植 @MaYIHEI",
       "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/sgcc",
       "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/sgcc/sgcc.js",
       "icons": [
@@ -1370,10 +1263,7 @@
       "keys": [
         "nodeseek_cookie",
         "nodeseek_ua",
-        "nodeseek_random",
-        "nodeseek_relay_url",
-        "nodeseek_relay_key",
-        "nodeseek_debug"
+        "nodeseek_random"
       ],
       "settings": [
         {
@@ -1392,39 +1282,6 @@
             }
           ],
           "desc": "签到奖励模式：固定 = 每次 +5 鸡腿；随机 = 1-10 随机"
-        },
-        {
-          "id": "nodeseek_relay_url",
-          "name": "中继地址",
-          "val": "",
-          "type": "text",
-          "placeholder": "http://IP:3001/attend",
-          "desc": "VPS 中继服务器地址"
-        },
-        {
-          "id": "nodeseek_relay_key",
-          "name": "中继密钥",
-          "val": "",
-          "type": "text",
-          "placeholder": "中继 API Key",
-          "desc": "中继服务器 API Key（x-api-key）"
-        },
-        {
-          "id": "nodeseek_debug",
-          "name": "调试模式",
-          "val": "false",
-          "type": "selects",
-          "items": [
-            {
-              "key": "false",
-              "label": "关闭"
-            },
-            {
-              "key": "true",
-              "label": "开启"
-            }
-          ],
-          "desc": "开启后打印中继响应和分类结果（不打印 Cookie / 密钥）"
         }
       ],
       "author": "@MaYIHEI",
@@ -1489,6 +1346,90 @@
       ]
     },
     {
+      "id": "paperclip.laifen",
+      "name": "徕芬",
+      "keys": [
+        "laifen_data",
+        "laifen_clear",
+        "laifen_debug"
+      ],
+      "settings": [
+        {
+          "id": "laifen_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开启后，运行一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭；之后重新抓取"
+        },
+        {
+          "id": "laifen_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "开启后打印签到接口原始响应"
+        }
+      ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/laifen",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/laifen/laifen.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/laifen.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/laifen.png"
+      ]
+    },
+    {
+      "id": "paperclip.linli",
+      "name": "林里",
+      "keys": [
+        "linli_data",
+        "linli_clear",
+        "linli_debug"
+      ],
+      "settings": [
+        {
+          "id": "linli_clear",
+          "name": "清除 Cookie",
+          "val": false,
+          "type": "boolean",
+          "desc": "设为开后，运行下一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭，之后重新抓取"
+        },
+        {
+          "id": "linli_debug",
+          "name": "调试模式",
+          "val": "false",
+          "type": "selects",
+          "items": [
+            {
+              "key": "false",
+              "label": "关闭"
+            },
+            {
+              "key": "true",
+              "label": "开启"
+            }
+          ],
+          "desc": "开启后打印签到、商品和兑换接口原始响应"
+        }
+      ],
+      "author": "@MaYIHEI",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/linli",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/linli/linli.js",
+      "icons": [
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/linli.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/linli.png"
+      ]
+    },
+    {
       "id": "paperclip.milottery",
       "name": "小米抽奖",
       "keys": [
@@ -1531,59 +1472,23 @@
       ]
     },
     {
-      "id": "paperclip.linli",
-      "name": "林里",
+      "id": "paperclip.pan1",
+      "name": "123社区",
       "keys": [
-        "linli_data",
-        "linli_clear",
-        "linli_debug",
-        "linli_task_exchange_coupon",
-        "linli_task_exchange_toy"
+        "pan1_data",
+        "pan1_clear",
+        "pan1_debug"
       ],
       "settings": [
         {
-          "id": "linli_task_exchange_coupon",
-          "name": "兑换单杯免单券",
-          "val": "false",
-          "type": "selects",
-          "items": [
-            {
-              "key": "false",
-              "label": "关闭"
-            },
-            {
-              "key": "true",
-              "label": "开启"
-            }
-          ],
-          "desc": "默认关闭；开启后仅在商品售卖时间内检查库存并消耗 1 鸭币兑换"
-        },
-        {
-          "id": "linli_task_exchange_toy",
-          "name": "兑换游乐园周边",
-          "val": "false",
-          "type": "selects",
-          "items": [
-            {
-              "key": "false",
-              "label": "关闭"
-            },
-            {
-              "key": "true",
-              "label": "开启"
-            }
-          ],
-          "desc": "默认关闭；开启后仅在商品售卖时间内检查库存并消耗 1 鸭币兑换，实体订单仍待真机验证"
-        },
-        {
-          "id": "linli_clear",
+          "id": "pan1_clear",
           "name": "清除 Cookie",
           "val": false,
           "type": "boolean",
-          "desc": "设为开后，运行下一次签到脚本会清空已抓的 Cookie，完成后自动复位为关闭，之后重新抓取"
+          "desc": "开启后运行一次脚本会清空已抓的 Cookie，完成后自动复位"
         },
         {
-          "id": "linli_debug",
+          "id": "pan1_debug",
           "name": "调试模式",
           "val": "false",
           "type": "selects",
@@ -1597,20 +1502,20 @@
               "label": "开启"
             }
           ],
-          "desc": "开启后打印签到、商品和兑换接口原始响应"
+          "desc": "开启后打印签到响应和诊断日志，不输出 Cookie"
         }
       ],
       "author": "@MaYIHEI",
-      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/miniprogram/linli",
-      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/miniprogram/linli/linli.js",
+      "repo": "https://github.com/MaYIHEI/paperclip/tree/main/app/pan1",
+      "script": "https://raw.githubusercontent.com/MaYIHEI/paperclip/main/app/pan1/pan1.js",
       "icons": [
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/linli.png",
-        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/linli.png"
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/pan1.png",
+        "https://raw.githubusercontent.com/MaYIHEI/pin/main/app/pan1.png"
       ]
     },
     {
       "id": "paperclip.agentrouter",
-      "name": "AgentRouter（Surge / QX / Stash）",
+      "name": "AgentRouter",
       "keys": [
         "agentrouter_username",
         "agentrouter_password",
@@ -1624,7 +1529,7 @@
           "val": "",
           "type": "text",
           "placeholder": "网站账号或邮箱",
-          "desc": "其他平台在此填写网站账号；Loon 请直接在插件设置中填写账号密码，不使用本页配置"
+          "desc": "网站账号或邮箱；Loon 单独插件里填了的话以插件为准，签到合集读这里"
         },
         {
           "id": "agentrouter_password",

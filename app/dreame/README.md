@@ -24,9 +24,9 @@
 hostname = cn-wxmall.dreame.tech
 
 [Script]
-http-request ^https:\/\/cn-wxmall\.dreame\.tech\/main\/my\/info tag=追觅 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/dreame.png
+request if ${url} ~= /^https:\/\/cn-wxmall\.dreame\.tech\/main\/my\/info/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js") with tag="追觅 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/dreame.png", requires_body=true
 
-cron "33 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js, tag=追觅签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/dreame.png, enable=true
+cron "33 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/dreame/dreame.js") with tag="追觅签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/dreame.png"
 ```
 
 ## Surge
@@ -84,9 +84,4 @@ script-providers:
 |---|---|
 | 2026-06-21 | 初版,基于追觅 2.5.1 抓包验证 |
 | 2026-06-25 | 修复 Cookie 获取偶发失败问题 |
-
-## 已知限制
-
-- **未经多日真机验证**:签到逻辑已抓包比对,完整流程尚未在真机定时任务下长期跑过;首次 cron 跑时留意通知结果
-- Cookie(sessid)有效期约 90 天,失效后需重新打开 APP 抓取
-- 客户端版本标识为抓包时的固定值,追觅大版本更新后若签到失败,需重新抓包对照更新脚本常量
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |

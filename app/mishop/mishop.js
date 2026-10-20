@@ -6,14 +6,14 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-05-27
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = shop-api.retail.mi.com
  * [Script]
- * http-request ^https:\/\/shop-api\.retail\.mi\.com\/mtop\/mf\/act\/infinite\/(do|done) tag=小米商城 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.cookie.js, requires-body=0, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png
- * cron "15 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.js, tag=小米商城签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png, enable=true
+ * request if ${url} ~= /^https:\/\/shop-api\.retail\.mi\.com\/mtop\/mf\/act\/infinite\/(do|done)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.cookie.js") with tag="小米商城 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png"
+ * cron "15 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mishop/mishop.js") with tag="小米商城签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -48,7 +48,11 @@
 
 const $ = new Env('小米商城');
 
-const SCRIPT_VERSION = "2026-06-20.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'mishop_data';
@@ -68,6 +72,7 @@ if (JSON.parse($.getdata("mishop_clear") || "false")) {
 (async () => {
     const raw = $.getdata(CK_KEY);
     if (!raw) {
+        saveStatus('none', '未抓取 Cookie');
         $.msg($.name, '🚫 缺少 Cookie',
             '请先开启 cookie 抓取脚本,然后打开小米商城 APP → 首页 → 米金商城');
         $.done();
@@ -78,12 +83,14 @@ if (JSON.parse($.getdata("mishop_clear") || "false")) {
     try {
         ck = JSON.parse(raw);
     } catch (e) {
+        saveStatus('cookie', 'Cookie 解析失败');
         $.msg($.name, '🚫 Cookie 解析失败', '请清空缓存重抓');
         $.done();
         return;
     }
 
     if (!ck.cookie) {
+        saveStatus('cookie', 'Cookie 不完整');
         $.msg($.name, '🚫 Cookie 不完整', '缺 cookie 字段,请重抓');
         $.done();
         return;
@@ -100,6 +107,7 @@ if (JSON.parse($.getdata("mishop_clear") || "false")) {
         ]);
 
         if (!r1) {
+            saveStatus('fail', '请求异常');
             $.msg($.name, `❌ ${userId} 签到失败`, '请求异常,请查看日志');
             $.done();
             return;
@@ -109,8 +117,10 @@ if (JSON.parse($.getdata("mishop_clear") || "false")) {
         const r1msg = r1.message || r1.msg || '';
         if (r1.code !== 0 || !r1.data || !r1.data.taskToken) {
             if (/已|重复|完成|done/i.test(r1msg)) {
+                saveStatus('ok', '今日已签');
                 $.msg($.name, `✨ ${userId} 今日已签`, r1msg);
             } else {
+                saveStatus('fail', `code=${r1.code} ${r1msg}`);
                 $.msg($.name, `❌ ${userId} 签到失败`, `code=${r1.code} ${r1msg}`);
                 debug(`do raw: ${JSON.stringify(r1).slice(0, 400)}`);
             }
@@ -129,6 +139,7 @@ if (JSON.parse($.getdata("mishop_clear") || "false")) {
 
         if (!r2 || r2.code !== 0) {
             const m = (r2 && (r2.message || r2.msg)) || '响应异常';
+            saveStatus('fail', `领奖失败 ${m}`);
             $.msg($.name, `⚠️ ${userId} 领奖失败`, `code=${r2 && r2.code} ${m}`);
             debug(`done raw: ${JSON.stringify(r2).slice(0, 400)}`);
             $.done();
@@ -153,9 +164,11 @@ if (JSON.parse($.getdata("mishop_clear") || "false")) {
             : `连签 ${doneInSeries || '?'} 天`;
 
         $.log(`✅ ${body}`);
+        saveStatus('ok', body);
         $.msg($.name, `✅ ${userId} 签到成功`, body);
     } catch (e) {
         $.log(`❌ 异常: ${e.message || e}`);
+        saveStatus('fail', String(e.message || e));
         $.msg($.name, `❌ ${userId} 签到异常`, String(e.message || e));
     }
 
@@ -203,6 +216,20 @@ function buildHeaders(ck) {
     return h;
 }
 
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === 'ok' && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata('mishop_status') || 'null'); } catch (e) {}
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'mishop_status');
+}
 
 // @Chavy Env
 // 调试日志:BoxJS 设 mishop_debug=true 才打印接口原始响应

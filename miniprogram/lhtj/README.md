@@ -24,9 +24,9 @@
 hostname = gw2c-hw-open.longfor.com
 
 [Script]
-http-request ^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$ tag=龙湖天街 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lhtj/lhtj.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png
+request if ${url} ~= /^https:\/\/gw2c-hw-open\.longfor\.com\/lmarketing-task-api-mvc-prod\/openapi\/task\/v1\/signature\/clock$/i && ${request.header['x-lf-channel']} == "C2" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lhtj/lhtj.js") with tag="龙湖天街 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png"
 
-cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lhtj/lhtj.js, tag=龙湖天街签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png, enable=true
+cron "0 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/lhtj/lhtj.js") with tag="龙湖天街签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/lhtj.png"
 ```
 
 ## Surge
@@ -84,10 +84,10 @@ script-providers:
 |---|---|
 | 2026-05-24 | 初版,仅支持微信小程序通道 |
 | 2026-05-24 | tag 统一为 `龙湖天街 Cookie` / `龙湖天街签到`,加 img-url 图标 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
 - **仅支持微信小程序通道**(`x-lf-channel=C2`)。APP 通道(`L0`)被顶象风控强制要求交互式图形验证,脚本无法自动通过
-- `x-lf-dxrisk-token` 是顶象 SDK 跑出来的设备/会话指纹,寿命未知,实测每次进小程序会刷新
 - **APP 抽奖功能**(每日 0.3 珑珠)同样因顶象交互式验证不可自动化,不做
 - 同一账号每天只能签一次,跨小程序/APP/H5 共享次数

@@ -25,9 +25,9 @@
 hostname = api-takumi.miyoushe.com, api-takumi.mihoyo.com
 
 [Script]
-http-response ^https:\/\/api-takumi\.(miyoushe|mihoyo)\.com\/(binding\/api\/getUserGameRolesByStoken|event\/luna\/) tag=米游社 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png
+response if ${url} ~= /^https:\/\/api-takumi\.(miyoushe|mihoyo)\.com\/(binding\/api\/getUserGameRolesByStoken|event\/luna\/)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.cookie.js") with tag="米游社 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png", requires_body=true
 
-cron "13 6 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.js, tag=米游社签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png, enable=true
+cron "13 6 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/mihoyo/mihoyo.js") with tag="米游社签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png"
 ```
 
 ## Surge
@@ -97,11 +97,11 @@ script-providers:
 | 2026-05-24 | tag 统一为 `米游社 Cookie` / `米游社签到`,加 img-url 图标 |
 | 2026-06-27 | 修复米游社改版后 Cookie 抓不到的问题;更新重写规则,请删掉旧规则换成本页新配置,再按抓取步骤重抓一次 |
 | 2026-07-27 | 补全崩坏学园2(`bh2_cn`)和未定事件簿(`nxx_cn`)签到配置 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
 - 米游币任务**整体放弃**(打卡 v2 DS 重放检测无解,其他任务官方已下线)
-- web cookie 30 天有效,失效需重抓
 
 ## 致谢
 

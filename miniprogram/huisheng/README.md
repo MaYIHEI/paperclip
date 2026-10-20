@@ -25,9 +25,9 @@
 hostname = media.meituan.com
 
 [Script]
-http-request ^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon tag=惠省红包墙 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png
+request if ${url} ~= /^https:\/\/media\.meituan\.com\/fulishemini\/couponActivity\/listActivityCoupon/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.cookie.js") with tag="惠省红包墙 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png", requires_body=true
 
-cron "5 0 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.js, tag=惠省红包墙签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png, enable=true
+cron "5 0 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/huisheng/huisheng.js") with tag="惠省红包墙签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/huisheng.png"
 ```
 
 ## Surge
@@ -93,10 +93,10 @@ script-providers:
 |---|---|
 | 2026-05 | 初版,针对「惠省」红包墙独立分析实现 |
 | 2026-05-24 | tag 统一为 `惠省红包墙 Cookie` / `惠省红包墙签到`,加 img-url 图标 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
-- 美团签名持续迭代,官方大改时可能需要重新适配
 - 部分券有「特定身份」前置条件(如新人券),领取失败会在统计里算作失败
 
 ## 致谢

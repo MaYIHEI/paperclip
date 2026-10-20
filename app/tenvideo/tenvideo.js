@@ -7,14 +7,14 @@
  * @Author: @WowYiJiu
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-06-05
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = pbaccess.video.qq.com, vip.video.qq.com
  * [Script]
- * http-request ^https:\/\/pbaccess\.video\.qq\.com\/ tag=腾讯视频 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png
- * cron "10 0 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js, tag=腾讯视频签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png, enable=true
+ * request if ${url} ~= /^https:\/\/pbaccess\.video\.qq\.com\//i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js") with tag="腾讯视频 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png"
+ * cron "10 0 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/tenvideo/tenvideo.js") with tag="腾讯视频签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -54,7 +54,11 @@
 
 const $ = new Env("腾讯视频");
 
-const SCRIPT_VERSION = "2026-06-07.r1"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK = "tenvideo_cookie"; // 完整 cookie(含 vqq_refresh_token 等),刷新后滚动更新
@@ -78,6 +82,7 @@ function captureAuth() {
         $.log(`[capture] 触发 ${($request.url || "").split("?")[0]} cookie长度=${cookie.length} refresh_token=${hasRT ? "有" : "无"}`);
         if (hasRT) {
             $.setdata(cookie, CK);
+            $.setdata("", "tenvideo_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
             $.msg($.name, "✅ 腾讯视频 Cookie 获取成功", "可关掉网页,cron 自动签到");
             return;
         }
@@ -96,14 +101,20 @@ function captureAuth() {
 
 async function checkin() {
     let cookie = $.getdata(CK);
-    if (!cookie) throw new Error(`[${SCRIPT_VERSION}] 未配置 Cookie,请先登录 v.qq.com 抓取`);
+    if (!cookie) {
+        saveStatus("none", "未抓取 Cookie");
+        throw new Error(`[${SCRIPT_VERSION}] 未配置 Cookie,请先登录 v.qq.com 抓取`);
+    }
 
     // 1) Account/Refresh:用 refresh_token 换新 vusession(vusession 仅 2 小时)
     const vuid = getCookieVal(cookie, "vqq_vuserid") || getCookieVal(cookie, "v_vuserid");
     const vusession = getCookieVal(cookie, "vqq_vusession") || getCookieVal(cookie, "v_vusession");
     const vurefresh = getCookieVal(cookie, "vqq_refresh_token") || getCookieVal(cookie, "v_t_refresh_token");
     $.log(`[检测] 版本=${SCRIPT_VERSION}  vuid=${vuid || "空"}  vusession=${vusession ? "有" : "无"}  refresh_token=${vurefresh ? "有" : "无"}`);
-    if (!vurefresh) throw new Error(`[${SCRIPT_VERSION}] cookie 缺 refresh_token,重抓`);
+    if (!vurefresh) {
+        saveStatus("cookie", "Cookie 缺 refresh_token");
+        throw new Error(`[${SCRIPT_VERSION}] cookie 缺 refresh_token,重抓`);
+    }
 
     const body = JSON.stringify({ vuid: Number(vuid) || vuid, vusession: vusession, vurefresh: vurefresh });
     const rf = await req("POST", REFRESH_URL, cookie, body);
@@ -111,6 +122,7 @@ async function checkin() {
     const rdata = (rf && (rf.data || rf)) || {};
     const newVusession = rdata.vusession;
     if (!newVusession) {
+        saveStatus(rf ? "cookie" : "fail", rf ? "刷新登录态失败" : "请求异常");
         throw new Error(
             `[${SCRIPT_VERSION}] 刷新 vusession 失败: ${rf ? JSON.stringify(rf).slice(0, 180) : "无响应"}\n👉 重进腾讯视频小程序/网页抓 Cookie`
         );
@@ -132,14 +144,33 @@ async function checkin() {
     $.log(`[响应] ${res ? JSON.stringify(res).slice(0, 200) : "无响应"}`);
     const tag = `[${SCRIPT_VERSION}]`;
     if (res && res.ret === 0 && res.check_in_score != null) {
+        saveStatus("ok", `签到成功 +${res.check_in_score} V力值`);
         $.messages.push(`✅ 签到成功,获得 ${res.check_in_score} V力值`);
     } else if (res && (res.ret === -2002 || /已签|already/i.test(res.err_msg || ""))) {
+        saveStatus("ok", "今日已签到");
         $.messages.push("✨ 今日已签到");
     } else if (res && /not login|登录|token|auth|-1009|-10001/i.test(JSON.stringify(res))) {
+        saveStatus("cookie", "签到鉴权失败");
         $.messages.push(`${tag} ❌ 签到鉴权失败(vusession 未被接受?): ${JSON.stringify(res).slice(0, 160)}`);
     } else {
+        saveStatus("fail", `签到失败: ${res ? JSON.stringify(res) : "无响应"}`);
         $.messages.push(`${tag} ❌ 签到失败: ${res ? JSON.stringify(res).slice(0, 160) : "无响应"}`);
     }
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === "ok" && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata("tenvideo_status") || "null"); } catch (e) {}
+        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), "tenvideo_status");
 }
 
 // ============ 请求 ============

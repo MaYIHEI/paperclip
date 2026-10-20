@@ -10,7 +10,7 @@
  *
  * ===== Loon =====
  * [Script]
- * generic script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/nodecheck/nodecheck.js, tag=节点阻断检测, timeout=20, img-url=bolt.horizontal.icloud.fill.system, enable=true
+ * generic then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/nodecheck/nodecheck.js") with tag="节点阻断检测", img_url="bolt.horizontal.icloud.fill.system", timeout=20
  */
 
 const SCRIPT_VERSION = "2026-07-17.r1";

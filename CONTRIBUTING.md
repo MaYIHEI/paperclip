@@ -104,9 +104,9 @@ feat: 新增 jd 脚本(京东每日签到)
 hostname = <域名>
 
 [Script]
-http-request <重写正则> tag=<显示名> Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/<分类>/<脚本名>/<脚本名>.js, requires-body=false, img-url=<pin 图标 URL>
+request if ${url} ~= /<重写正则>/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/<分类>/<脚本名>/<脚本名>.js") with tag="<显示名> Cookie", img_url="<pin 图标 URL>"
 
-cron "0 9 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/<分类>/<脚本名>/<脚本名>.js, tag=<显示名>签到, img-url=<pin 图标 URL>, enable=true
+cron "0 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/<分类>/<脚本名>/<脚本名>.js") with tag="<显示名>签到", img_url="<pin 图标 URL>"
 ```
 
 ## Surge
@@ -220,6 +220,7 @@ $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 - **日期**只用 `@Updated`(`YYYY-MM-DD`);署名:原作者带 `@` 前缀,MaYIHEI 用 `<尖括号>`,`@Modifier` 仅改造他人脚本时加
 - **`SCRIPT_VERSION`**:主脚本必带 + 首行 `$.log` 打印;cookie 副脚本不带(版本归主脚本)
 - **4 段平台配置注释保留在头部**,与 README 的四平台逐字一致(精简 = 把实现原理移本地 project.md,**不进 README、不进头注释**,不删配置)
+- **Loon 只用新语法**(Loon 3.5.1(983)+ Script v2):`request|response if ${url} ~= /正则/i then script("URL") with tag="…", img_url="…"`、`cron "0 9 * * *" then script("URL") with …`;选项用下划线(`requires_body`),`tag`/`img_url` 加双引号;不再写 `script-path=` / `http-request` / `argument=[{x}]` / `enable={x}` 旧写法。插件参数用 `script("URL", {${a}, ${b}})`、`with enable=${x}`。同一请求只会命中一个 request(或 response)脚本,同 URL 的两条抓取要合并
 - **入口判断**统一 `if (typeof $request !== "undefined")`(双引号、`!==`);**若是 http-response 抓取**(读 `$response.body`,如 `wedome` / `casetify`)则判 `$response`,不要改成 `$request`
 
 ---

@@ -24,9 +24,9 @@
 hostname = superapp-public.kiwa-tech.com
 
 [Script]
-http-request ^https:\/\/superapp-public\.kiwa-tech\.com\/activity\/wxapp\/signin\/(query|querySite|querySwitch|queryFragment|signin) tag=海底捞 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/haidilao/haidilao.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/haidilao.png
+request if ${url} ~= /^https:\/\/superapp-public\.kiwa-tech\.com\/activity\/wxapp\/signin\/(query|querySite|querySwitch|queryFragment|signin)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/haidilao/haidilao.js") with tag="海底捞 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/haidilao.png"
 
-cron "23 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/haidilao/haidilao.js, tag=海底捞签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/haidilao.png, enable=true
+cron "23 7 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/haidilao/haidilao.js") with tag="海底捞签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/haidilao.png"
 ```
 
 ## Surge
@@ -85,11 +85,7 @@ script-providers:
 | - | 原作者 [@Sliverkiss](https://gist.github.com/Sliverkiss) 初版 |
 | 2026-05-13 | 修复 Cookie 抓错字段,放宽重写匹配路径 |
 | 2026-05-24 | tag 统一为 `海底捞 Cookie` / `海底捞签到`,加 img-url 图标 |
-
-## 已知限制
-
-- token 时效未知,如返回未授权请重抓
-- 单脚本同时承担「抓 token」和「签到」两个角色(通过 `$request` 是否存在区分),架构沿用原作
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |
 
 ## 致谢
 

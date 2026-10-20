@@ -25,9 +25,9 @@
 hostname = api.weibo.cn
 
 [Script]
-http-request ^https:\/\/api\.weibo\.cn\/2\/(statuses\/container_timeline_topicsub|page\/button) tag=微博超话 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.cookie.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png
+request if ${url} ~= /^https:\/\/api\.weibo\.cn\/2\/(statuses\/container_timeline_topicsub|page\/button)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.cookie.js") with tag="微博超话 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png", requires_body=true
 
-cron "0 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.js, tag=微博超话签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png, enable=true
+cron "0 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/weibotalk/weibotalk.js") with tag="微博超话签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png"
 ```
 
 ## Surge
@@ -94,10 +94,10 @@ script-providers:
 | - | 原作者 [@Evilbutcher](https://github.com/Evilbutcher) / [@toulanboy](https://github.com/toulanboy) |
 | 2026-05 | 适配新接口: `cardlist` → `container_timeline_topicsub`(POST+since_id);双 cookie 模式适配 X-Validator |
 | 2026-05-24 | tag 统一为 `微博超话 Cookie` / `微博超话签到`,加 img-url 图标 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
-- X-Validator 时效未知,持续观察 cron 稳定性
 - 关注超话多时建议把 `wb_request_time` 调到 1000+ 避免触发风控
 
 ## 致谢

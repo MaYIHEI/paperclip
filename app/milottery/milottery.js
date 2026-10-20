@@ -6,16 +6,16 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-08-16
+ * @Updated: 2026-10-20
  *
  * ===== Loon =====
  * [MITM]
  * hostname = shop-api.retail.mi.com
  *
  * [Script]
- * http-request ^https:\/\/shop-api\.retail\.mi\.com\/mtop\/navi\/venue\/batch tag=小米抽奖 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/milottery/milottery.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png
+ * request if ${url} ~= /^https:\/\/shop-api\.retail\.mi\.com\/mtop\/navi\/venue\/batch/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/milottery/milottery.js") with tag="小米抽奖 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png", requires_body=true
  *
- * cron "30 8 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/milottery/milottery.js, tag=小米抽奖签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png, timeout=360, enable=true
+ * cron "30 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/milottery/milottery.js") with tag="小米抽奖签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mishop.png", timeout=360
  *
  * ===== Surge =====
  * [MITM]
@@ -60,7 +60,11 @@
 
 const $ = new Env("小米抽奖");
 
-const SCRIPT_VERSION = "2026-08-16.r3"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-20.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "milottery_data";
@@ -148,6 +152,7 @@ function capture() {
     const ok = $.setdata(JSON.stringify(data), CK_KEY);
     const persisted = $.getdata(CK_KEY);
     if (ok && persisted && notify) {
+        $.setdata("", "milottery_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         $.msg($.name, "", "✅ 小米抽奖 Cookie 获取成功");
     } else if (!ok || !persisted) {
         $.msg($.name, "❌ Cookie 保存失败", "请查看脚本日志后重试");
@@ -158,6 +163,7 @@ function capture() {
 async function run() {
     const raw = $.getdata(CK_KEY);
     if (!raw) {
+        saveStatus("none", "未抓取 Cookie");
         $.msg($.name, "🚫 缺少 Cookie", "请先进入小米商城 APP → 狂欢礼 → 抽奖活动页抓取");
         return;
     }
@@ -166,10 +172,12 @@ async function run() {
     try {
         auth = JSON.parse(raw);
     } catch (e) {
+        saveStatus("cookie", "Cookie 解析失败");
         $.msg($.name, "🚫 Cookie 解析失败", "请清除后重新抓取");
         return;
     }
     if (!auth.body || !header(auth.headers || {}, "cookie")) {
+        saveStatus("cookie", "Cookie 不完整");
         $.msg($.name, "🚫 Cookie 不完整", "请重新进入抽奖活动页抓取");
         return;
     }
@@ -180,6 +188,7 @@ async function run() {
     let tasks = mergeTasks([extractTasks(first), ...detailResults.map(extractTasks)]);
     const lottery = tasks.find((task) => Number(task.taskType) === 128);
     if (!lottery) {
+        saveStatus("cookie", "未找到抽奖活动,需重进活动页抓取");
         $.msg($.name, "⚠️ 未找到抽奖活动", "活动配置可能已更新，请重进活动页抓取");
         debug(`task query raw: ${JSON.stringify(first).slice(0, 500)}`);
         return;
@@ -187,6 +196,7 @@ async function run() {
 
     const now = Number(lottery.serverTime || Date.now());
     if ((lottery.startTime && now < lottery.startTime) || (lottery.endTime && now > lottery.endTime)) {
+        saveStatus("cookie", "活动不在有效期,需重进活动页抓取");
         $.msg($.name, "⚠️ 活动不在有效期", "请进入当前抽奖活动页重新抓取配置");
         return;
     }
@@ -228,6 +238,7 @@ async function run() {
     tasks = extractTasks(refreshed);
     const drawTask = tasks.find((task) => Number(task.taskType) === 128);
     if (!drawTask) {
+        saveStatus("fail", "重新查询后未找到抽奖任务");
         $.msg($.name, "⚠️ 任务已处理", "重新查询后未找到抽奖任务");
         return;
     }
@@ -264,18 +275,25 @@ async function run() {
     if (drawResult.failed) lines.push(`⚠️ 抽奖中止: ${drawResult.failed}`);
 
     const ok = !taskResult.failed.length && !drawResult.failed;
+    saveStatus("ok", lines.join(" · ")); // 部分任务失败不代表 Cookie 有问题,详情见当次通知
     $.msg($.name, ok ? "✅ 执行完成" : "⚠️ 部分完成", lines.join("\n"));
 }
 
 async function queryTasks(auth, body = auth.body, quiet = false) {
     const result = await request(auth.url || API + BATCH_PATH, auth.headers, body);
     if (!result) {
-        if (!quiet) $.msg($.name, "❌ 查询任务失败", "网络无响应，请稍后重试");
+        if (!quiet) {
+            saveStatus("fail", "查询任务失败:网络无响应");
+            $.msg($.name, "❌ 查询任务失败", "网络无响应，请稍后重试");
+        }
         return null;
     }
     if (Number(result.code) !== 0) {
         const message = result.message || result.msg || "未知错误";
-        if (!quiet) $.msg($.name, "❌ 查询任务失败", `${message}；若提示未登录，请重进活动页抓取`);
+        if (!quiet) {
+            saveStatus("fail", `查询任务失败:${message}`);
+            $.msg($.name, "❌ 查询任务失败", `${message}；若提示未登录，请重进活动页抓取`);
+        }
         debug(`query raw: ${JSON.stringify(result).slice(0, 500)}`);
         return null;
     }
@@ -475,6 +493,21 @@ function normalizeCookie(raw) {
 function messageOf(result) {
     if (!result) return "网络无响应";
     return result.message || result.msg || `code=${result.code}`;
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === "ok" && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata("milottery_status") || "null"); } catch (e) {}
+        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), "milottery_status");
 }
 
 function sleep(ms) {

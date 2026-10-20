@@ -24,9 +24,9 @@
 hostname = api.tuhu.cn
 
 [Script]
-http-request https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList) tag=途虎养车 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js, requires-body=false, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png
+request if ${url} ~= /https:\/\/api\.tuhu\.cn\/User\/(GetMemberSignInInfoAsync|GetRightsList)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js") with tag="途虎养车 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png"
 
-cron "17 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js, tag=途虎养车签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png, enable=true
+cron "17 7 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/miniprogram/tuhu/tuhu.js") with tag="途虎养车签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tuhu.png"
 ```
 
 ## Surge
@@ -93,11 +93,11 @@ script-providers:
 |---|---|
 | 2025-09-27 | [@FoKit](https://github.com/FoKit) 原版,[@Sliverkiss](https://github.com/Sliverkiss) 修复 blackBox 参数 |
 | 2026-05-08 | 适配途虎小程序 v7.62.3:原 token 抓取接口下线,改从「我的/积分中心」页抓取 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../../app/summary/)」一条通知查看是否需要重新抓取 |
 
 ## 已知限制
 
 - **依赖第三方 blackBox 服务**: `tuhu.xn--ug8h.eu.org` 由 [@Sliverkiss](https://github.com/Sliverkiss) 维护,如该服务下线签到会失败
-- **token 抓取需手动触发**: 每次 token 失效后需要重新进入小程序「我的」或「积分中心」页面刷新
 
 ## 致谢
 

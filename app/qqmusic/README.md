@@ -4,8 +4,6 @@
 
 # QQ 音乐
 
-> ✅ **维护中** · 绿钻与金币签到、每日任务、定时奖励和红包雨均已接入;正式版不含广告任务。
-
 QQ 音乐绿钻成长值、金币中心签到、App 每日任务与金币抽奖。**一次抓取后挂着代理即可,cron 自动续期、签到、做任务并领奖。**
 
 ## 文件
@@ -26,11 +24,11 @@ QQ 音乐绿钻成长值、金币中心签到、App 每日任务与金币抽奖�
 hostname = u6.y.qq.com
 
 [Script]
-http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
+request if ${url} ~= /^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js") with tag="QQ音乐 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png", requires_body=true
 
-cron "0 30 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐每日任务, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
-cron "0 * 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
-cron "0 5 0,8,12,16,20,22 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
+cron "0 30 7 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js") with tag="QQ音乐每日任务", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png"
+cron "0 * 9-10 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js") with tag="QQ音乐定时金币", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png"
+cron "0 5 0,8,12,16,20,22 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js") with tag="QQ音乐红包雨", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png"
 ```
 
 最终只保留上面三条 cron,不要再添加旧的 `20 9 * * *`。第一条 07:30 负责续期、两套签到、普通每日任务和免费抽奖;若当时未运行,当天后续 cron 会补跑一次。第二条在 9–10 点每分钟唤醒,普通定时金币与独立宝箱分别按各自返回的 `TargetNum / Progress / TaskMaxTimes / State` 维护下次查询时间;未到任一任务时间时只在本地退出,不发网络请求。某一类任务未下发或达到当天上限后,只关闭该类任务。第三条在红包雨六个时段开始后各运行一次,红包雨按自己的 `timeSegment / restChance` 判断,每个时段只请求一次。每次 cron 的结果最多汇总为一条通知,没有新结果时不通知。
@@ -110,7 +108,6 @@ script-providers:
 
 ## 已知限制
 
-- **`refresh_key` 长期寿命未知**:实测长期不变、可无限续期,但最终会不会过期需长期观察。一旦失效,续期会失败、签到报错,重进签到页重抓即可。
 - **手机关机 / 断代理超过 3 天**:可能需要重抓。日常挂着代理 + 每日 cron 不会触发。
 - **每日任务**:会完成可安全恢复的收藏/关注任务并领取所有已完成奖励。“定时领金币”和右下角浮动宝箱是两个独立任务,分别以服务端返回的间隔和进度调度,不假定二者间隔相同;听歌时长和分享歌曲仍要求真实 App 行为,脚本不会伪造分享。
 - **红包雨时段**:每天 `00:00–08:00`、`08:00–12:00`、`12:00–16:00`、`16:00–20:00`、`20:00–22:00`、`22:00–24:00`,每段 6 次。脚本退出后不能自行唤醒;要覆盖全部时段,需由 Loon 等调度器在每段各运行一次。
@@ -121,7 +118,6 @@ script-providers:
 
 | 日期 | 变更 |
 |---|---|
-| 2026-08-18 | r21 从 testing 转入 main,正式版保持无广告并使用三条独立 cron |
 | 2026-08-05 | r21 每日一次性流程拆为 07:30 独立 cron,错过后由当天后续 cron 补跑;定时金币与红包雨保持独立调度 |
 | 2026-08-05 | r20 普通定时金币与独立宝箱按各自服务端间隔独立调度;每分钟仅本地检查到期状态,未到时间不联网,未下发或达到上限后关闭对应来源,无奖励批次保持静默 |
 | 2026-08-05 | r19 按每日、定时任务批次和红包雨时段分流,增加本地防重复锁,密集 cron 不再运行整套流程 |
@@ -131,6 +127,7 @@ script-providers:
 | 2026-07-12 | 新增金币签到、App 动态签名、每日任务领奖与临时收藏歌曲/有声书任务 |
 | 2026-06-15 | 初版:绿钻成长值每日签到,musickey 自动续期,后台无需开 App |
 | 2026-06-15 | 抓取规则放宽:进会员中心首页即可触发,无需点进签到页 |
+| 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |
 
 ## 致谢
 

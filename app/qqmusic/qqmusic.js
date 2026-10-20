@@ -6,16 +6,16 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-08-05
+ * @Updated: 2026-10-18
  *
  * ===== Loon =====
  * [MITM]
  * hostname = u6.y.qq.com
  * [Script]
- * http-request ^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary) tag=QQ音乐 Cookie, script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, requires-body=true, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png
- * cron "0 30 7 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐每日任务, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
- * cron "0 * 9-10 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐定时金币, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
- * cron "0 5 0,8,12,16,20,22 * * *" script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js, tag=QQ音乐红包雨, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png, enable=true
+ * request if ${url} ~= /^https:\/\/u6\.y\.qq\.com\/cgi-bin\/musics\.fcg\?.*(EveryDaySignLvzScore|GetSignInSummary)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js") with tag="QQ音乐 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png", requires_body=true
+ * cron "0 30 7 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js") with tag="QQ音乐每日任务", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png"
+ * cron "0 * 9-10 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js") with tag="QQ音乐定时金币", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png"
+ * cron "0 5 0,8,12,16,20,22 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/app/qqmusic/qqmusic.js") with tag="QQ音乐红包雨", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/qqmusic.png"
  *
  * ===== Surge =====
  * [MITM]
@@ -70,7 +70,11 @@
 
 const $ = new Env("QQ音乐");
 
-const SCRIPT_VERSION = "2026-08-05.r21"; // 改一次 +1,确认拉到最新版
+// 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
+$.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
+if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
+
+const SCRIPT_VERSION = "2026-10-18.r5"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -132,6 +136,7 @@ function getCookie() {
             ts: Date.now(),
         };
         $.setjson(saved, CK_KEY);
+        $.setdata("", "qqmusic_status"); // 新 Cookie 待签到验证,先撤掉旧的体检结果
         $.msg($.name, "✅ QQ音乐 Cookie 获取成功", "可关闭抓包,主脚本会自动续期并签到");
         $.log(`[INFO] 已保存 (loginType=${login_type}, refresh_key=${saved.refresh_key ? "有" : "无"}, 金币活动${saved.coin_act_id ? "已识别" : "用默认值"})`);
     } catch (e) {
@@ -144,6 +149,7 @@ function getCookie() {
 async function checkin() {
     const snap = $.getjson(CK_KEY, null);
     if (!snap || !snap.authst || !snap.uin) {
+        saveStatus("none", "未抓取 Cookie");
         $.messages.push(
             "🚫 未抓到 Cookie\n" +
             "👉 打开 QQ 音乐 →「我的 / 会员 / 每日签到」或「金币中心 / 每日签到」一次"
@@ -184,7 +190,9 @@ async function checkin() {
         const lockUntil = Date.now() + 10 * 60 * 1000;
         for (const source of timedSources) runState.timerSources[source].nextAt = lockUntil;
         saveRunState(runState);
+        const coinsBefore = $.coinGain || 0;
         await claimTimedTaskRewards(snap, uin, runState, timedSources);
+        if (($.coinGain || 0) > coinsBefore) runState.gain.timed = (runState.gain.timed || 0) + 1;
         saveRunState(runState);
     }
 
@@ -192,7 +200,16 @@ async function checkin() {
         runState.redPacketSlots.push(redPacketSlot);
         saveRunState(runState);
         await runRedPacketRain(snap, uin);
+        if ($.rainDone) runState.gain.rain = (runState.gain.rain || 0) + $.rainDone;
     }
+
+    // 汇总里显示当天累计:绿钻 + 每日任务、定时金币、红包雨拿到的金币;每日流程没成功时不写
+    if ($.lvzText) runState.gain.lvz = $.lvzText;
+    runState.gain.coins = (runState.gain.coins || 0) + ($.coinGain || 0);
+    saveRunState(runState);
+    const g = runState.gain;
+    const times = [g.timed && `定时 ${g.timed} 次`, g.rain && `红包雨 ${g.rain} 次`].filter(Boolean).join(" · ");
+    if (g.lvz) saveStatus("ok", `${g.lvz}${g.coins ? ` · 金币 +${g.coins}` : ""}${times ? `(${times})` : ""}`);
 }
 
 async function checkLvzScore(snap, uin) {
@@ -209,6 +226,7 @@ async function checkLvzScore(snap, uin) {
     debug(res, "EveryDaySignLvzScore");
 
     if (!res) {
+        saveStatus("fail", "绿钻成长值签到无响应");
         $.messages.push("❌ 绿钻成长值签到无响应(详情见日志)");
         return;
     }
@@ -217,6 +235,7 @@ async function checkLvzScore(snap, uin) {
 
     // 外层鉴权失败(authst 失效)→ code!=0,需重抓
     if (res.code !== 0 || (r0.code !== 0 && r0.code !== undefined && data.Ret === undefined)) {
+        saveStatus("cookie", `登录态失效 (code=${res.code}, req_0.code=${r0.code})`);
         $.messages.push(
             `❌ 绿钻成长值签到失败 (code=${res.code}, req_0.code=${r0.code})\n` +
             "续期可能也失败(refresh_key 失效或离线 >3 天),请重进「每日签到」页重抓"
@@ -225,8 +244,12 @@ async function checkLvzScore(snap, uin) {
         return;
     }
 
+    // 每日流程以绿钻签到的鉴权结果代表 Cookie 状态;定时任务/红包雨不改写
+    const lvzScore = data.Ret === 0 ? (data.Info && data.Info.Score) || 0 : 0;
+    $.lvzText = lvzScore ? `绿钻 +${lvzScore}` : "绿钻已签";
+    saveStatus("ok", $.lvzText);
     if (data.Ret === 0) {
-        const score = (data.Info && data.Info.Score) || 0;
+        const score = lvzScore;
         $.messages.push(`✅ 绿钻成长值签到成功${score ? `: 今日 +${score}` : ""}`);
     } else if (data.Ret === 20019 || /已.*领取|已签|重复/.test(data.Msg || "")) {
         $.messages.push(`✨ 绿钻成长值今日已签到${data.Msg ? `(${data.Msg})` : ""}`);
@@ -234,6 +257,21 @@ async function checkLvzScore(snap, uin) {
         $.messages.push(`⚠️ 绿钻成长值已处理 (Ret=${data.Ret})${data.Msg ? `: ${data.Msg}` : ""}`);
         $.log(`[DEBUG] 响应前300: ${$.toStr(res).slice(0, 300)}`);
     }
+}
+
+// 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
+function saveStatus(s, msg) {
+    msg = String(msg).slice(0, 100);
+    // 服务器明确提示登录过期的失败,按需要重新抓取处理
+    if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    if (s === "ok" && /^今日已/.test(msg)) {
+        const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+        let old = null;
+        try { old = JSON.parse($.getdata("qqmusic_status") || "null"); } catch (e) {}
+        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+    }
+    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), "qqmusic_status");
 }
 
 async function checkCoinSignIn(snap, uin) {
@@ -286,6 +324,8 @@ async function checkCoinSignIn(snap, uin) {
         const awardData = awardReq && awardReq.data;
         if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && (awardData.retCode === 0 || awardData.retCode === 100004)) {
             $.messages.push(`${signedNow ? "✅ 金币中心签到成功" : "✅ 金币中心奖励已领取"}${reward}`);
+            const prize = Array.isArray(task.PrizeList) ? task.PrizeList[0] : null;
+            if (prize && !prize.Name) $.coinGain = ($.coinGain || 0) + Number(prize.Value || 0);
         } else {
             const code = awardReq ? awardReq.code : "?";
             const ret = awardData ? awardData.retCode : "?";
@@ -495,6 +535,8 @@ async function runRedPacketRain(snap, uin) {
         coins += Number(findFirstValue(drawRes.req_0.data, ["awardValue", "RewardGold", "rewardGold", "coinNum", "coin"]) || 0);
     }
     if (completed) $.messages.push(`✅ 红包雨 ${completed} 次${coins ? `: +${coins} 金币` : ""}`);
+    $.coinGain = ($.coinGain || 0) + coins;
+    $.rainDone = completed;
 }
 
 async function claimDailyTaskRewards(snap, uin) {
@@ -635,6 +677,7 @@ async function claimReadyTaskRewards(tasks, snap, uin) {
         const awardData = awardReq && awardReq.data;
         if (awardRes && awardRes.code === 0 && awardReq && awardReq.code === 0 && awardData && awardData.retCode === 0) {
             const value = Number(awardData.awardValue || 0);
+            $.coinGain = ($.coinGain || 0) + value;
             claimed.push(`${task.Name || task.ID}${value ? ` +${value}` : ""}`);
             if (awardData.taskStatusInfo && typeof awardData.taskStatusInfo === "object") {
                 Object.assign(task, awardData.taskStatusInfo);
@@ -1374,6 +1417,7 @@ function getRunState(now = new Date()) {
             dailyAttempted: false,
             timerSources: makeTimerSources(),
             redPacketSlots: [],
+            gain: {},
         };
     }
     const oldTimerDone = Boolean(saved.timerDone);
@@ -1382,6 +1426,7 @@ function getRunState(now = new Date()) {
         dailyAttempted: Boolean(saved.dailyAttempted),
         timerSources: makeTimerSources(saved.timerSources, oldTimerDone),
         redPacketSlots: Array.isArray(saved.redPacketSlots) ? saved.redPacketSlots.map(String) : [],
+        gain: saved.gain && typeof saved.gain === "object" ? saved.gain : {},
     };
 }
 
