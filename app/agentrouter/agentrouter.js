@@ -7,7 +7,7 @@
  * @Author: @773075692 <https://github.com/773075692/agentrouter-checkin>
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-18
+ * @Updated: 2026-10-20
  *
  * ===== Loon =====
  * [Argument]
@@ -45,7 +45,7 @@ const $ = new Env("AgentRouter");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-18.r6";
+const SCRIPT_VERSION = "2026-10-20.r7";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -246,8 +246,8 @@ function formatAmount(label, value, quotaUnit) {
 }
 
 function formatCheckinReward(content, isNew) {
-    // 系统日志的 quota 不是奖励；只解析实测详情中明确标注的美元金额。
-    const match = content.trim().match(/^每日签到成功，\s*增加额度\s*\$\s*(\d+(?:\.\d+)?)\s*额度$/);
+    // 系统日志的 quota 不是奖励；只解析实测详情中明确标注的美元金额（官网半角 $、全角 ＄ 都出现过）。
+    const match = content.trim().match(/^每日签到成功，\s*增加额度\s*[$＄]\s*(\d+(?:\.\d+)?)\s*额度$/);
     const amount = match ? Number(match[1]) : NaN;
     const label = isNew ? "🎁 本次奖励" : "🎁 今日奖励";
     if (!Number.isFinite(amount)) return `${label}：金额未识别，请到网站核对`;
