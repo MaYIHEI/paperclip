@@ -4,7 +4,7 @@
 
 # Paperclip Cookie 抓取合集
 
-> 🧪 待验证 · Loon 3.5.1(983)+
+> Loon 3.5.1(983)+
 
 集中抓取 paperclip 全部在用签到脚本的 Cookie。没有单独开关，整个插件就是开关；签到用「[Paperclip · 签到合集](../paperclip-checkin/)」。
 
