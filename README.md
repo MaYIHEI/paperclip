@@ -15,7 +15,7 @@
 | [`miniprogram/`](./miniprogram/) | 微信小程序签到、自动化脚本 | [查看](./miniprogram/README.md) |
 | [`app/`](./app/) | 原生 APP 签到、自动化脚本 | [查看](./app/README.md) |
 | [`proxy/`](./proxy/) | 通用代理重写规则、Hostname、URL Filter | [查看](./proxy/README.md) |
-| [`loon/`](./loon/) | Loon 专用 `.plugin` 文件 | [查看](./loon/README.md) |
+| [`loon/`](./loon/) | Loon 插件(`.lpx`),含签到合集与 Cookie 抓取合集 | [查看](./loon/README.md) |
 | [`surge/`](./surge/) | Surge 专用 `.sgmodule` 文件 | [查看](./surge/README.md) |
 
 每个子目录的 README 里有该类下所有脚本的清单、引用地址、使用说明。
@@ -27,7 +27,7 @@
 所有脚本均通过 GitHub Raw URL 引用,格式:
 
 ```
-https://raw.githubusercontent.com/MaYIHEI/paperclip/main/<分类>/<脚本名>/<脚本名>.<ext>
+https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/<分类>/<脚本名>/<脚本名>.<ext>
 ```
 
 具体每个脚本的重写规则与 cron 配置,请进入对应子目录的 README 查看。
