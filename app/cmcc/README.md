@@ -1,0 +1,111 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png" width="80" alt="中国移动" />
+</p>
+
+# 中国移动 🧪 待验证
+
+中国移动 APP「签到赢好礼」每日签到,顺带查询积分。登录凭证长期有效、自动续期、免短信。
+
+> 🧪 待验证:登录续登、换令牌、查积分已真机跑通;签到接口(doPrize)链路已打通并处理「今日已签」,待连续几天真机确认稳定。
+
+## 文件
+
+- `cmcc.js` — 单文件:抓取(重写)+ cron 续登签到查积分
+- `cmcc.data.js` / `cmcc.data.md` — 只读数据模块(给小组件等用,返回积分/话费/流量)
+- Loon 插件见 [`loon/cmcc`](../../loon/cmcc/)
+
+## 使用步骤
+
+1. 按下方对应平台添加任务(含 MITM 与重写)
+2. 打开「中国移动」APP → 进「签到赢好礼」活动页,**手动点一次签到**。脚本会自动抓到登录凭证、积分信封和签到标识,收到「✅ 中国移动 Cookie 获取成功」即完成,可关掉重写
+3. 之后 cron 每天自动续登 → 签到 → 查积分;凭证长期有效,免短信
+
+## Loon
+
+推荐导入插件:
+
+```
+https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/cmcc/cmcc.lpx
+```
+
+或手动添加:
+
+```ini
+[MITM]
+hostname = client.app.coc.10086.cn, clientaccess.10086.cn, h5.bj.10086.cn
+
+[Script]
+request if ${url} ~= /^https:\/\/client\.app\.coc\.10086\.cn\/biz-orange\/LN\/uamrandcodelogin\/autoLogin/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png"
+request if ${url} ~= /^https:\/\/clientaccess\.10086\.cn\/biz-orange\/BN\/scoreQueryService\/getScoreQuery/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png"
+request if ${url} ~= /^https:\/\/h5\.bj\.10086\.cn\/ActSignIn2023\/doPrize/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png"
+cron "20 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png", timeout=60
+```
+
+## Surge
+
+```ini
+[MITM]
+hostname = %APPEND% client.app.coc.10086.cn, clientaccess.10086.cn, h5.bj.10086.cn
+
+[Script]
+中国移动 Cookie = type=http-request,pattern=^https:\/\/client\.app\.coc\.10086\.cn\/biz-orange\/LN\/uamrandcodelogin\/autoLogin,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png
+中国移动 Cookie 2 = type=http-request,pattern=^https:\/\/clientaccess\.10086\.cn\/biz-orange\/BN\/scoreQueryService\/getScoreQuery,requires-body=true,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png
+中国移动 Cookie 3 = type=http-request,pattern=^https:\/\/h5\.bj\.10086\.cn\/ActSignIn2023\/doPrize,requires-body=false,max-size=0,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png
+中国移动签到 = type=cron,cronexp=20 8 * * *,timeout=60,script-path=https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js,img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png
+```
+
+## Quantumult X
+
+```ini
+[rewrite_local]
+^https:\/\/client\.app\.coc\.10086\.cn\/biz-orange\/LN\/uamrandcodelogin\/autoLogin url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js
+^https:\/\/clientaccess\.10086\.cn\/biz-orange\/BN\/scoreQueryService\/getScoreQuery url script-request-body https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js
+^https:\/\/h5\.bj\.10086\.cn\/ActSignIn2023\/doPrize url script-request-header https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js
+
+[task_local]
+20 8 * * * https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js, tag=中国移动签到, img-url=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png, enabled=true
+
+[mitm]
+hostname = client.app.coc.10086.cn, clientaccess.10086.cn, h5.bj.10086.cn
+```
+
+## Stash
+
+```yaml
+cron:
+  script:
+    - name: 中国移动签到
+      cron: '20 8 * * *'
+      timeout: 60
+
+http:
+  mitm:
+    - "client.app.coc.10086.cn"
+    - "clientaccess.10086.cn"
+    - "h5.bj.10086.cn"
+  script:
+    - match: ^https:\/\/client\.app\.coc\.10086\.cn\/biz-orange\/LN\/uamrandcodelogin\/autoLogin
+      name: 中国移动 Cookie
+      type: request
+      require-body: true
+    - match: ^https:\/\/clientaccess\.10086\.cn\/biz-orange\/BN\/scoreQueryService\/getScoreQuery
+      name: 中国移动 Cookie 2
+      type: request
+      require-body: true
+    - match: ^https:\/\/h5\.bj\.10086\.cn\/ActSignIn2023\/doPrize
+      name: 中国移动 Cookie 3
+      type: request
+      require-body: false
+
+script-providers:
+  中国移动签到:
+    url: https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js
+    interval: 86400
+```
+
+## 维护记录
+
+| 日期 | 变更 |
+|---|---|
+| 2026-10-21 | 🧪 初版:打开 APP 抓凭证,cron 静默续登(免短信)查积分 |
+| 2026-10-21 | 🧪 r2:接入「签到赢好礼」签到(续登 → 换令牌 → doPrize),处理「今日已签」;抓一次签到即可 |
