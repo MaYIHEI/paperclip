@@ -33,7 +33,7 @@
 
 const $ = new Env("Paperclip 签到汇总");
 
-const SCRIPT_VERSION = "2026-10-22.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-22.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 // [显示名, 状态 key];没装或从未运行的脚本没有记录,自动跳过
@@ -58,6 +58,7 @@ const SCRIPTS = [
     ["AgentRouter", "agentrouter_status"],
     ["网上国网", "sgcc_status"],
     ["中国移动", "cmcc_status"],
+    ["小黑盒", "heybox_status"],
     ["百度网盘", "baidunetdisk_status"],
     ["徕芬", "laifen_status"],
     ["泡泡玛特", "ppmt_status"],

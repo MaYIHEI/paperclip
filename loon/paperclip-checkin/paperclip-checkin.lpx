@@ -28,6 +28,7 @@ pan1 = switch,true,tag=【123社区】签到
 agentrouter = switch,true,tag=【AgentRouter】签到
 sgcc = switch,true,tag=【网上国网】签到
 cmcc = switch,true,tag=【中国移动】签到
+heybox = switch,true,tag=【小黑盒】签到
 baidunetdisk = switch,true,tag=【百度网盘】成长值签到
 laifen = switch,true,tag=【徕芬】签到
 ppmt = switch,true,tag=【泡泡玛特】签到
@@ -42,7 +43,7 @@ bhg = switch,true,tag=【北京华联】签到
 linli = switch,true,tag=【林里】签到
 
 [Script]
-cron "30 11 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/summary/summary.js", {${weibotalk}, ${tenvideo}, ${mihoyo}, ${newmixc}, ${mishop}, ${milottery}, ${youpin}, ${lhtj_app}, ${qqmusic}, ${wanda}, ${tingtingfm}, ${wps}, ${camscanner}, ${dreame}, ${linghu}, ${nodeseek}, ${pan1}, ${agentrouter}, ${sgcc}, ${cmcc}, ${baidunetdisk}, ${laifen}, ${ppmt}, ${tuhu}, ${haidilao}, ${huisheng}, ${miniso}, ${longde}, ${lhtj}, ${wedome}, ${bhg}, ${linli}}) with tag="签到汇总", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip-checkin.png", enable=${merge}
+cron "30 11 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/summary/summary.js", {${weibotalk}, ${tenvideo}, ${mihoyo}, ${newmixc}, ${mishop}, ${milottery}, ${youpin}, ${lhtj_app}, ${qqmusic}, ${wanda}, ${tingtingfm}, ${wps}, ${camscanner}, ${dreame}, ${linghu}, ${nodeseek}, ${pan1}, ${agentrouter}, ${sgcc}, ${cmcc}, ${heybox}, ${baidunetdisk}, ${laifen}, ${ppmt}, ${tuhu}, ${haidilao}, ${huisheng}, ${miniso}, ${longde}, ${lhtj}, ${wedome}, ${bhg}, ${linli}}) with tag="签到汇总", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip-checkin.png", enable=${merge}
 cron "0 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/weibotalk/weibotalk.js", {${merge}}) with tag="微博超话签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png", enable=${weibotalk}
 cron "10 0 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/tenvideo/tenvideo.js", {${merge}}) with tag="腾讯视频签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png", enable=${tenvideo}
 cron "13 6 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/mihoyo/mihoyo.js", {${merge}}) with tag="米游社签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png", enable=${mihoyo}
@@ -65,6 +66,7 @@ cron "10 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/papercl
 cron "0 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/agentrouter.js", {${merge}}) with tag="AgentRouter签到", img_url="https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/agentrouter/icon.png", timeout=300, enable=${agentrouter}
 cron "30 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/sgcc/sgcc.js", {${merge}}) with tag="网上国网签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/sgcc.png", timeout=60, enable=${sgcc}
 cron "20 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js", {${merge}}) with tag="中国移动签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png", timeout=60, enable=${cmcc}
+cron "20 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/heybox/heybox.js", {${merge}}) with tag="小黑盒签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/heybox.png", enable=${heybox}
 cron "15 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/baidunetdisk/baidunetdisk.js", {${merge}}) with tag="百度网盘签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/baidunetdisk.png", enable=${baidunetdisk}
 cron "40 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/laifen/laifen.js", {${merge}}) with tag="徕芬签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/laifen.png", enable=${laifen}
 cron "0 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/ppmt/ppmt.js", {${merge}}) with tag="泡泡玛特签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/popmart.png", enable=${ppmt}
