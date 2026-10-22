@@ -17,7 +17,7 @@
 ## 使用步骤
 
 1. 按下方对应平台添加任务(含 MITM 与重写)
-2. 打开「中国移动」APP → 进「签到赢好礼」活动页,**手动点一次签到**。脚本会自动抓到登录凭证、积分信封和签到标识,收到「✅ 中国移动 Cookie 获取成功」即完成,可关掉重写
+2. 先在后台划掉「中国移动」APP 再重新打开(已登录状态下直接切回来不会触发抓取)→ 进「签到赢好礼」活动页,**手动点一次签到**。脚本会自动抓到登录凭证、积分信封和签到标识,收到「✅ 中国移动 Cookie 获取成功」即完成,可关掉重写
 3. 之后 cron 每天自动续登 → 签到 → 查积分;凭证长期有效,免短信
 
 ## Loon
@@ -35,8 +35,8 @@ https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/cmcc
 hostname = client.app.coc.10086.cn, clientaccess.10086.cn, h5.bj.10086.cn
 
 [Script]
-request if ${url} ~= /^https:\/\/client\.app\.coc\.10086\.cn\/biz-orange\/[LD]N\/uam(onekey|randcode)login\/autoLogin/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png"
-request if ${url} ~= /^https:\/\/clientaccess\.10086\.cn\/biz-orange\/BN\/scoreQueryService\/getScoreQuery/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png"
+request if ${url} ~= /^https:\/\/client\.app\.coc\.10086\.cn\/biz-orange\/[LD]N\/uam(onekey|randcode)login\/autoLogin/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png", requires_body=true
+request if ${url} ~= /^https:\/\/clientaccess\.10086\.cn\/biz-orange\/BN\/scoreQueryService\/getScoreQuery/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png", requires_body=true
 request if ${url} ~= /^https:\/\/h5\.bj\.10086\.cn\/ActSignIn2023\/doPrize/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png"
 cron "20 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png", timeout=60
 ```
@@ -110,3 +110,4 @@ script-providers:
 | 2026-10-21 | 🧪 初版:打开 APP 抓凭证,cron 静默续登(免短信)查积分 |
 | 2026-10-21 | 🧪 r2:接入「签到赢好礼」签到(续登 → 换令牌 → doPrize),处理「今日已签」;抓一次签到即可 |
 | 2026-10-22 | 🧪 r3:兼容一键登录抓取;接入签到合集与 Cookie 抓取合集 |
+| 2026-10-22 | 🧪 r4:修复 Loon 抓不到 Cookie;抓取前需先划掉 APP 重开 |

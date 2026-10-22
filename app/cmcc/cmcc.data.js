@@ -98,8 +98,15 @@
 
   // 主入口:刷新 + 按需查询,返回结构化数据
   // opts.want: 需要哪些项(默认全要) ["points","fee","flow","user"]
+  // 查询信封可选:没传就从登录信封合成(顶层复用,reqBody 换成 {cellNum:手机号})
+  function bizFromLogin(loginEnvelope) {
+    const lo = JSON.parse(loginEnvelope);
+    return JSON.stringify(Object.assign({}, lo, { reqBody: { cellNum: lo.tel } }));
+  }
+
   async function getAccountData(opts) {
-    const { loginEnvelope, bizEnvelope, request } = opts || {};
+    const { loginEnvelope, request } = opts || {};
+    const bizEnvelope = (opts && opts.bizEnvelope) || bizFromLogin(loginEnvelope);
     const want = (opts && opts.want) || ["points", "fee", "flow", "user"];
     const cookie = await refresh(loginEnvelope, request);
     const raw = {}, data = { ok: true };

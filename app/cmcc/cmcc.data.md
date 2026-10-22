@@ -4,14 +4,14 @@
 **积分 / 话费余额 / 本月消费 / 套餐流量·语音·短信余量 / 用户信息**。
 不签到、不下单、不改任何账号数据，只读。
 
-## 一、需要两份凭证（信封）
+## 一、需要凭证（信封）
 
-两份凭证由中国移动签到脚本抓取一次后**长期有效、自动续期、免短信**：
+凭证由中国移动签到脚本抓取一次后**长期有效、自动续期、免短信**，存在 BoxJS：
 
-- `loginEnvelope` — 登录凭证，用来刷新会话
-- `bizEnvelope` — 查询凭证，**一份即可查全部数据项**
+- `loginEnvelope`（BoxJS 键 `cmcc_login`）— 登录凭证，刷新会话用。**必需**。
+- `bizEnvelope`（BoxJS 键 `cmcc_score`）— 查询凭证，**可选**；不传就自动从登录凭证合成，一份查全部数据项。
 
-> 获取方式：在 paperclip 的「中国移动」脚本（`app/cmcc/cmcc.js` + 对应 Loon/Surge 插件）里打开一次中国移动 APP，脚本会把这两份凭证存到本地。小组件读到这两个字符串即可，不需要账号密码、不需要每次登录。
+> 获取方式：在 paperclip 的「中国移动」脚本（`app/cmcc/cmcc.js` + 对应 Loon/Surge 插件）里**冷启动打开一次**中国移动 APP，脚本把凭证存进 BoxJS。小组件从 BoxJS 读 `cmcc_login` 即可查询（只读这一个就够），不需要账号密码、不需要点签到、不需要每次登录。
 
 ## 二、调用
 
@@ -19,8 +19,8 @@
 const { getAccountData } = require("./cmcc.data.js");
 
 const data = await getAccountData({
-  loginEnvelope,   // 字符串
-  bizEnvelope,     // 字符串
+  loginEnvelope,   // 字符串，必需（BoxJS cmcc_login）
+  // bizEnvelope,  // 可选；不传自动从 loginEnvelope 合成
   request,         // 由你的运行时提供，见下
   want: ["points", "fee", "flow", "user"], // 可选，默认全要
 });

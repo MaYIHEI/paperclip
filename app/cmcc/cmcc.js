@@ -1,20 +1,20 @@
 /**
  * 中国移动 · 中国移动 APP「签到赢好礼」每日签到(🧪 待验证)
  *
- * 抓取:打开「中国移动」APP → 进「签到赢好礼」点一次签到,自动抓登录凭证 + 积分信封 + 签到标识
+ * 抓取:先划掉后台的「中国移动」APP 再重新打开 → 进「签到赢好礼」点一次签到,自动抓登录凭证 + 积分信封 + 签到标识
  * 签到:cron 每天自动用登录凭证静默续登并签到,顺带查积分;凭证长期有效,免短信
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip> —— 登录与加密协议由社区逆向,出处见本地 project.md
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Version: 2026-10-22.r3
+ * @Version: 2026-10-22.r4
  * @Updated: 2026-10-22
  *
  * ===== Loon =====
  * [MITM]
  * hostname = client.app.coc.10086.cn, clientaccess.10086.cn, h5.bj.10086.cn
  * [Script]
- * request if ${url} ~= /^https:\/\/client\.app\.coc\.10086\.cn\/biz-orange\/[LD]N\/uam(onekey|randcode)login\/autoLogin/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png"
- * request if ${url} ~= /^https:\/\/clientaccess\.10086\.cn\/biz-orange\/BN\/scoreQueryService\/getScoreQuery/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png"
+ * request if ${url} ~= /^https:\/\/client\.app\.coc\.10086\.cn\/biz-orange\/[LD]N\/uam(onekey|randcode)login\/autoLogin/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png", requires_body=true
+ * request if ${url} ~= /^https:\/\/clientaccess\.10086\.cn\/biz-orange\/BN\/scoreQueryService\/getScoreQuery/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png", requires_body=true
  * request if ${url} ~= /^https:\/\/h5\.bj\.10086\.cn\/ActSignIn2023\/doPrize/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png"
  * cron "20 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png"
  *
@@ -68,7 +68,7 @@ const $ = new Env("中国移动");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-22.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-22.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const K_LOGIN = "cmcc_login";     // 登录信封(整份明文,用于静默续登)
@@ -222,7 +222,7 @@ async function main() {
     $.setdata("", K_LOGIN); $.setdata("", K_SCORE); $.setdata("", K_STATUS); $.setdata("false", "cmcc_clear");
     $.msg("中国移动", "", "✅ 已清除登录凭证"); return;
   }
-  if (!$.getdata(K_LOGIN)) { saveStatus("none", "缺登录凭证"); $.msg("⚠️ 中国移动", "缺少登录凭证", "打开中国移动 APP 停留几秒,触发抓取后再运行"); return; }
+  if (!$.getdata(K_LOGIN)) { saveStatus("none", "缺登录凭证"); $.msg("⚠️ 中国移动", "缺少登录凭证", "划掉后台的中国移动 APP 重新打开,触发抓取后再运行"); return; }
 
   const cookie = await refresh();
   const sg = await sign(cookie);
@@ -280,7 +280,7 @@ if (typeof $request !== "undefined" && $request) {
 } else {
   main().catch((e) => {
     $.log("[ERROR] " + (e.message || e));
-    if (e.message === "NO_COOKIE") { saveStatus("none", "缺登录凭证"); $.msg("⚠️ 中国移动", "缺少登录凭证", "打开中国移动 APP 停留几秒,触发抓取后再运行"); }
+    if (e.message === "NO_COOKIE") { saveStatus("none", "缺登录凭证"); $.msg("⚠️ 中国移动", "缺少登录凭证", "划掉后台的中国移动 APP 重新打开,触发抓取后再运行"); }
     else { saveStatus("fail", String(e.message || e)); $.msg("⚠️ 中国移动", "续登/查询异常", String(e.message || e)); }
   }).finally(() => $.done());
 }
