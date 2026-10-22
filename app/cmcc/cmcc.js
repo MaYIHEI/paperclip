@@ -4,7 +4,7 @@
  * 抓取:先划掉后台的「中国移动」APP 再重新打开 → 进「签到赢好礼」点一次签到,自动抓登录凭证 + 积分信封 + 签到标识
  * 签到:cron 每天自动用登录凭证静默续登并签到,顺带查积分;凭证长期有效,免短信
  *
- * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip> —— 登录与加密协议由社区逆向,出处见本地 project.md
+ * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
  * @Version: 2026-10-22.r4
  * @Updated: 2026-10-22
@@ -71,17 +71,16 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const SCRIPT_VERSION = "2026-10-22.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
-const K_LOGIN = "cmcc_login";     // 登录信封(整份明文,用于静默续登)
-const K_SCORE = "cmcc_score";     // 积分查询信封(业务模板,验证会话用)
-const K_CONSTID = "cmcc_constid"; // 签到设备标识(从签到请求抓一次)
-const K_STATUS = "cmcc_status";   // 最近一次结果
+const K_LOGIN = "cmcc_login";
+const K_SCORE = "cmcc_score";
+const K_CONSTID = "cmcc_constid";
+const K_STATUS = "cmcc_status";
 
 const HOST_LOGIN = "client.app.coc.10086.cn";
 const HOST_BIZ = "clientaccess.10086.cn";
 const P_AUTOLOGIN = "/biz-orange/LN/uamrandcodelogin/autoLogin";
 const P_SCORE = "/biz-orange/BN/scoreQueryService/getScoreQuery";
 const P_BIGNET = "/leadeon-abilityopen-biz/BN/obtainToken/getBigNetToken";
-// 签到赢好礼(北京移动 H5)
 const H5_HOST = "h5.bj.10086.cn";
 const P_UNITOKEN = "/ActivityUnifyLogin/uniTokenValidateH5";
 const P_DOPRIZE = "/ActSignIn2023/doPrize/JT/ActSignIn2023JT";
@@ -91,24 +90,21 @@ const H5_REFERER = "https://h5.bj.10086.cn/cmcc_app/checkin/index.html";
 const UA = "ChinaMobile/12.5.5 (iPhone; iOS 26.1; Scale/3.00)";
 const H5_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
 const SALT = "Leadeon/SecurityOrganization";
-// 加密常量(算法说明见本地 project.md)
-const LK = "tVkdaRWRY0ZkV1Vr", LSK = "RYV0hCV1lV25KYVJ", LIV = "VjFSQ1ZtVkQxRTlQ"; // 登录正文
-const BK = "bAIgvwAuA4tbDr9d", BSK = "GS7VelkJl5IT1uwQ", BIV = "9791027341711819"; // 业务正文
-const TK = "bAIgvwAuA4tbDr9d", TIV = "9791027341711819"; // x-token
+const LK = "tVkdaRWRY0ZkV1Vr", LSK = "RYV0hCV1lV25KYVJ", LIV = "VjFSQ1ZtVkQxRTlQ";
+const BK = "bAIgvwAuA4tbDr9d", BSK = "GS7VelkJl5IT1uwQ", BIV = "9791027341711819";
+const TK = "bAIgvwAuA4tbDr9d", TIV = "9791027341711819";
 
 const ARG = typeof $argument === "object" && $argument ? $argument : {};
 const DEBUG = ARG.debug === true || ARG.debug === "true" || $.getdata("cmcc_debug") === "true";
 
 const post = (opt) => new Promise((ok) => $.post(opt, (err, resp, data) => ok({ err, status: resp && resp.status, headers: (resp && resp.headers) || {}, data })));
 const httpGet = (opt) => new Promise((ok) => $.get(opt, (err, resp, data) => ok({ err, status: resp && resp.status, headers: (resp && resp.headers) || {}, data })));
-// 业务响应按两套 key 兜底解(getBigNetToken 响应 key 随 x-pen 变)
 const decBiz = (data) => { for (const kv of [[BSK, BIV], [LSK, LIV]]) { try { const x = decStr(data || "", kv[0], kv[1]); if (/^\s*[{[]/.test(x)) return x; } catch (e) {} } return ""; };
-// H5 响应:明文 JSON 或 base64(JSON)
 const peelJson = (s) => { s = String(s || ""); if (/^\s*[{[]/.test(s)) return s; try { const p = u8s(b64dec(s)); if (/^\s*[{[]/.test(p)) return p; } catch (e) {} return s; };
 const maskPhone = (p) => (p && p.length === 11 ? p.slice(0, 3) + "****" + p.slice(7) : p || "");
 const saveStatus = (s, msg) => $.setdata(JSON.stringify({ s, msg, t: Date.now() }), K_STATUS);
 
-// 从合并写法的 Set-Cookie 里取出 JSESSIONID / UID / ticketID 一并转发
+// 转发会话 cookie
 function pickCookie(headers) {
   let raw = "";
   for (const k in headers) if (k.toLowerCase() === "set-cookie") raw = Array.isArray(headers[k]) ? headers[k].join("; ") : String(headers[k]);
@@ -116,7 +112,6 @@ function pickCookie(headers) {
   return ["JSESSIONID", "UID", "ticketID"].map(pick).filter(Boolean).join("; ");
 }
 
-// 按接口构造签名头;登录接口 x-sign 末段固定字面量 "null",业务接口用 JSESSIONID
 function headersFor(host, path, J, sid, qen) {
   const t = String(Date.now()), n = nonce8();
   const xk = JSON.parse(J).xk || "";
@@ -155,7 +150,7 @@ function capture() {
   $.done();
 }
 
-// ---------- 静默续登,返回会话 cookie ----------
+// ---------- 续登,返回会话 cookie ----------
 async function refresh() {
   const J = $.getdata(K_LOGIN);
   if (!J) throw new Error("NO_COOKIE");
@@ -169,7 +164,7 @@ async function refresh() {
   return cookie;
 }
 
-// ---------- 查积分(验证会话闭环)----------
+// ---------- 查积分 ----------
 async function queryPoints(cookie) {
   const J = $.getdata(K_SCORE);
   if (!J) return { skip: true };
@@ -184,14 +179,13 @@ async function queryPoints(cookie) {
   return { point: out.rspBody && out.rspBody.pointValue };
 }
 
-// ---------- 签到赢好礼(北京移动 H5): 续登会话 → 换令牌 → doPrize ----------
+// ---------- 签到赢好礼 ----------
 async function sign(cookie) {
   const loginJ = $.getdata(K_LOGIN);
   const constid = $.getdata(K_CONSTID);
   if (!constid) return { skip: true };
   const jsid = (cookie.match(/JSESSIONID=([^;]+)/) || [, ""])[1];
   const lo = JSON.parse(loginJ);
-  // 1) 用登录信封换签到活动的 SSO 令牌(reqBody 合成,url 指向签到页)
   const gJ = JSON.stringify(Object.assign({}, lo, { reqBody: { sourceid: SIGN_SRCID, appId: "", url: SIGN_H5URL, cellNum: lo.tel } }));
   const gh = headersFor(HOST_LOGIN, P_BIGNET, gJ, jsid, "14"); gh["Cookie"] = cookie;
   const gr = await post({ url: "https://" + HOST_LOGIN + P_BIGNET, headers: gh, body: encB64(gJ, LK, LIV) });
@@ -199,12 +193,10 @@ async function sign(cookie) {
   if (DEBUG) $.log("[DEBUG] getBigNetToken " + (gout.retCode || gr.status));
   const sso = gout.rspBody && gout.rspBody.token;
   if (!sso) throw new Error(`取签到令牌失败 [${gout.retCode || gr.status}]`);
-  // 2) 换 H5 登录令牌
   const ur = await httpGet({ url: "https://" + H5_HOST + P_UNITOKEN + "?token=" + encodeURIComponent(sso), headers: { "User-Agent": H5_UA, "Referer": H5_REFERER } });
   const uout = JSON.parse(peelJson(ur.data) || "{}");
   const h5tok = uout.token;
   if (!h5tok) throw new Error("H5 登录失败");
-  // 3) 签到
   const q = "?token=" + encodeURIComponent(h5tok) + "&type=sign&constid=" + encodeURIComponent(constid) + "&transactionid=" + Date.now();
   const dr = await post({ url: "https://" + H5_HOST + P_DOPRIZE + q, headers: { "User-Agent": H5_UA, "Referer": H5_REFERER, "Content-Type": "application/json" }, body: "" });
   const dout = JSON.parse(peelJson(dr.data) || "{}");
@@ -228,24 +220,24 @@ async function main() {
   const sg = await sign(cookie);
   const pts = await queryPoints(cookie);
 
-  const lines = [];
-  if (sg.skip) lines.push("未抓到签到标识,进签到赢好礼页点一次签到后再运行");
-  else if (sg.already) lines.push("今日已签到");
-  else if (sg.ok) lines.push(`签到成功${sg.prize ? ` 获得 ${sg.prize}` : ""}`);
-  else lines.push(`签到失败 ${sg.msg}`);
-  if (!pts.skip && !pts.err) lines.push(`积分 ${pts.point}`);
-  else if (pts.err) lines.push(`查积分失败 ${pts.err}`);
+  let head;
+  if (sg.skip) head = "签到待配置";
+  else if (sg.already) head = "今日已签到";
+  else if (sg.ok) head = sg.prize ? `签到成功 获得 ${sg.prize}` : "签到成功";
+  else head = `签到失败 ${sg.msg}`;
+
+  const body = [];
+  if (!pts.skip && !pts.err) body.push(`积分 ${pts.point}`);
+  else if (pts.err) body.push(`查积分失败 ${pts.err}`);
+  if (sg.skip) body.push("进签到赢好礼页点一次签到后再运行");
 
   const state = sg.ok ? "ok" : (sg.skip ? "cookie" : "fail");
-  const title = sg.ok ? "✅ 中国移动签到" : (sg.skip ? "⚠️ 中国移动" : "⚠️ 中国移动签到");
-  const subtitle = sg.already ? "今日已签到" : (sg.ok ? "签到完成" : (sg.skip ? "签到待配置" : "签到未完成"));
-  saveStatus(state, lines.join(" · "));
-  $.msg(title, subtitle, lines.join("\n"));
+  const title = sg.ok ? "✅ 中国移动签到" : "⚠️ 中国移动签到";
+  saveStatus(state, [head].concat(body).join(" · "));
+  $.msg(title, head, body.join("\n"));
 }
 
-// 入口在文件末尾(加密核 const 需先初始化)
-
-// ==================== 加密核(纯 JS,运行时无 node crypto)====================
+// ==================== 工具函数 ====================
 function u8(s){if(s instanceof Uint8Array)return s;const o=[];for(let i=0;i<s.length;i++){let c=s.charCodeAt(i);if(c>=0xd800&&c<0xdc00&&i+1<s.length){const d=s.charCodeAt(i+1);if(d>=0xdc00&&d<0xe000){c=0x10000+((c-0xd800)<<10)+(d-0xdc00);i++;}}if(c<0x80)o.push(c);else if(c<0x800)o.push(0xc0|(c>>6),0x80|(c&63));else if(c<0x10000)o.push(0xe0|(c>>12),0x80|((c>>6)&63),0x80|(c&63));else o.push(0xf0|(c>>18),0x80|((c>>12)&63),0x80|((c>>6)&63),0x80|(c&63));}return new Uint8Array(o);}
 function u8s(b){let s='';for(let i=0;i<b.length;){const c=b[i++];let cp;if(c<0x80)cp=c;else if(c<0xe0)cp=((c&31)<<6)|(b[i++]&63);else if(c<0xf0)cp=((c&15)<<12)|((b[i++]&63)<<6)|(b[i++]&63);else cp=((c&7)<<18)|((b[i++]&63)<<12)|((b[i++]&63)<<6)|(b[i++]&63);if(cp>0xffff){cp-=0x10000;s+=String.fromCharCode(0xd800+(cp>>10),0xdc00+(cp&1023));}else s+=String.fromCharCode(cp);}return s;}
 function toHex(b){let s='';for(let i=0;i<b.length;i++)s+=b[i].toString(16).padStart(2,'0');return s;}
