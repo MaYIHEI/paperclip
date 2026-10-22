@@ -56,7 +56,7 @@ const $ = new Env("小黑盒");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-22.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-22.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "heybox_data";
@@ -197,19 +197,23 @@ async function apiGet(ck, path, extra) {
   };
 
   return new Promise((resolve) => {
-    $.get({ url: finalUrl, headers, timeout: 10000 }, (err, _resp, data) => {
+    $.get({ url: finalUrl, headers, timeout: 10000 }, (err, resp, data) => {
       if (err) {
-        debug(`请求异常 ${path}: ${err}`);
-        resolve(null);
+        $.log(`[ERROR] ${path} 网络错误: ${err}`);
+        resolve({ status: "error", msg: `网络错误: ${err}` });
         return;
       }
-      const text = b64decode(String(data || "").trim());
-      debug(`${path} => ${text.slice(0, 300)}`);
-      try {
-        resolve(JSON.parse(text));
-      } catch (e) {
-        resolve(null);
+      const code = resp && resp.statusCode;
+      const raw = String(data || "").trim();
+      // 正常响应是 Base64 包的 JSON;报错时可能直接回明文 JSON
+      const text = raw.startsWith("{") ? raw : b64decode(raw);
+      debug(`${path} HTTP ${code} => ${text.slice(0, 300)}`);
+      let json = null;
+      try { json = JSON.parse(text); } catch (e) {}
+      if (!json || json.status !== "ok") {
+        $.log(`[ERROR] ${path} HTTP ${code} 原始响应: ${raw.slice(0, 300)}`);
       }
+      resolve(json || { status: "error", msg: `HTTP ${code} 响应无法解析: ${raw.slice(0, 80)}` });
     });
   });
 }
