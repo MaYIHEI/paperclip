@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Version: 2026-10-22.r4
+ * @Version: 2026-10-25.r5
  * @Updated: 2026-10-22
  *
  * ===== Loon =====
@@ -68,10 +68,10 @@ const $ = new Env("中国移动");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-22.r4"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-25.r5"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
-const K_LOGIN = "cmcc_login";
+const K_LOGIN = "cmcc_login";    // 登录信封数组(JSON 数组,每元素一个账号;单一数据源)
 const K_SCORE = "cmcc_score";
 const K_CONSTID = "cmcc_constid";
 const K_STATUS = "cmcc_status";
@@ -121,6 +121,16 @@ function headersFor(host, path, J, sid, qen) {
   return { "Content-Type": "application/Json", "User-Agent": UA, "x-qen": qen, "x-time": t, "x-nonce": n, "xs": xs, "x-token": xtoken, "x-sign": xsign };
 }
 
+// cmcc_login 存 JSON 数组;兼容旧的单对象字符串(当 1 个账号)
+function loadAccounts() {
+  const raw = $.getdata(K_LOGIN);
+  if (!raw) return [];
+  try { const p = JSON.parse(raw); if (Array.isArray(p)) return p.filter(Boolean); } catch (e) {}
+  return [raw];
+}
+const telOf = (J) => { try { return JSON.parse(J).tel || ""; } catch (e) { return ""; } };
+const bizFromLogin = (J) => { const lo = JSON.parse(J); return JSON.stringify(Object.assign({}, lo, { reqBody: { cellNum: lo.tel } })); };
+
 // ---------- 抓取(http-request)----------
 function capture() {
   if ($request.method === "OPTIONS") { $.done(); return; }
@@ -130,15 +140,13 @@ function capture() {
       const J = decStr(body, LK, LIV);
       const obj = JSON.parse(J);
       if (!obj.xk) throw new Error("登录信封缺 xk");
-      $.setdata(J, K_LOGIN);
+      const tel = obj.tel || "";
+      const arr = loadAccounts().filter((x) => telOf(x) !== tel);
+      arr.push(J);
+      $.setdata(JSON.stringify(arr), K_LOGIN);
       $.setdata("", K_STATUS);
-      $.msg("中国移动", "✅ 中国移动 Cookie 获取成功", `账号 ${maskPhone(obj.tel || "")}`);
-      $.log("[INFO] 登录信封已保存");
-    } else if (/scoreQueryService\/getScoreQuery/.test(url)) {
-      const J = decStr(body, BK, BIV);
-      if (!JSON.parse(J).xk) throw new Error("积分信封缺 xk");
-      $.setdata(J, K_SCORE);
-      $.log("[INFO] 积分信封已保存");
+      $.msg("中国移动", "✅ 中国移动 Cookie 获取成功", `账号 ${maskPhone(tel)}(共 ${arr.length} 个)`);
+      $.log("[INFO] 登录信封已保存,共 " + arr.length + " 个账号");
     } else if (/ActSignIn2023\/doPrize/.test(url)) {
       const m = url.match(/[?&]constid=([^&]+)/);
       if (m) { $.setdata(decodeURIComponent(m[1]), K_CONSTID); $.log("[INFO] 签到设备标识已保存"); }
@@ -151,11 +159,9 @@ function capture() {
 }
 
 // ---------- 续登,返回会话 cookie ----------
-async function refresh() {
-  const J = $.getdata(K_LOGIN);
-  if (!J) throw new Error("NO_COOKIE");
-  const h = headersFor(HOST_LOGIN, P_AUTOLOGIN, J, "null", "14");
-  const r = await post({ url: "https://" + HOST_LOGIN + P_AUTOLOGIN, headers: h, body: encB64(J, LK, LIV) });
+async function refresh(loginJ) {
+  const h = headersFor(HOST_LOGIN, P_AUTOLOGIN, loginJ, "null", "14");
+  const r = await post({ url: "https://" + HOST_LOGIN + P_AUTOLOGIN, headers: h, body: encB64(loginJ, LK, LIV) });
   const out = JSON.parse(decStr(r.data || "", LSK, LIV) || "{}");
   if (DEBUG) $.log("[DEBUG] autoLogin " + (out.retCode || r.status) + " " + (out.retDesc || ""));
   if (out.retCode !== "000000") throw new Error(`续登失败 ${out.retDesc || ""} [${out.retCode || r.status}]`);
@@ -165,23 +171,20 @@ async function refresh() {
 }
 
 // ---------- 查积分 ----------
-async function queryPoints(cookie) {
-  const J = $.getdata(K_SCORE);
-  if (!J) return { skip: true };
+async function queryPoints(cookie, loginJ) {
+  const J = bizFromLogin(loginJ);
   const sid = (cookie.match(/JSESSIONID=([^;]+)/) || [, ""])[1];
   const h = headersFor(HOST_BIZ, P_SCORE, J, sid, "2");
   h["Cookie"] = cookie;
   const r = await post({ url: "https://" + HOST_BIZ + P_SCORE, headers: h, body: encB64(J, BK, BIV) });
   const out = JSON.parse(decStr(r.data || "", BSK, BIV) || "{}");
   if (DEBUG) $.log("[DEBUG] getScoreQuery " + (out.retCode || r.status) + " " + (out.retDesc || ""));
-  if (out.retCode === "410000") throw new Error("会话失效,请重新续登");
   if (out.retCode !== "000000") return { err: `${out.retDesc || ""} [${out.retCode || r.status}]` };
   return { point: out.rspBody && out.rspBody.pointValue };
 }
 
 // ---------- 签到赢好礼 ----------
-async function sign(cookie) {
-  const loginJ = $.getdata(K_LOGIN);
+async function sign(cookie, loginJ) {
   const constid = $.getdata(K_CONSTID);
   if (!constid) return { skip: true };
   const jsid = (cookie.match(/JSESSIONID=([^;]+)/) || [, ""])[1];
@@ -209,32 +212,47 @@ async function sign(cookie) {
   return { ok: false, msg: dout.errmsg || dout.resultDesc || ("result=" + dout.result) };
 }
 
+// 单账号一行结果文案
+function lineFor(r) {
+  const who = r.tel ? maskPhone(r.tel) : "账号";
+  if (r.err) return `${who}: 异常 ${r.err}`;
+  let s;
+  if (r.sg.skip) s = "签到待配置";
+  else if (r.sg.already) s = "今日已签到";
+  else if (r.sg.ok) s = r.sg.prize ? `签到成功 获得 ${r.sg.prize}` : "签到成功";
+  else s = `签到失败 ${r.sg.msg}`;
+  const pt = (r.pts && !r.pts.err && r.pts.point != null) ? ` · 积分 ${r.pts.point}` : "";
+  return `${who}: ${s}${pt}`;
+}
+
 async function main() {
   if (ARG.clear === "true" || $.getdata("cmcc_clear") === "true" || $.getdata("cmcc_clear") === true) {
-    $.setdata("", K_LOGIN); $.setdata("", K_SCORE); $.setdata("", K_STATUS); $.setdata("false", "cmcc_clear");
+    $.setdata("", K_LOGIN); $.setdata("", K_SCORE); $.setdata("", K_CONSTID); $.setdata("", K_STATUS); $.setdata("false", "cmcc_clear");
     $.msg("中国移动", "", "✅ 已清除登录凭证"); return;
   }
-  if (!$.getdata(K_LOGIN)) { saveStatus("none", "缺登录凭证"); $.msg("⚠️ 中国移动", "缺少登录凭证", "划掉后台的中国移动 APP 重新打开,触发抓取后再运行"); return; }
+  const accounts = loadAccounts();
+  if (!accounts.length) { saveStatus("none", "缺登录凭证"); $.msg("⚠️ 中国移动", "缺少登录凭证", "划掉后台的中国移动 APP 重新打开,触发抓取后再运行"); return; }
 
-  const cookie = await refresh();
-  const sg = await sign(cookie);
-  const pts = await queryPoints(cookie);
+  const results = [];
+  for (let i = 0; i < accounts.length; i++) {
+    const loginJ = accounts[i], tel = telOf(loginJ);
+    if (i > 0) await $.wait(2000); // 多账号间隔,避免频繁登录触发风控
+    try {
+      const cookie = await refresh(loginJ);
+      const sg = await sign(cookie, loginJ);
+      const pts = await queryPoints(cookie, loginJ);
+      results.push({ tel, sg, pts });
+    } catch (e) {
+      results.push({ tel, err: String(e.message || e) });
+    }
+  }
 
-  let head;
-  if (sg.skip) head = "签到待配置";
-  else if (sg.already) head = "今日已签到";
-  else if (sg.ok) head = sg.prize ? `签到成功 获得 ${sg.prize}` : "签到成功";
-  else head = `签到失败 ${sg.msg}`;
-
-  const body = [];
-  if (!pts.skip && !pts.err) body.push(`积分 ${pts.point}`);
-  else if (pts.err) body.push(`查积分失败 ${pts.err}`);
-  if (sg.skip) body.push("进签到赢好礼页点一次签到后再运行");
-
-  const state = sg.ok ? "ok" : (sg.skip ? "cookie" : "fail");
-  const title = sg.ok ? "✅ 中国移动签到" : "⚠️ 中国移动签到";
-  saveStatus(state, [head].concat(body).join(" · "));
-  $.msg(title, head, body.join("\n"));
+  const lines = results.map(lineFor);
+  const allOk = results.every((r) => !r.err && r.sg && r.sg.ok);
+  const state = allOk ? "ok" : (results.some((r) => r.err || (r.sg && !r.sg.ok && !r.sg.skip)) ? "fail" : "cookie");
+  const title = allOk ? "✅ 中国移动签到" : "⚠️ 中国移动签到";
+  saveStatus(state, lines.join(" | "));
+  $.msg(title, results.length > 1 ? `${results.length} 个账号` : "", lines.join("\n"));
 }
 
 // ==================== 工具函数 ====================
