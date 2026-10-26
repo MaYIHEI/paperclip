@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Version: 2026-10-26.r9
+ * @Version: 2026-10-26.r10
  * @Updated: 2026-10-22
  *
  * ===== Loon =====
@@ -68,7 +68,7 @@ const $ = new Env("中国移动");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-26.r9"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-26.r10"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const K_LOGIN = "cmcc_login";    // 登录信封数组(JSON 数组,每元素一个账号;单一数据源)
@@ -160,7 +160,10 @@ function capture() {
 }
 
 // ---------- 续登,返回会话 cookie ----------
-async function refresh(loginJ) {
+async function refresh(saved) {
+  const lo = JSON.parse(saved);
+  lo.reqBody = Object.assign({}, lo.reqBody, { cellNum: cellNumFor(lo.tel), sysTime: String(Math.floor(Date.now() / 1000)) });
+  const loginJ = JSON.stringify(lo);
   // 显式带会话 cookie 并按它签名,避免客户端自动回带上次的会话导致签名不符
   const sid = [8, 4, 4, 4, 12].map((n) => Array.from({ length: n }, () => ((Math.random() * 16) | 0).toString(16)).join("")).join("-");
   const h = headersFor(HOST_LOGIN, P_AUTOLOGIN, loginJ, sid, "14");
@@ -283,6 +286,9 @@ function aesCbcEnc(plainBytes,keyText,ivText){const {w,Nr}=expand128(u8(keyText)
 function aesCbcDec(cipherBytes,keyText,ivText){const {w,Nr}=expand128(u8(keyText)),iv=u8(ivText),out=new Uint8Array(cipherBytes.length);let prev=iv;for(let i=0;i<cipherBytes.length;i+=16){const blk=cipherBytes.subarray(i,i+16),pt=decBlock(blk.slice(),w,Nr);for(let k=0;k<16;k++)pt[k]^=prev[k];out.set(pt,i);prev=blk;}const pad=out[out.length-1];return out.slice(0,out.length-(pad>0&&pad<=16?pad:0));}
 const encB64=(plainStr,keyText,ivText)=>b64(aesCbcEnc(u8(plainStr),keyText,ivText));
 const decStr=(b64str,keyText,ivText)=>u8s(aesCbcDec(b64dec(b64str),keyText,ivText));
+const RSA_N=BigInt("0x968e9acf9e59b4e2e1bb24266ee39043788a45f788ecdc5c971f4964c3267cf20afd3b7f029b68a9a9b65d77d0306b8319df0c174f3dd82ef3894a6c38e23634f6095a81901ad7e6650911c0910f12c7de50a6fcee3ae3563cc5985c46a965db2af49e94f69b62f67ff3d5c0f79782572375e5f8b44aa43c0ca6d48e8a969beb");
+function modpow(b,e,m){let r=1n;b%=m;while(e>0n){if(e&1n)r=(r*b)%m;e>>=1n;b=(b*b)%m;}return r;}
+function cellNumFor(tel){const d=new Date(),p=x=>String(x).padStart(2,'0');const m=u8('leadeon'+tel+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds()));const eb=[0,2];while(eb.length<128-m.length-1)eb.push(1+Math.floor(Math.random()*255));eb.push(0,...m);const h=modpow(BigInt('0x'+toHex(eb)),65537n,RSA_N).toString(16).padStart(256,'0');const o=new Uint8Array(128);for(let i=0;i<128;i++)o[i]=parseInt(h.substr(i*2,2),16);return b64(o);}
 function nonce8(){let s='';for(let i=0;i<8;i++)s+=Math.floor(Math.random()*10);return s;}
 
 // prettier-ignore
