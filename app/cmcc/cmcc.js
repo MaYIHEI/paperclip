@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Version: 2026-10-25.r5
+ * @Version: 2026-10-26.r6
  * @Updated: 2026-10-22
  *
  * ===== Loon =====
@@ -68,7 +68,7 @@ const $ = new Env("中国移动");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-25.r5"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-26.r6"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const K_LOGIN = "cmcc_login";    // 登录信封数组(JSON 数组,每元素一个账号;单一数据源)
@@ -87,7 +87,6 @@ const P_DOPRIZE = "/ActSignIn2023/doPrize/JT/ActSignIn2023JT";
 const SIGN_SRCID = "026033";
 const SIGN_H5URL = "https://h5.bj.10086.cn/cmcc_app/checkin/index.html#/index";
 const H5_REFERER = "https://h5.bj.10086.cn/cmcc_app/checkin/index.html";
-const UA = "ChinaMobile/12.5.5 (iPhone; iOS 26.1; Scale/3.00)";
 const H5_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
 const SALT = "Leadeon/SecurityOrganization";
 const LK = "tVkdaRWRY0ZkV1Vr", LSK = "RYV0hCV1lV25KYVJ", LIV = "VjFSQ1ZtVkQxRTlQ";
@@ -114,11 +113,13 @@ function pickCookie(headers) {
 
 function headersFor(host, path, J, sid, qen) {
   const t = String(Date.now()), n = nonce8();
-  const xk = JSON.parse(J).xk || "";
+  const o = JSON.parse(J);
+  const xk = o.xk || "";
+  const ua = "ChinaMobile/" + (o.cv || "12.5.6") + " (iPhone; iOS " + (o.sv || "26.1") + "; Scale/3.00)"; // 跟随抓取时的 App 版本
   const xs = md5hex("https://" + host + path + "_" + J + "_" + SALT);
   const xtoken = encB64(xk + "_" + path + "_" + t + "_" + n, TK, TIV);
   const xsign = md5hex(xtoken + "_" + t + "_" + n + "_" + sid);
-  return { "Content-Type": "application/Json", "User-Agent": UA, "x-qen": qen, "x-time": t, "x-nonce": n, "xs": xs, "x-token": xtoken, "x-sign": xsign };
+  return { "Content-Type": "application/Json", "User-Agent": ua, "x-qen": qen, "x-time": t, "x-nonce": n, "xs": xs, "x-token": xtoken, "x-sign": xsign };
 }
 
 // cmcc_login 存 JSON 数组;兼容旧的单对象字符串(当 1 个账号)
