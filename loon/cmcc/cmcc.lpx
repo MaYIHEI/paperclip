@@ -15,5 +15,8 @@ request if ${url} ~= /^https:\/\/clientaccess\.10086\.cn\/biz-orange\/BN\/scoreQ
 request if ${url} ~= /^https:\/\/h5\.bj\.10086\.cn\/ActSignIn2023\/doPrize/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js") with tag="中国移动 Cookie", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png"
 cron "20 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/cmcc/cmcc.js", {${debug}}) with tag="中国移动签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png", timeout=60
 
+[Rule]
+DOMAIN-SUFFIX,10086.cn,DIRECT
+
 [MITM]
 hostname = client.app.coc.10086.cn, clientaccess.10086.cn, h5.bj.10086.cn
