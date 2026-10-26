@@ -2,11 +2,10 @@
   <img src="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png" width="80" alt="中国移动" />
 </p>
 
-# 中国移动 🧪 待验证
+# 中国移动
 
 中国移动 APP「签到赢好礼」每日签到,顺带查询积分。登录凭证长期有效、自动续期、免短信。
 
-> 🧪 待验证:登录续登、换令牌、查积分已真机跑通;签到接口(doPrize)链路已打通并处理「今日已签」,待连续几天真机确认稳定。
 
 ## 文件
 
