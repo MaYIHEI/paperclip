@@ -15,6 +15,8 @@ Loon 专用插件文件,后缀 `.lpx`(Loon Plugin Extension,旧称 `.plugin`,内
 | [`ipquality-web-test/`](./ipquality-web-test/) | 独立混合模式：单项快速原生报告、多项网页报告、HTTPS 轻量测速与三网探针 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc12) |
 | [`agentrouter/`](./agentrouter/) | AgentRouter 每日登录签到，插件内配置单账号或多账号 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/agentrouter/agentrouter.lpx) |
 | [`sgcc/`](./sgcc/) | 网上国网积分每日签到，插件内填写手机号和密码，无需抓包 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/sgcc/sgcc.lpx) |
+| [`meituan/`](./meituan/) | 美团去广告：隐藏视频/小团 Tab、推荐流、搜索热词、开屏与购物车横幅（转自 ZenmoFeiShi） | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/meituan/MT.lpx) |
+| [`hellobike/`](./hellobike/) | 哈啰净化：去弹窗、首页推荐流、借钱入口、会员横条和我的页推广（转自 ZenmoFeiShi） | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/main/loon/hellobike/hellobike.lpx) |
 
 ---
 

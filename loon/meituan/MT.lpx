@@ -1,0 +1,72 @@
+#!name=美团App 12.67.403
+#!desc=美团去广告（转自 ZenmoFeiShi/Qx MT.snippet 2026.10.25）
+#!author=TG@ZenMoFiShi
+#!homepage=https://github.com/ZenmoFeiShi/Qx
+#!icon=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/meituan.png
+#!loon_version = 3.5.3(1008)
+#!tag=去广告
+
+[Rule]
+DOMAIN,shark-mt.meituan.com,REJECT
+DOMAIN,shark-default.meituan.com,REJECT
+DOMAIN,shark-dp.meituan.com,REJECT
+DOMAIN,shark-ps.meituan.com,REJECT
+DOMAIN,shark-wm.sankuai.com,REJECT
+DOMAIN,shark.dianping.com,REJECT
+DOMAIN-WILDCARD,mquic-*.meituan.com,REJECT
+DOMAIN,httpdnsmultiapi.meituan.com,REJECT
+DOMAIN,httpdnsmultiapivip.meituan.com,REJECT
+DOMAIN,httpdns.meituan.com,REJECT
+DOMAIN,httpdnsvip.meituan.com,REJECT
+DOMAIN,dnspod.meituan.httpdns.qcloud.com,REJECT
+DOMAIN,dnspod.meituan.httpdns.start.qcloud.com,REJECT
+IP-CIDR,202.90.108.13/32,REJECT,no-resolve
+IP-CIDR,202.90.110.46/32,REJECT,no-resolve
+IP-CIDR,202.90.108.69/32,REJECT,no-resolve
+IP-CIDR,202.90.110.45/32,REJECT,no-resolve
+IP-CIDR,202.90.108.68/32,REJECT,no-resolve
+IP-CIDR,202.90.110.48/32,REJECT,no-resolve
+IP-CIDR,202.90.108.67/32,REJECT,no-resolve
+IP-CIDR,202.90.110.36/32,REJECT,no-resolve
+IP-CIDR,202.90.108.54/32,REJECT,no-resolve
+IP-CIDR,202.90.108.55/32,REJECT,no-resolve
+IP-CIDR,203.76.217.51/32,REJECT,no-resolve
+IP-CIDR,203.76.217.53/32,REJECT,no-resolve
+IP-CIDR,203.76.217.241/32,REJECT,no-resolve
+IP-CIDR,203.76.217.243/32,REJECT,no-resolve
+IP-CIDR,103.202.146.30/32,REJECT,no-resolve
+IP-CIDR,103.202.146.49/32,REJECT,no-resolve
+IP-CIDR,101.50.8.64/32,REJECT,no-resolve
+IP-CIDR,103.63.160.64/32,REJECT,no-resolve
+IP-CIDR,103.63.160.69/32,REJECT,no-resolve
+IP-CIDR,103.37.155.77/32,REJECT,no-resolve
+IP-CIDR,103.37.155.60/32,REJECT,no-resolve
+IP-CIDR,111.230.0.200/32,REJECT,no-resolve
+IP-CIDR,139.9.47.231/32,REJECT,no-resolve
+IP-CIDR,121.37.4.167/32,REJECT,no-resolve
+IP-CIDR,119.29.126.219/32,REJECT,no-resolve
+IP-CIDR,106.55.217.56/32,REJECT,no-resolve
+IP-CIDR,103.37.152.224/32,REJECT,no-resolve
+IP-CIDR,119.29.48.215/32,REJECT,no-resolve
+IP-CIDR,42.193.128.160/32,REJECT,no-resolve
+IP-CIDR6,2405:1480:3000:303b::303b/128,REJECT,no-resolve
+IP-CIDR6,2405:1480:1000:3::1e/128,REJECT,no-resolve
+IP-CIDR6,2405:1480:1000:4::15/128,REJECT,no-resolve
+IP-CIDR6,2402:4e00:40:40::2:373/128,REJECT,no-resolve
+
+[Rewrite]
+request if ${url} ~= /^https?:\/\/(httpdns|httpdnsvip|httpdnsmultiapi|httpdnsmultiapivip)\.meituan\.com\// then reject(404)
+request if ${url} ~= /^http:\/\/103\.37\.155\.60\/fetch/ then reject(404)
+
+[Script]
+response if ${url} ~= /^https?:\/\/apimobile\.meituan\.com\/aggroup\/indexTab/ then script("https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/MT.js") with requires_body=true, tag="美团去广告1"
+response if ${url} ~= /^https?:\/\/feedguess\.meituan\.com\/lycoris\/scene\/(gwc_feed1_2265|personalcenter_2154)(\?|$)/ then script("https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/MT.js") with requires_body=true, tag="美团去广告2"
+response if ${url} ~= /^https?:\/\/mt-personalcenter\.meituan\.com\/usercenter\/display/ then script("https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/MT.js") with requires_body=true, tag="美团去广告3"
+response if ${url} ~= /^https?:\/\/apimobile\.meituan\.com\/group\/v1\/deal\/searchpage\/defaultword/ then script("https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/MT.js") with requires_body=true, tag="美团去广告4"
+response if ${url} ~= /^https?:\/\/apimobile\.meituan\.com\/group\/v1\/deal\/searchpage\/hotword\/city\/divide\/hotrecommend\// then script("https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/MT.js") with requires_body=true, tag="美团去广告5"
+response if ${url} ~= /^https?:\/\/assistify\.meituan\.com\/assistant\/getAppClientHornConfig/ then script("https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/MT.js") with requires_body=true, tag="美团去广告6"
+response if ${url} ~= /^https?:\/\/mop\.meituan\.com\/mop\/entry\/shoppingCartEntry/ then script("https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/MT.js") with requires_body=true, tag="美团去广告7"
+response if ${url} ~= /^https?:\/\/mop\.meituan\.com\/api\/entryModule\/startupPicture/ then script("https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/MT.js") with requires_body=true, tag="美团去广告8"
+
+[MITM]
+hostname = apimobile.meituan.com, feedguess.meituan.com, mop.meituan.com, mt-personalcenter.meituan.com, assistify.meituan.com, httpdns.meituan.com, httpdnsmultiapi.meituan.com
