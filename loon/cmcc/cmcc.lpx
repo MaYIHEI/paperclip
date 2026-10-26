@@ -1,5 +1,5 @@
 #!name=中国移动签到
-#!desc=版本 2026-10-26.r7 · 🧪 待验证。先划掉后台的中国移动 APP 再重新打开, 进「签到赢好礼」点一次签到,收到「✅ 中国移动 Cookie 获取成功」即完成;cron 每天自动续登签到查积分,凭证长期有效免短信。
+#!desc=版本 2026-10-26.r8 · 🧪 待验证。先划掉后台的中国移动 APP 再重新打开, 进「签到赢好礼」点一次签到,收到「✅ 中国移动 Cookie 获取成功」即完成;cron 每天自动续登签到查积分,凭证长期有效免短信。
 #!author=MaYIHEI
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/app/cmcc
 #!icon=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/cmcc.png

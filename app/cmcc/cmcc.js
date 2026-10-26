@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Version: 2026-10-26.r7
+ * @Version: 2026-10-26.r8
  * @Updated: 2026-10-22
  *
  * ===== Loon =====
@@ -68,7 +68,7 @@ const $ = new Env("中国移动");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-26.r7"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-26.r8"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const K_LOGIN = "cmcc_login";    // 登录信封数组(JSON 数组,每元素一个账号;单一数据源)
@@ -164,7 +164,7 @@ async function refresh(loginJ) {
   const h = headersFor(HOST_LOGIN, P_AUTOLOGIN, loginJ, "null", "14");
   const r = await post({ url: "https://" + HOST_LOGIN + P_AUTOLOGIN, headers: h, body: encB64(loginJ, LK, LIV) });
   const out = JSON.parse(decStr(r.data || "", LSK, LIV) || "{}");
-  if (DEBUG) $.log("[DEBUG] autoLogin " + (out.retCode || r.status) + " " + (out.retDesc || ""));
+  if (DEBUG) $.log("[DEBUG] autoLogin " + (out.retCode || r.status) + " " + (out.retDesc || ""), "[DEBUG] req " + JSON.stringify(h), "[DEBUG] resp " + r.status + " " + JSON.stringify(r.headers));
   if (out.retCode !== "000000") throw new Error(`续登失败 ${out.retDesc || ""} [${out.retCode || r.status}]`);
   const cookie = pickCookie(r.headers);
   if (!cookie) throw new Error("续登未返回会话");
