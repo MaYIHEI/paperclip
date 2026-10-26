@@ -1,12 +1,12 @@
 // Loon 兼容层 + 原样拼接 ZenmoFeiShi/Qx easybike-ad.js(QX 专用)
-// 映射:$prefs→$persistentStore、$notify→$notification.post、$response.statusCode←status、echo 返回→$done({response})
+// 映射:$prefs→$persistentStore、$notify→$notification.post(文案 QX→Loon)、$response.statusCode←status、echo 返回→$done({response})
 (function ($loonDone) {
 var $prefs = {
   valueForKey: function (k) { return $persistentStore.read(k); },
   setValueForKey: function (v, k) { return $persistentStore.write(v, k); },
   removeValueForKey: function (k) { return $persistentStore.write(null, k); }
 };
-var $notify = function (t, s, b) { $notification.post(t, s, b); };
+var $notify = function (t, s, b) { $notification.post(t, s, String(b).replace(/QX/g, "Loon")); };
 var $response = typeof globalThis.$response === "object" && globalThis.$response ? Object.assign({}, globalThis.$response, { statusCode: globalThis.$response.status }) : undefined;
 var $done = function (r) {
   var m = !$response && r && typeof r.status === "string" && /^HTTP\/\S+ (\d+)/.exec(r.status);
