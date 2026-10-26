@@ -1,8 +1,10 @@
-#!name = 美团App 12.67.403
-#!desc = 美团去广告（转自 ZenmoFeiShi/Qx MT.snippet 2026.10.25）
-#!author = TG@ZenMoFiShi
-#!homepage = https://github.com/ZenmoFeiShi/Qx
+#!name=美团App 12.67.403
+#!desc=美团去广告（转自 ZenmoFeiShi/Qx MT.snippet 2026.10.25）
+#!author=TG@ZenMoFiShi
+#!homepage=https://github.com/ZenmoFeiShi/Qx
+#!icon=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/meituan.png
 #!loon_version = 3.5.3(1008)
+#!tag=去广告
 
 [Rule]
 DOMAIN,shark-mt.meituan.com,REJECT
