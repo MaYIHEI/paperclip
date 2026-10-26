@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Version: 2026-10-26.r6
+ * @Version: 2026-10-26.r7
  * @Updated: 2026-10-22
  *
  * ===== Loon =====
@@ -68,7 +68,7 @@ const $ = new Env("中国移动");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-26.r6"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-26.r7"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const K_LOGIN = "cmcc_login";    // 登录信封数组(JSON 数组,每元素一个账号;单一数据源)
@@ -150,7 +150,7 @@ function capture() {
       $.log("[INFO] 登录信封已保存,共 " + arr.length + " 个账号");
     } else if (/ActSignIn2023\/doPrize/.test(url)) {
       const m = url.match(/[?&]constid=([^&]+)/);
-      if (m) { $.setdata(decodeURIComponent(m[1]), K_CONSTID); $.log("[INFO] 签到设备标识已保存"); }
+      if (m) { $.setdata(decodeURIComponent(m[1]), K_CONSTID); $.msg("中国移动", "✅ 中国移动 Cookie 获取成功", "签到标识已保存"); $.log("[INFO] 签到设备标识已保存"); }
     }
   } catch (e) {
     $.log("[ERROR] 抓取失败: " + (e.message || e));
