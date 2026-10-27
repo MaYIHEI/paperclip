@@ -56,7 +56,7 @@ const $ = new Env("小黑盒");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-27.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-27.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "heybox_data";
@@ -450,7 +450,7 @@ function saveStatus(s, msg) {
     try { old = JSON.parse($.getdata("heybox_status") || "null"); } catch (e) {}
     if (old && old.s === "ok" && !/^(今日已|已发起)/.test(old.msg) && day(old.t) === day(Date.now())) return;
   }
-  $.setdata(JSON.stringify({ s, msg, t: Date.now() }), "heybox_status");
+  checkinReport("heybox_status", { s, msg }, { name: "小黑盒", author: "MaYIHEI" });
 }
 
 function maskToken(s) {
@@ -619,6 +619,19 @@ function md5hex(bytes) {
   }
   const toHex = (n) => { let h = ""; for (let i = 0; i < 4; i++) h += ((n >>> (8 * i)) & 0xff).toString(16).padStart(2, "0"); return h; };
   return toHex(a0) + toHex(b0) + toHex(c0) + toHex(d0);
+}
+
+// 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
+function checkinReport(key, rec, info) {
+  const read = (k) => (typeof $prefs !== "undefined" ? $prefs.valueForKey(k) : $persistentStore.read(k));
+  const write = (v, k) => (typeof $prefs !== "undefined" ? $prefs.setValueForKey(v, k) : $persistentStore.write(v, k));
+  const registry = () => { try { return JSON.parse(read("checkin_registry") || "{}") || {}; } catch (e) { return {}; } };
+  write(JSON.stringify(Object.assign({ v: 1, t: Date.now(), name: info.name, author: info.author }, rec)), key);
+  const reg = registry();
+  if (reg[key]) return;
+  reg[key] = info;
+  write(JSON.stringify(reg), "checkin_registry");
+  if (!registry()[key]) console.log(`[checkin] ${key} 登记没写上,下次运行再补`);
 }
 
 // ─── Env（轻量版，兼容 Loon / Surge / QX / Stash）────────────────────────────
