@@ -1,0 +1,21 @@
+#!name=腾讯视频净化
+#!desc=去除开屏广告、视频播放前广告、底部多余 Tab 栏、我的页面美化、我的界面顶部广告（转自 ZenmoFeiShi/Qx TxvideoAD.snippet 2026-10-27）
+#!author=ZenmoFeiShi
+#!homepage=https://github.com/ZenmoFeiShi/Qx
+#!icon=https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png
+#!loon_version = 3.5.1(983)
+#!tag=去广告
+
+[Rule]
+DOMAIN,iacc.stgw.qq.com,REJECT
+DOMAIN,tacc.video.qq.com,REJECT
+
+[Script]
+request if ${url} ~= /^https?:\/\/i\.video\.qq\.com\/(?:\?.*)?$/ then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/testing/loon/txvideo/txvideo-ad.js") with requires_body=true, binary_body_mode=true, tag="腾讯视频净化·请求"
+response if ${url} ~= /^https?:\/\/i\.video\.qq\.com\/(?:\?.*)?$/ then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/testing/loon/txvideo/txvideo-ad.js") with requires_body=true, binary_body_mode=true, tag="腾讯视频净化·播放"
+response if ${url} ~= /^https?:\/\/iacc\.qq\.com\/(?:\?.*)?$/ then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/testing/loon/txvideo/txvideo-ad.js") with requires_body=true, binary_body_mode=true, tag="腾讯视频净化·开屏"
+response if ${url} ~= /^https?:\/\/config\.ab\.qq\.com\/tab\/GetTabRemoteConfig(?:\?.*)?$/ then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/testing/loon/txvideo/txvideo-ad.js") with requires_body=true, binary_body_mode=true, tag="腾讯视频净化·Tab"
+response if ${url} ~= /^https:\/\/rdelivery\.qq\.com\/v1\/sdkconfig\/get(?:\?.*)?$/ then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/testing/loon/txvideo/txvideo-ad.js") with requires_body=true, tag="腾讯视频净化·配置"
+
+[MITM]
+hostname = i.video.qq.com, iacc.qq.com, config.ab.qq.com, rdelivery.qq.com
