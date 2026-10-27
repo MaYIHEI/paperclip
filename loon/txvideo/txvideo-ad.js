@@ -3,7 +3,12 @@
 (function ($loonRequest, $loonResponse, $loonDone) {
 var $request = Object.assign({}, $loonRequest, { bodyBytes: $loonRequest.body });
 var $response = typeof $loonResponse === "object" && $loonResponse ? Object.assign({}, $loonResponse, { bodyBytes: $loonResponse.body }) : undefined;
+// 临时诊断日志(排查开屏),确认后删除
+var $txB = $loonRequest.body, $txS = $response ? "resp" : "req";
+var $txBody = $response ? $response.bodyBytes : $txB;
+console.log("[txdiag] " + $txS + " " + $loonRequest.url + " type=" + Object.prototype.toString.call($txBody) + " len=" + ($txBody && ($txBody.length || $txBody.byteLength)) + " head=" + ($txBody && $txBody.length ? Array.prototype.slice.call($txBody, 0, 12).map(function (x) { return (x < 16 ? "0" : "") + x.toString(16); }).join("") : "") + " func=" + ($txBody && $txBody.length ? (String.fromCharCode.apply(null, Array.prototype.slice.call($txBody, 0, 400)).match(/\/trpc\.[\w.]+\/\w+/) || [""])[0] : ""));
 var $done = function (r) {
+  console.log("[txdiag] " + $txS + " modified=" + !!(r && (r.bodyBytes || r.body)));
   $loonDone(r && r.bodyBytes ? { body: new Uint8Array(r.bodyBytes) } : r);
 };
 (() => {
