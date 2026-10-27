@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-19
+ * @Updated: 2026-10-27
  *
  * ===== Loon =====
  * [MITM]
@@ -112,7 +112,7 @@ const $ = new Env('万达电影');
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = '2026-10-19.r6'; // 改用 App 渠道签名,恢复签到
+const SCRIPT_VERSION = '2026-10-27.r1'; // 改用 App 渠道签名,恢复签到
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'wanda_data';
@@ -286,7 +286,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('wanda_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'wanda_status');
+    checkinReport('wanda_status', { s, msg }, { name: '万达电影', author: 'MaYIHEI' });
 }
 
 function todayCN() {
@@ -301,6 +301,19 @@ function mask(s) {
     if (!s) return '未知';
     if (s.length <= 4) return s;
     return s.slice(0, 2) + '****' + s.slice(-2);
+}
+
+// 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
+function checkinReport(key, rec, info) {
+    const read = (k) => (typeof $prefs !== 'undefined' ? $prefs.valueForKey(k) : $persistentStore.read(k));
+    const write = (v, k) => (typeof $prefs !== 'undefined' ? $prefs.setValueForKey(v, k) : $persistentStore.write(v, k));
+    const registry = () => { try { return JSON.parse(read('checkin_registry') || '{}') || {}; } catch (e) { return {}; } };
+    write(JSON.stringify(Object.assign({ v: 1, t: Date.now(), name: info.name, author: info.author }, rec)), key);
+    const reg = registry();
+    if (reg[key]) return;
+    reg[key] = info;
+    write(JSON.stringify(reg), 'checkin_registry');
+    if (!registry()[key]) console.log(`[checkin] ${key} 登记没写上,下次运行再补`);
 }
 
 // @Chavy Env
