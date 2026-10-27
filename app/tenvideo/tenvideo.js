@@ -58,14 +58,14 @@ const $ = new Env("腾讯视频");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-27.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK = "tenvideo_cookie"; // 完整 cookie(含 vqq_refresh_token 等),刷新后滚动更新
 
 // 用小程序的账号刷新接口(只需 vuid/vusession/vurefresh,不要 qimei,网页/小程序 cookie 都适用)
 const REFRESH_URL = "https://pbaccess.video.qq.com/trpc.anywhere_door.account.Account/Refresh?vplatform=5";
-const CHECKIN_URL = "https://vip.video.qq.com/rpc/trpc.new_task_system.task_system.TaskSystem/CheckIn?rpc_data={}";
+const CHECKIN_URL = "https://vip.video.qq.com/rpc/trpc.new_task_system.task_system.TaskSystem/CheckIn?rpc_data=%7B%7D";
 const UA =
     "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
 
