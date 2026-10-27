@@ -7,7 +7,7 @@
  * @Author: @773075692 <https://github.com/773075692/agentrouter-checkin>
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-20
+ * @Updated: 2026-10-27
  *
  * ===== Loon =====
  * [Argument]
@@ -45,7 +45,7 @@ const $ = new Env("AgentRouter");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-20.r7";
+const SCRIPT_VERSION = "2026-10-27.r1";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -232,7 +232,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata("agentrouter_status") || "null"); } catch (e) {}
         if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), "agentrouter_status");
+    checkinReport("agentrouter_status", { s, msg }, { name: "AgentRouter", author: "MaYIHEI" });
 }
 
 function maskAccount(username) {
@@ -316,6 +316,19 @@ function request(method, path, headers, body, label) {
 
 function debug(message) {
     if (PLUGIN.debug === true || $.getdata(DEBUG_KEY) === "true") $.log(`[DEBUG] ${message}`);
+}
+
+// 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
+function checkinReport(key, rec, info) {
+    const read = (k) => (typeof $prefs !== "undefined" ? $prefs.valueForKey(k) : $persistentStore.read(k));
+    const write = (v, k) => (typeof $prefs !== "undefined" ? $prefs.setValueForKey(v, k) : $persistentStore.write(v, k));
+    const registry = () => { try { return JSON.parse(read("checkin_registry") || "{}") || {}; } catch (e) { return {}; } };
+    write(JSON.stringify(Object.assign({ v: 1, t: Date.now(), name: info.name, author: info.author }, rec)), key);
+    const reg = registry();
+    if (reg[key]) return;
+    reg[key] = info;
+    write(JSON.stringify(reg), "checkin_registry");
+    if (!registry()[key]) console.log(`[checkin] ${key} 登记没写上,下次运行再补`);
 }
 
 function Env(s) {
