@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-18
+ * @Updated: 2026-10-27
  *
  * ===== Loon =====
  * [MITM]
@@ -56,7 +56,7 @@ const $ = new Env("追觅");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r4"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-27.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'dreame_data';
@@ -182,7 +182,7 @@ async function main() {
     }
 
     // 3. 拼通知:连签天数 / 今日积分 / 总积分(失败不影响签到主结果)
-    let continueDays = '', todayPoint = '', total = '';
+    let continueDays = '', todayPoint = '', total = '', asset;
     try {
         const info = await call('continue-sign-info', ck);
         if (info && info.iRet === 1 && info.data) {
@@ -191,6 +191,7 @@ async function main() {
         const score = await call('score-get', ck);
         if (score && score.iRet === 1 && score.data) {
             total = score.data.totalPoints != null ? `总积分 ${score.data.totalPoints}` : '';
+            if (score.data.totalPoints != null) asset = `积分 ${score.data.totalPoints}`;
         }
         // 签到响应或再查一次 status 拿连签天数
         const st2 = await call('sign-in-status', ck);
@@ -202,7 +203,7 @@ async function main() {
     }
 
     const body = [todayPoint, continueDays, total].filter(Boolean).join(' · ') || '签到成功';
-    saveStatus('ok', body);
+    saveStatus('ok', body, asset);
     $.msg($.name, '✅ 追觅签到成功', body);
 }
 
@@ -254,7 +255,7 @@ function call(endpoint, ck, extra = {}) {
 
 // 签名: 把盐塞进 security_key 字段, 所有 key 排序后拼 "k=v&k=v..." 再 md5
 // 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
-function saveStatus(s, msg) {
+function saveStatus(s, msg, asset) {
     msg = String(msg).slice(0, 100);
     // 服务器明确提示登录过期的失败,按需要重新抓取处理
     if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
@@ -265,7 +266,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('dreame_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'dreame_status');
+    checkinReport('dreame_status', { s, msg, asset }, { name: '追觅', author: 'MaYIHEI' });
 }
 
 function buildSign(params) {
@@ -493,6 +494,19 @@ function md5(str) {
         c = addUnsigned(c, CC); d = addUnsigned(d, DD);
     }
     return (wordToHex(a) + wordToHex(b) + wordToHex(c) + wordToHex(d)).toLowerCase();
+}
+
+// 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
+function checkinReport(key, rec, info) {
+    const read = (k) => (typeof $prefs !== 'undefined' ? $prefs.valueForKey(k) : $persistentStore.read(k));
+    const write = (v, k) => (typeof $prefs !== 'undefined' ? $prefs.setValueForKey(v, k) : $persistentStore.write(v, k));
+    const registry = () => { try { return JSON.parse(read('checkin_registry') || '{}') || {}; } catch (e) { return {}; } };
+    write(JSON.stringify(Object.assign({ v: 1, t: Date.now(), name: info.name, author: info.author }, rec)), key);
+    const reg = registry();
+    if (reg[key]) return;
+    reg[key] = info;
+    write(JSON.stringify(reg), 'checkin_registry');
+    if (!registry()[key]) console.log(`[checkin] ${key} 登记没写上,下次运行再补`);
 }
 
 // @Chavy Env
