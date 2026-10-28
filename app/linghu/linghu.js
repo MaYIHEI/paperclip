@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('linghu_status') || '{}' } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'linghu_data';
@@ -167,7 +167,7 @@ async function main() {
         return;
     }
     if (status.data && status.data.todaySignedIn === true) {
-        saveStatus('ok', '今日已签到');
+        saveStatus('ok', '今日已签到', await pointAsset(ck));
         $.msg($.name, '✨ 今日已签到',
             `连签 ${status.data.continueSignDays || 0} 天`);
         return;
@@ -200,7 +200,7 @@ async function main() {
     }
 
     const body = [redEnvelope, continueDays].filter(Boolean).join(' · ') || '签到成功';
-    saveStatus('ok', body);
+    saveStatus('ok', body, await pointAsset(ck));
     $.msg($.name, '✅ 灵狐灵购签到成功', body);
 }
 
@@ -252,7 +252,7 @@ function call(endpoint, ck, extra = {}) {
 }
 
 // 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
-function saveStatus(s, msg) {
+function saveStatus(s, msg, asset) {
     msg = String(msg).slice(0, 100);
     // 服务器明确提示登录过期的失败,按需要重新抓取处理
     if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
@@ -263,7 +263,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('linghu_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('linghu_status', { s, msg, exp: cookieExp() }, { name: '灵狐灵购', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/linghu', open: 'https://apps.apple.com/app/id6753839135' });
+    checkinReport('linghu_status', { s, msg, asset, exp: cookieExp() }, { name: '灵狐灵购', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/linghu', open: 'https://apps.apple.com/app/id6753839135' });
 }
 
 // 签名: 把盐塞进 security_key 字段, 所有 key 排序后拼 "k=v&k=v..." 再 md5
@@ -292,6 +292,12 @@ function parseForm(str) {
         try { out[k] = decodeURIComponent(v); } catch (e) { out[k] = v; }
     }
     return out;
+}
+
+// 积分总数(和追觅同一套 member-center 的 score-get);查不到就不写
+async function pointAsset(ck) {
+    const score = await call('score-get', ck);
+    return score && score.iRet === 1 && score.data && score.data.totalPoints != null ? `积分 ${score.data.totalPoints}` : undefined;
 }
 
 // 从 sessid(JWT)的 payload.sub 里取 user_id(body 没带时的兜底)
