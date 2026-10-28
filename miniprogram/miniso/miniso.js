@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-27
+ * @Updated: 2026-10-28
  *
  * ===== Loon =====
  * [MITM]
@@ -56,7 +56,7 @@ const $ = new Env('名创优品');
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-27.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_NAME = 'miniso_data';
@@ -535,7 +535,7 @@ function checkinReport(key, rec, info) {
     const registry = () => { try { return JSON.parse(read('checkin_registry') || '{}') || {}; } catch (e) { return {}; } };
     write(JSON.stringify(Object.assign({ v: 1, t: Date.now(), name: info.name, author: info.author }, rec)), key);
     const reg = registry();
-    if (reg[key]) return;
+    if (JSON.stringify(reg[key]) === JSON.stringify(info)) return;
     reg[key] = info;
     write(JSON.stringify(reg), 'checkin_registry');
     if (!registry()[key]) console.log(`[checkin] ${key} 登记没写上,下次运行再补`);
