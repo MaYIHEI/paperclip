@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('baidunetdisk_status') || '{}' } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY    = 'baidunetdisk_data';
@@ -171,12 +171,12 @@ async function main() {
     // 3. 查会员成长值 / 等级 → 距 SVIP10 进度
     const tail = await growthTail(cookie, (signPts || 0) + answerPts);
 
-    saveStatus('ok', `${signTip}${answerTip}`);
+    saveStatus('ok', `${signTip}${answerTip}`, $.growth != null ? `成长值 ${$.growth}` : undefined);
     $.msg($.name, '✅ 百度网盘成长值签到', `${signTip}${answerTip}${tail}`);
 }
 
 // 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
-function saveStatus(s, msg) {
+function saveStatus(s, msg, asset) {
     msg = String(msg).slice(0, 100);
     // 服务器明确提示登录过期的失败,按需要重新抓取处理
     if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
@@ -187,7 +187,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('baidunetdisk_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('baidunetdisk_status', { s, msg }, { name: '百度网盘', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/baidunetdisk', open: 'https://apps.apple.com/app/id547166701' });
+    checkinReport('baidunetdisk_status', { s, msg, asset }, { name: '百度网盘', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/baidunetdisk', open: 'https://apps.apple.com/app/id547166701' });
 }
 
 // 拼「会员成长值 / 等级 / 距下一级 + 估算天数」尾巴(失败不影响主结果)
@@ -197,6 +197,7 @@ async function growthTail(cookie, todayGain) {
         const L = num(u, /"current_level"\s*:\s*(\d+)/);
         const V = num(u, /"current_value"\s*:\s*(\d+)/);
         if (L == null || V == null) return '';
+        $.growth = V;
         let t = ` · SVIP${L} 成长值 ${V}`;
         const next = LEVEL_THRESHOLDS[L + 1];
         if (next != null) {
