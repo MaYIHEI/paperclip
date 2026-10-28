@@ -56,7 +56,7 @@ const $ = new Env('名创优品');
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_NAME = 'miniso_data';
@@ -152,6 +152,8 @@ async function main() {
     const gained = (typeof beforeCoin === 'number' && typeof afterCoin === 'number') ? afterCoin - beforeCoin : '?';
     $.gained = gained;
     $.messages.push(`💰 mini币: ${beforeCoin} → ${afterCoin} (今日 +${gained})`);
+    // 浏览任务做完后的余额,补进签到记录
+    if ($.signSuccess && typeof afterCoin === 'number') saveStatus('ok', $.signMsg, `mini币 ${afterCoin}`);
 }
 
 
@@ -164,11 +166,13 @@ async function signIn() {
         { activityId: ACTIVITY_ID, taskId: SIGNIN_TASK_ID }
     );
     if (res?.code === 200 && res?.success) {
-        saveStatus('ok', '+20 mini币');
+        $.signMsg = '+20 mini币';
+        saveStatus('ok', $.signMsg);
         $.messages.push(`✅ 每日签到成功 (+20 mini币)`);
         $.signSuccess = true;
     } else if (/已完成|已签|已经/.test(res?.message || '')) {
-        saveStatus('ok', '今日已签到');
+        $.signMsg = '今日已签到';
+        saveStatus('ok', $.signMsg);
         $.messages.push(`✨ 今日已签到`);
         $.signSuccess = true;
     } else {
@@ -178,7 +182,7 @@ async function signIn() {
 }
 
 // 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
-function saveStatus(s, msg) {
+function saveStatus(s, msg, asset) {
     msg = String(msg).slice(0, 100);
     // 服务器明确提示登录过期的失败,按需要重新抓取处理
     if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
@@ -189,7 +193,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('miniso_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('miniso_status', { s, msg }, { name: '名创优品', author: 'MaYIHEI', open: 'weixin://' });
+    checkinReport('miniso_status', { s, msg, asset }, { name: '名创优品', author: 'MaYIHEI', open: 'weixin://' });
 }
 
 // 查任务列表,返回所有未完成的浏览任务(taskType=5)
