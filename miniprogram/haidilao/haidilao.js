@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('haidilao_status') || '{}' } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const ckName = "hdl_data";
 const Notify = 1;
@@ -94,8 +94,9 @@ async function main() {
     await Promise.all(taskall);
     const expired = userList.filter(u => !u.ckStatus).length;
     const signed = userList.some(u => /^[✅✨]/.test(u.signMsg));
+    const fragment = userList.length === 1 ? userList[0].fragment : null; // 多账号不合并碎片
     if (expired) saveStatus('cookie', `${expired} 个账号 token 失效`);
-    else saveStatus(signed ? 'ok' : 'fail', signed ? userList.filter(u => /^[✅✨]/.test(u.signMsg)).map(u => u.signMsg.replace(/^[✅✨]/, '')).join(' · ') : (userList[0] && userList[0].signMsg) || '签到失败');
+    else saveStatus(signed ? 'ok' : 'fail', signed ? userList.filter(u => /^[✅✨]/.test(u.signMsg)).map(u => u.signMsg.replace(/^[✅✨]/, '')).join(' · ') : (userList[0] && userList[0].signMsg) || '签到失败', fragment != null ? `碎片 ${fragment}` : undefined);
 }
 
 class UserInfo {
@@ -187,6 +188,7 @@ class UserInfo {
 
             if (result?.success === true) {
                 DoubleLog(`${this.signMsg},当前共${result.data.total}碎片🧩`);
+                this.fragment = result.data.total;
                 this.ckStatus = true;
             } else if (result?.code === 'unauthorized' || /token|登录|未授权/i.test(result?.msg || '')) {
                 this.ckStatus = false;
@@ -238,7 +240,7 @@ async function getCookie() {
 }
 
 // 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
-function saveStatus(s, msg) {
+function saveStatus(s, msg, asset) {
     msg = String(msg).slice(0, 100);
     // 服务器明确提示登录过期的失败,按需要重新抓取处理
     if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
@@ -249,7 +251,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('haidilao_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('haidilao_status', { s, msg }, { name: '海底捞', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/haidilao', open: 'weixin://' });
+    checkinReport('haidilao_status', { s, msg, asset }, { name: '海底捞', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/haidilao', open: 'weixin://' });
 }
 
 function ObjectKeys2LowerCase(obj) {
