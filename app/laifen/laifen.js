@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== "undefined" && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" }, body: $.getdata("laifen_status") || "{}" } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "laifen_data";
@@ -223,7 +223,7 @@ function saveStatus(s, msg) {
         const old = parseJSON($.getdata(STATUS_KEY));
         if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport(STATUS_KEY, { s, msg }, { name: "徕芬", author: "MaYIHEI", run: "http://1.1.1.1/checkin/laifen" });
+    checkinReport(STATUS_KEY, { s, msg }, { name: "徕芬", author: "MaYIHEI", run: "http://1.1.1.1/checkin/laifen", open: "https://apps.apple.com/app/id6463205325" });
 }
 
 // 北京时间 YYYY-MM-DD
