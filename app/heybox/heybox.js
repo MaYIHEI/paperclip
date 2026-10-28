@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== "undefined" && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" }, body: $.getdata("heybox_status") || "{}" } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "heybox_data";
@@ -454,7 +454,7 @@ function saveStatus(s, msg) {
     try { old = JSON.parse($.getdata("heybox_status") || "null"); } catch (e) {}
     if (old && old.s === "ok" && !/^(今日已|已发起)/.test(old.msg) && day(old.t) === day(Date.now())) return;
   }
-  checkinReport("heybox_status", { s, msg }, { name: "小黑盒", author: "MaYIHEI", run: "http://1.1.1.1/checkin/heybox" });
+  checkinReport("heybox_status", { s, msg }, { name: "小黑盒", author: "MaYIHEI", run: "http://1.1.1.1/checkin/heybox", open: "https://apps.apple.com/app/id1244505010" });
 }
 
 function maskToken(s) {
