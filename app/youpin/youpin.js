@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('youpin_status') || '{}' } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY  = 'youpin_data';
@@ -237,7 +237,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('youpin_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('youpin_status', { s, msg }, { name: '小米有品', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/youpin' });
+    checkinReport('youpin_status', { s, msg }, { name: '小米有品', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/youpin', open: 'https://apps.apple.com/app/id1212182562' });
 }
 
 function parseCookieField(cookieStr, field) {
