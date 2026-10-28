@@ -56,7 +56,7 @@ const $ = new Env('名创优品');
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_NAME = 'miniso_data';
@@ -189,7 +189,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('miniso_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('miniso_status', { s, msg }, { name: '名创优品', author: 'MaYIHEI' });
+    checkinReport('miniso_status', { s, msg }, { name: '名创优品', author: 'MaYIHEI', open: 'weixin://' });
 }
 
 // 查任务列表,返回所有未完成的浏览任务(taskType=5)
