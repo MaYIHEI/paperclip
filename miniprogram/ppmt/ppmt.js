@@ -7,7 +7,7 @@
  * @Author: @Sliverkiss
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-27
+ * @Updated: 2026-10-28
  *
  * ===== Loon =====
  * [MITM]
@@ -56,7 +56,11 @@ const $ = new Env("泡泡玛特");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-27.r1"; // 改一次 +1,确认拉到最新版
+// 补签入口:请求 http://1.1.1.1/checkin/ppmt 时现跑一次签到,跑完把本脚本的签到状态作为响应返回
+const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
+if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('ppmt_status') || '{}' } }); }
+
+const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const ckName = "ppmt_data";
 const userCookie = $.toObj($.isNode() ? process.env[ckName] : $.getdata(ckName)) || [];
@@ -166,7 +170,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('ppmt_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('ppmt_status', { s, msg }, { name: '泡泡玛特', author: 'MaYIHEI' });
+    checkinReport('ppmt_status', { s, msg, exp: cookieExp() }, { name: '泡泡玛特', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/ppmt' });
 }
 
 // 解析 JWT payload
@@ -293,7 +297,7 @@ async function loadCryptoJS() {
 
 !(async () => {
     try {
-        if (typeof $request !== "undefined") {
+        if (typeof $request !== "undefined" && !CHECKIN_RUN) {
             await getCookie();
         } else {
             if (JSON.parse($.getdata("ppmt_clear") || "false")) {
@@ -323,6 +327,12 @@ async function checkEnv() { try { if (!userCookie?.length) throw new Error("no a
 function debug(g, e = "debug") { "true" === $.is_debug && ($.log(`\n-----------${e}------------\n`), $.log("string" == typeof g ? g : $.toStr(g) || `debug error => t=${g}`), $.log(`\n-----------${e}------------\n`)) }
 function ObjectKeys2LowerCase(obj) { return !obj ? {} : Object.fromEntries(Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v])) };
 async function Request(t) { "string" == typeof t && (t = { url: t }); try { if (!t?.url) throw new Error("[URL][ERROR] 缺少 url 参数"); let { url: o, type: e, headers: r = {}, body: s, params: a, dataType: n = "form", resultType: u = "data" } = t; const p = e ? e?.toLowerCase() : "body" in t ? "post" : "get", c = o.concat("post" === p ? "?" + $.queryStr(a) : ""), i = t.timeout ? $.isSurge() ? t.timeout / 1e3 : t.timeout : 1e4; "json" === n && (r["Content-Type"] = "application/json;charset=UTF-8"); const y = "string" == typeof s ? s : (s && "form" == n ? $.queryStr(s) : $.toStr(s)), l = { ...t, ...t?.opts ? t.opts : {}, url: c, headers: r, ..."post" === p && { body: y }, ..."get" === p && a && { params: a }, timeout: i }, m = $.http[p.toLowerCase()](l).then((t => "data" == u ? $.toObj(t.body) || t.body : $.toObj(t) || t)).catch((t => $.log(`[${p.toUpperCase()}][ERROR] ${t}\n`))); return Promise.race([new Promise(((t, o) => setTimeout((() => o("当前请求已超时")), i))), m]) } catch (t) { console.log(`[${p.toUpperCase()}][ERROR] ${t}\n`) } }
+// 各账号 Cookie(JWT)里最早的过期时间,毫秒;JWT 里没有 exp 就不写
+function cookieExp() {
+    const exps = userCookie.map((u) => (parseJWT(u.jwt) || {}).exp).filter((x) => typeof x === 'number');
+    return exps.length ? Math.min(...exps) * 1000 : undefined;
+}
+
 // 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
 function checkinReport(key, rec, info) {
     const read = (k) => (typeof $prefs !== 'undefined' ? $prefs.valueForKey(k) : $persistentStore.read(k));
@@ -330,7 +340,7 @@ function checkinReport(key, rec, info) {
     const registry = () => { try { return JSON.parse(read('checkin_registry') || '{}') || {}; } catch (e) { return {}; } };
     write(JSON.stringify(Object.assign({ v: 1, t: Date.now(), name: info.name, author: info.author }, rec)), key);
     const reg = registry();
-    if (reg[key]) return;
+    if (JSON.stringify(reg[key]) === JSON.stringify(info)) return;
     reg[key] = info;
     write(JSON.stringify(reg), 'checkin_registry');
     if (!registry()[key]) console.log(`[checkin] ${key} 登记没写上,下次运行再补`);
