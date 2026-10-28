@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Version: 2026-10-26.r9
+ * @Version: 2026-10-28.r10
  * @Updated: 2026-10-22
  *
  * ===== Loon =====
@@ -68,7 +68,7 @@ const $ = new Env("中国移动");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-26.r9"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r10"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const K_LOGIN = "cmcc_login";    // 登录信封数组(JSON 数组,每元素一个账号;单一数据源)
@@ -142,6 +142,9 @@ function capture() {
       const obj = JSON.parse(J);
       if (!obj.xk) throw new Error("登录信封缺 xk");
       const tel = obj.tel || "";
+      const old = loadAccounts().find((x) => telOf(x) === tel);
+      // 同账号凭证没变(小组件等续登请求也会命中),不覆盖、不清签到记录、不弹通知
+      if (old && JSON.parse(old).xk === obj.xk) { $.log("[INFO] 登录凭证未变化,跳过"); $.done(); return; }
       const arr = loadAccounts().filter((x) => telOf(x) !== tel);
       arr.push(J);
       $.setdata(JSON.stringify(arr), K_LOGIN);
