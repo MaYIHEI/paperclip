@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== "undefined" && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" }, body: $.getdata("bhg_status") || "{}" } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const CK_NAME = "bhg_token";
 const MALL_KEY = "bhg_mallid"; // 华联是连锁,mall_id 不在 JWT 里,从抓取 URL 提取后存这里
@@ -259,14 +259,15 @@ function saveStatus(s, msg, asset) {
     msg = String(msg).slice(0, 100);
     // 服务器明确提示登录过期的失败,按需要重新抓取处理
     if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
-    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它的奖励文字,只合并本次的资产等信息
+    let keep = null;
     if (s === "ok" && /^今日已/.test(msg)) {
         const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
         let old = null;
         try { old = JSON.parse($.getdata("bhg_status") || "null"); } catch (e) {}
-        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) keep = old;
     }
-    checkinReport("bhg_status", { s, msg, asset, exp: cookieExp() }, { name: "北京华联", author: "MaYIHEI", run: "http://1.1.1.1/checkin/bhg", open: "weixin://" });
+    checkinReport("bhg_status", keep ? keepReward(keep, { s, msg, asset, exp: cookieExp() }) : { s, msg, asset, exp: cookieExp() }, { name: "北京华联", author: "MaYIHEI", run: "http://1.1.1.1/checkin/bhg", open: "weixin://" });
 }
 
 function request(method, path, body) {
@@ -506,6 +507,13 @@ if (typeof $request !== "undefined" && !CHECKIN_RUN) {
 function cookieExp() {
     const p = parseJWT($.token || "");
     return p && typeof p.exp === "number" ? p.exp * 1000 : undefined;
+}
+
+// 保留当天带奖励的旧记录(状态、奖励文字、时间),合并本次拿到的资产、过期时间等;本次没有的沿用旧值
+function keepReward(old, rec) {
+    const out = { s: old.s, msg: old.msg, t: old.t, asset: old.asset, exp: old.exp };
+    for (const k in rec) if (rec[k] !== undefined && k !== "s" && k !== "msg") out[k] = rec[k];
+    return out;
 }
 
 // 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
