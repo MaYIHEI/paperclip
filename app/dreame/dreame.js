@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('dreame_status') || '{}' } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'dreame_data';
@@ -166,7 +166,7 @@ async function main() {
         return;
     }
     if (status.data && status.data.todaySignedIn === true) {
-        saveStatus('ok', '今日已签到');
+        saveStatus('ok', '今日已签到', await pointAsset(ck));
         $.msg($.name, '✨ 今日已签到',
             `连签 ${status.data.continueSignDays || 0} 天`);
         return;
@@ -298,6 +298,12 @@ function parseForm(str) {
         try { out[k] = decodeURIComponent(v); } catch (e) { out[k] = v; }
     }
     return out;
+}
+
+// 积分总数(和追觅同一套 member-center 的 score-get);查不到就不写
+async function pointAsset(ck) {
+    const score = await call('score-get', ck);
+    return score && score.iRet === 1 && score.data && score.data.totalPoints != null ? `积分 ${score.data.totalPoints}` : undefined;
 }
 
 // 从 sessid(JWT)的 payload.sub 里取 user_id(body 没带时的兜底)
