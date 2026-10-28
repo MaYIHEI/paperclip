@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('tingtingfm_status') || '{}' } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'tingtingfm_data';        // 存的是含 s_k 会话密钥的完整 User-Agent
@@ -141,7 +141,7 @@ async function main() {
     const point = await getPoint(token, ua);
     const pointStr = point != null ? ` · 金币 ${point}` : '';
 
-    saveStatus('ok', log ? `签到成功 +${log.grow || 0} 成长值` : '今日已签到');
+    saveStatus('ok', log ? `签到成功 +${log.grow || 0} 成长值` : '今日已签到', point != null ? `金币 ${point}` : undefined);
     if (log) {
         $.msg($.name, '✅ 签到成功',
             `+${log.grow || 0} 成长值 · +${log.coin || 0} 金币${pointStr}`);
@@ -208,7 +208,7 @@ function getPoint(token, ua) {
 }
 
 // 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
-function saveStatus(s, msg) {
+function saveStatus(s, msg, asset) {
     msg = String(msg).slice(0, 100);
     // 服务器明确提示登录过期的失败,按需要重新抓取处理
     if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
@@ -219,7 +219,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('tingtingfm_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('tingtingfm_status', { s, msg }, { name: '听听FM', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/tingtingfm', open: 'https://apps.apple.com/app/id885422779' });
+    checkinReport('tingtingfm_status', { s, msg, asset }, { name: '听听FM', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/tingtingfm', open: 'https://apps.apple.com/app/id885422779' });
 }
 
 function buildHeaders(ua) {
