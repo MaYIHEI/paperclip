@@ -64,7 +64,7 @@ const $ = new Env("小米抽奖");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "milottery_data";
@@ -507,7 +507,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata("milottery_status") || "null"); } catch (e) {}
         if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport("milottery_status", { s, msg }, { name: "小米抽奖", author: "MaYIHEI" });
+    checkinReport("milottery_status", { s, msg }, { name: "小米抽奖", author: "MaYIHEI", open: "https://apps.apple.com/app/id1024958046" });
 }
 
 function sleep(ms) {
