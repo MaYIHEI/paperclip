@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-27
+ * @Updated: 2026-10-28
  *
  * ===== Loon =====
  * [MITM]
@@ -112,7 +112,11 @@ const $ = new Env('万达电影');
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = '2026-10-27.r1'; // 改用 App 渠道签名,恢复签到
+// 补签入口:请求 http://1.1.1.1/checkin/wanda 时现跑一次签到,跑完把本脚本的签到状态作为响应返回
+const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
+if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('wanda_status') || '{}' } }); }
+
+const SCRIPT_VERSION = '2026-10-28.r1'; // 改用 App 渠道签名,恢复签到
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'wanda_data';
@@ -286,7 +290,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('wanda_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('wanda_status', { s, msg }, { name: '万达电影', author: 'MaYIHEI' });
+    checkinReport('wanda_status', { s, msg }, { name: '万达电影', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/wanda' });
 }
 
 function todayCN() {
@@ -310,7 +314,7 @@ function checkinReport(key, rec, info) {
     const registry = () => { try { return JSON.parse(read('checkin_registry') || '{}') || {}; } catch (e) { return {}; } };
     write(JSON.stringify(Object.assign({ v: 1, t: Date.now(), name: info.name, author: info.author }, rec)), key);
     const reg = registry();
-    if (reg[key]) return;
+    if (JSON.stringify(reg[key]) === JSON.stringify(info)) return;
     reg[key] = info;
     write(JSON.stringify(reg), 'checkin_registry');
     if (!registry()[key]) console.log(`[checkin] ${key} 登记没写上,下次运行再补`);
