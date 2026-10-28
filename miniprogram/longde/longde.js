@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== "undefined" && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" }, body: $.getdata("longde_status") || "{}" } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const CK_NAME = "longde_token";
 $.token = ($.isNode() ? process.env.LONGDE_TOKEN : $.getdata(CK_NAME)) || "";
@@ -126,6 +126,16 @@ function parseJWT(token) {
 
 // ============ 业务 ============
 
+// 会员积分余额(和北京华联同一套 member.info 接口,余额优先 data.balance,否则 data.point);查不到就不写
+async function pointAsset(mallId, memberId) {
+    if (!memberId) return undefined;
+    const res = await request("GET", `restful/mall/${mallId}/member/${memberId}`, null);
+    debug(res, "member.info");
+    const d = res && res.data;
+    const point = d && (typeof d.balance === "number" ? d.balance : typeof d.point === "number" ? d.point : null);
+    return point != null ? `积分 ${point}` : undefined;
+}
+
 async function checkin() {
     const payload = parseJWT($.token);
     if (!payload || !payload.mall_id) {
@@ -164,14 +174,14 @@ async function checkin() {
         const extraLine = extra && extra > 0 ? ` (含连签 +${extra})` : "";
         const totalLine = typeof total_point === "number" ? `, 累计 ${total_point} 分` : "";
         const numLine = typeof num === "number" ? `\n📅 本月已签 ${num} 天` : "";
-        saveStatus("ok", `签到成功 +${earned} 分`);
+        saveStatus("ok", `签到成功 +${earned} 分`, await pointAsset(mallId, payload.sub));
         $.messages.push(`✅ 签到成功: +${earned} 分${extraLine}${totalLine}${numLine}`);
         return;
     }
 
     // 已签
     if (res.code === 422 || /已签|已经签到/.test(res.msg || "")) {
-        saveStatus("ok", "今日已签到");
+        saveStatus("ok", "今日已签到", await pointAsset(mallId, payload.sub));
         $.messages.push(`✨ 今日已签到${res.msg ? `: ${res.msg}` : ""}`);
         return;
     }
@@ -190,7 +200,7 @@ async function checkin() {
 // ============ 请求 ============
 
 // 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
-function saveStatus(s, msg) {
+function saveStatus(s, msg, asset) {
     msg = String(msg).slice(0, 100);
     // 服务器明确提示登录过期的失败,按需要重新抓取处理
     if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
@@ -201,7 +211,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata("longde_status") || "null"); } catch (e) {}
         if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport("longde_status", { s, msg, exp: cookieExp() }, { name: "龙德广场", author: "MaYIHEI", run: "http://1.1.1.1/checkin/longde", open: "weixin://" });
+    checkinReport("longde_status", { s, msg, asset, exp: cookieExp() }, { name: "龙德广场", author: "MaYIHEI", run: "http://1.1.1.1/checkin/longde", open: "weixin://" });
 }
 
 function request(method, path, body) {
