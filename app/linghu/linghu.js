@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-27
+ * @Updated: 2026-10-28
  *
  * ===== Loon =====
  * [MITM]
@@ -56,7 +56,11 @@ const $ = new Env("灵狐灵购");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-27.r1"; // 改一次 +1,确认拉到最新版
+// 补签入口:请求 http://1.1.1.1/checkin/linghu 时现跑一次签到,跑完把本脚本的签到状态作为响应返回
+const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
+if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('linghu_status') || '{}' } }); }
+
+const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'linghu_data';
@@ -76,7 +80,7 @@ const VERSION_CODE = '1220';
 const SIGN_TYPE    = '5'; // 签到活动类型,status / sign-in 都带 type=5
 
 // ─── 入口 ────────────────────────────────────────────────────────────────────
-if (typeof $request !== "undefined") {
+if (typeof $request !== "undefined" && !CHECKIN_RUN) {
     getCookie();
     $.done();
 } else {
@@ -259,7 +263,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('linghu_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('linghu_status', { s, msg }, { name: '灵狐灵购', author: 'MaYIHEI' });
+    checkinReport('linghu_status', { s, msg, exp: cookieExp() }, { name: '灵狐灵购', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/linghu' });
 }
 
 // 签名: 把盐塞进 security_key 字段, 所有 key 排序后拼 "k=v&k=v..." 再 md5
@@ -487,6 +491,17 @@ function md5(str) {
     return (wordToHex(a) + wordToHex(b) + wordToHex(c) + wordToHex(d)).toLowerCase();
 }
 
+// Cookie(sessid 是 JWT)的过期时间,毫秒;JWT 里没有 exp 就不写
+function cookieExp() {
+    try {
+        const b64 = String(JSON.parse($.getdata(CK_KEY) || '{}').sessid).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const exp = JSON.parse(b64decode(b64 + '='.repeat((4 - b64.length % 4) % 4))).exp;
+        return typeof exp === 'number' ? exp * 1000 : undefined;
+    } catch (e) {
+        return undefined;
+    }
+}
+
 // 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
 function checkinReport(key, rec, info) {
     const read = (k) => (typeof $prefs !== 'undefined' ? $prefs.valueForKey(k) : $persistentStore.read(k));
@@ -494,7 +509,7 @@ function checkinReport(key, rec, info) {
     const registry = () => { try { return JSON.parse(read('checkin_registry') || '{}') || {}; } catch (e) { return {}; } };
     write(JSON.stringify(Object.assign({ v: 1, t: Date.now(), name: info.name, author: info.author }, rec)), key);
     const reg = registry();
-    if (reg[key]) return;
+    if (JSON.stringify(reg[key]) === JSON.stringify(info)) return;
     reg[key] = info;
     write(JSON.stringify(reg), 'checkin_registry');
     if (!registry()[key]) console.log(`[checkin] ${key} 登记没写上,下次运行再补`);
