@@ -58,7 +58,7 @@ const $ = new Env("扫描全能王");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-28.r1";
+const SCRIPT_VERSION = "2026-10-28.r2";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY     = 'camscanner_data';
@@ -211,7 +211,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('camscanner_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('camscanner_status', { s, msg }, { name: '扫描全能王', author: 'MaYIHEI' });
+    checkinReport('camscanner_status', { s, msg }, { name: '扫描全能王', author: 'MaYIHEI', open: 'https://apps.apple.com/app/id388627783' });
 }
 
 // intsig 约定:成功 ret 为 0 或 "200"(类型不统一,统一转字符串比对)
