@@ -56,7 +56,7 @@ const $ = new Env("WPS");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "wps_sid";
@@ -85,7 +85,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata("wps_status") || "null"); } catch (e) {}
         if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport("wps_status", { s, msg }, { name: "WPS", author: "MaYIHEI" });
+    checkinReport("wps_status", { s, msg }, { name: "WPS", author: "MaYIHEI", open: "https://apps.apple.com/app/id599852710" });
 }
 
 // ===== 接口 =====
