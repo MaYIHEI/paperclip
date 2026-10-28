@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== "undefined" && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" }, body: $.getdata("bhg_status") || "{}" } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const CK_NAME = "bhg_token";
 const MALL_KEY = "bhg_mallid"; // 华联是连锁,mall_id 不在 JWT 里,从抓取 URL 提取后存这里
@@ -266,7 +266,7 @@ function saveStatus(s, msg, asset) {
         try { old = JSON.parse($.getdata("bhg_status") || "null"); } catch (e) {}
         if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport("bhg_status", { s, msg, asset, exp: cookieExp() }, { name: "北京华联", author: "MaYIHEI", run: "http://1.1.1.1/checkin/bhg" });
+    checkinReport("bhg_status", { s, msg, asset, exp: cookieExp() }, { name: "北京华联", author: "MaYIHEI", run: "http://1.1.1.1/checkin/bhg", open: "weixin://" });
 }
 
 function request(method, path, body) {
