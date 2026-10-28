@@ -148,7 +148,7 @@ request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/all(\?|$)/i then script("<�
 
 ## 附：已接入的脚本
 
-签到合集插件里的 32 个脚本都已按本协议写结果。
+签到合集插件里的 33 个脚本都已按本协议写结果。
 
 带 `exp` 的脚本，都取自 Cookie 本身就是 JWT 的 `exp` 字段，JWT 里没有 `exp` 时不写：
 
@@ -212,6 +212,7 @@ request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/all(\?|$)/i then script("<�
 | 米游社 `mihoyo` | `https://apps.apple.com/app/id1470182559` | App Store「米游社」，com.miHoYo.mhybbs |
 | WPS `wps` | `https://apps.apple.com/app/id599852710` | App Store「WPS Office」，com.kingsoft.www.office.wpsoffice |
 | 腾讯视频 `tenvideo` | `https://apps.apple.com/app/id458318329` | App Store「腾讯视频」，com.tencent.live4iphone |
+| 小黑盒 `heybox` | `https://apps.apple.com/app/id1244505010` | App Store「小黑盒」，com.max.xiaoheihe |
 | 灵狐灵购 `linghu` | `https://apps.apple.com/app/id6753839135` | App Store「灵狐灵购」，com.dreame.yx |
 | 龙湖天街 App `lhtj_app` | `https://apps.apple.com/app/id6636468806` | App Store「龙湖」，com.longfor.supera，官方描述写明涵盖龙湖天街会员服务 |
 | 百度网盘 `baidunetdisk` | `https://apps.apple.com/app/id547166701` | App Store「百度网盘」，com.baidu.netdisk |
