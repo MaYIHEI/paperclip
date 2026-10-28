@@ -72,7 +72,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 // 补签入口:请求 http://1.1.1.1/checkin/cmcc 时现跑一次签到,跑完把本脚本的签到状态作为响应返回
 const CHECKIN_RUN = typeof $request !== "undefined" && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" }, body: $.getdata("cmcc_status") || "{}" } }); }
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const K_LOGIN = "cmcc_login";    // 登录信封数组(JSON 数组,每元素一个账号;单一数据源)
@@ -105,7 +105,7 @@ const httpGet = (opt) => new Promise((ok) => $.get(opt, (err, resp, data) => ok(
 const decBiz = (data) => { for (const kv of [[BSK, BIV], [LSK, LIV]]) { try { const x = decStr(data || "", kv[0], kv[1]); if (/^\s*[{[]/.test(x)) return x; } catch (e) {} } return ""; };
 const peelJson = (s) => { s = String(s || ""); if (/^\s*[{[]/.test(s)) return s; try { const p = u8s(b64dec(s)); if (/^\s*[{[]/.test(p)) return p; } catch (e) {} return s; };
 const maskPhone = (p) => (p && p.length === 11 ? p.slice(0, 3) + "****" + p.slice(7) : p || "");
-const saveStatus = (s, msg) => checkinReport(K_STATUS, { s, msg }, { name: "中国移动", author: "MaYIHEI", run: "http://1.1.1.1/checkin/cmcc" });
+const saveStatus = (s, msg) => checkinReport(K_STATUS, { s, msg }, { name: "中国移动", author: "MaYIHEI", run: "http://1.1.1.1/checkin/cmcc", open: "https://apps.apple.com/app/id583700738" });
 
 // 转发会话 cookie
 function pickCookie(headers) {
