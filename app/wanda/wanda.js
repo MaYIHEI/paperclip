@@ -116,7 +116,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('wanda_status') || '{}' } }); }
 
-const SCRIPT_VERSION = '2026-10-28.r1'; // 改用 App 渠道签名,恢复签到
+const SCRIPT_VERSION = '2026-10-28.r2'; // 改用 App 渠道签名,恢复签到
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'wanda_data';
@@ -290,7 +290,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('wanda_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('wanda_status', { s, msg }, { name: '万达电影', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/wanda' });
+    checkinReport('wanda_status', { s, msg }, { name: '万达电影', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/wanda', open: 'https://apps.apple.com/app/id517644732' });
 }
 
 function todayCN() {
