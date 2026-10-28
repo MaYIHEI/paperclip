@@ -50,7 +50,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 // 补签入口:请求 http://1.1.1.1/checkin/sgcc 时现跑一次签到,跑完把本脚本的签到状态作为响应返回
 const CHECKIN_RUN = typeof $request !== "undefined" && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" }, body: $.getdata("sgcc_status") || "{}" } }); }
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const KEY_PHONE = "sgcc_phone";       // 账号(手机号)
@@ -160,14 +160,14 @@ async function ensureLogin(force) {
 
 // ----- 签到(与 App 签到页同一请求)-----
 const signin = (sess) => call(P_SIGN, { sourceAddr: "0101-1015", timestamp: Date.now(), activityCode: "ACT20201212" }, { sess });
-// 可用签到金余额(签到页同一查询);只用于通知展示,查不到就不显示
-async function goldText(sess) {
-  try { const d = await call(P_GOLD, {}, { sess }); return String(d.rtnCode) === "1" && !isNaN(d.rtnData) ? `签到金余额 ${d.rtnData}` : ""; }
-  catch (e) { $.log(`[WARN] 查询签到金余额失败: ${e.message || e}`); return ""; }
+// 可用签到金余额(签到页同一查询);查不到返回 null,通知里就不显示
+async function goldValue(sess) {
+  try { const d = await call(P_GOLD, {}, { sess }); return String(d.rtnCode) === "1" && !isNaN(d.rtnData) ? d.rtnData : null; }
+  catch (e) { $.log(`[WARN] 查询签到金余额失败: ${e.message || e}`); return null; }
 }
 
 // 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
-function saveStatus(s, msg) {
+function saveStatus(s, msg, asset) {
   msg = String(msg).slice(0, 100);
   // 服务器明确提示登录过期的失败,按需要重新抓取处理
   if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
@@ -178,7 +178,7 @@ function saveStatus(s, msg) {
     try { old = JSON.parse($.getdata("sgcc_status") || "null"); } catch (e) {}
     if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
   }
-  checkinReport("sgcc_status", { s, msg }, { name: "网上国网", author: "MaYIHEI", run: "http://1.1.1.1/checkin/sgcc" });
+  checkinReport("sgcc_status", { s, msg, asset }, { name: "网上国网", author: "MaYIHEI", run: "http://1.1.1.1/checkin/sgcc" });
 }
 
 async function main() {
@@ -200,9 +200,11 @@ async function main() {
   }
   // rtnCode 1=签到成功(rtnData=获得签到金),102007=今日已签
   const code = String(d.rtnCode);
-  const gold = code === "1" || code === "102007" ? await goldText(sess) : "";
-  if (code === "1") { saveStatus("ok", isNaN(d.rtnData) ? "签到成功" : `+${d.rtnData} 签到金`); $.msg("✅ 网上国网签到", "今日签到完成 ✓", [isNaN(d.rtnData) ? "" : `获得 ${d.rtnData} 签到金`, gold].filter(Boolean).join(" · ")); }
-  else if (code === "102007") { saveStatus("ok", "今日已签到"); $.msg("✅ 网上国网签到", "今日已签到", gold); }
+  const goldV = code === "1" || code === "102007" ? await goldValue(sess) : null;
+  const gold = goldV != null ? `签到金余额 ${goldV}` : "";
+  const asset = goldV != null ? `签到金 ${goldV}` : undefined;
+  if (code === "1") { saveStatus("ok", isNaN(d.rtnData) ? "签到成功" : `+${d.rtnData} 签到金`, asset); $.msg("✅ 网上国网签到", "今日签到完成 ✓", [isNaN(d.rtnData) ? "" : `获得 ${d.rtnData} 签到金`, gold].filter(Boolean).join(" · ")); }
+  else if (code === "102007") { saveStatus("ok", "今日已签到", asset); $.msg("✅ 网上国网签到", "今日已签到", gold); }
   else { saveStatus("fail", `${d.rtnMessage || ""} [${d.rtnCode}]`); $.msg("⚠️ 网上国网签到", "签到失败", `${d.rtnMessage || ""} [${d.rtnCode}]`); }
 }
 
