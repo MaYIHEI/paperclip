@@ -1,11 +1,11 @@
 /**
  * 签到汇总 · 一条通知看完所有签到脚本今天的结果和奖励
  *
- * 汇总:读取各签到脚本最近一次运行结果;cron 每天 11:30,也可随时手动运行
+ * 汇总:读取登记在 checkin_registry 里的各签到脚本最近一次结果;cron 每天 11:30,也可随时手动运行
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-26
+ * @Updated: 2026-10-28
  *
  * ===== Loon =====
  * [Script]
@@ -33,10 +33,10 @@
 
 const $ = new Env("Paperclip 签到汇总");
 
-const SCRIPT_VERSION = "2026-10-26.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
-// [显示名, 状态 key];没装或从未运行的脚本没有记录,自动跳过
+// 本仓库脚本 [显示名, 状态 key]:登记索引里还没有它们时兜底;没装或从未运行的脚本没有记录,自动跳过
 const SCRIPTS = [
     ["微博超话", "weibotalk_status"],
     ["腾讯视频", "tenvideo_status"],
@@ -72,38 +72,63 @@ const SCRIPTS = [
     ["林里", "linli_status"],
 ];
 
-// 签到合集插件会传入各脚本开关,只汇总打开的脚本
-const enabled = typeof $argument === "object" && $argument ? $argument : null;
-const today = day(Date.now());
-const cookie = [], fail = [], ok = [];
-let unused = 0;
-for (const [name, key] of SCRIPTS) {
-    if (enabled && enabled[key.replace(/_status$/, "")] !== true) continue;
-    let r;
-    try { r = JSON.parse($.getdata(key) || "null"); } catch (e) { r = null; }
-    if (!r) continue;
-    if (r.s === "none") { unused++; continue; } // 没抓过 Cookie 或没配账号,不算问题
-    const label = `${name}${day(r.t) === today ? "" : `(${day(r.t)})`}`; // 不是今天的结果标上日期
-    if (r.s === "ok") ok.push(`${label} ${reward(r.msg)}`);
-    else if (r.s === "cookie") cookie.push(label);
-    else fail.push(`${label}(${r.msg})`);
+// 签到状态协议 v1:各脚本把自己登记在 checkin_registry({状态 key: {name, author}}),这里按索引发现脚本
+let registry = {};
+try { registry = JSON.parse($.getdata("checkin_registry") || "{}") || {}; } catch (e) {}
+const own = new Map(SCRIPTS.map(([name, key]) => [key, name]));
+const keys = [...new Set([...own.keys(), ...Object.keys(registry)])];
+
+// 数据地址:请求 http://1.1.1.1/checkin/all 时返回索引和全部签到状态,只读,不受开关影响,不发通知
+if (typeof $request !== "undefined") {
+    const status = {};
+    for (const key of keys) {
+        try { const r = JSON.parse($.getdata(key) || "null"); if (r) status[key] = r; } catch (e) {}
+    }
+    $.done({ response: { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" }, body: JSON.stringify({ v: 1, t: Date.now(), registry, status }) } });
+} else {
+    summarize();
 }
 
-const counts = [ok.length && `✅ ${ok.length} 成功`, cookie.length && `⚠️ ${cookie.length} 需重抓`, fail.length && `❌ ${fail.length} 失败`].filter(Boolean);
-const lines = [];
-if (cookie.length) lines.push(`需重新抓取:${cookie.join("、")}`);
-if (fail.length) lines.push(`失败:${fail.join("、")}`);
-lines.push(...ok);
-if (unused) lines.push(`未使用 ${unused} 个`);
-if (!lines.length) lines.push("暂无记录,签到脚本运行一次后会自动登记");
-$.msg($.name, counts.join(" · "), lines.join("\n"));
-$.done();
+function summarize() {
+    // 签到合集插件会传入本仓库各脚本开关,只汇总打开的;别的作者登记的脚本不受开关影响
+    const enabled = typeof $argument === "object" && $argument ? $argument : null;
+    const today = day(Date.now());
+    const cookie = [], fail = [], ok = [];
+    let unused = 0;
+    for (const key of keys) {
+        if (enabled && own.has(key) && enabled[key.replace(/_status$/, "")] !== true) continue;
+        let r;
+        try { r = JSON.parse($.getdata(key) || "null"); } catch (e) { r = null; }
+        if (!r) continue;
+        if (r.s === "none") { unused++; continue; } // 没抓过 Cookie 或没配账号,不算问题
+        const name = (registry[key] && registry[key].name) || r.name || own.get(key) || key;
+        const label = `${name}${day(r.t) === today ? "" : `(${day(r.t)})`}`; // 不是今天的结果标上日期
+        if (r.s === "ok") ok.push(`${label} ${reward(r.msg)}${assetText(r)}`);
+        else if (r.s === "cookie") cookie.push(label);
+        else fail.push(`${label}(${r.msg})`);
+    }
+
+    const counts = [ok.length && `✅ ${ok.length} 成功`, cookie.length && `⚠️ ${cookie.length} 需重抓`, fail.length && `❌ ${fail.length} 失败`].filter(Boolean);
+    const lines = [];
+    if (cookie.length) lines.push(`需重新抓取:${cookie.join("、")}`);
+    if (fail.length) lines.push(`失败:${fail.join("、")}`);
+    lines.push(...ok);
+    if (unused) lines.push(`未使用 ${unused} 个`);
+    if (!lines.length) lines.push("暂无记录,签到脚本运行一次后会自动登记");
+    $.msg($.name, counts.join(" · "), lines.join("\n"));
+    $.done();
+}
 
 // 成功记录里去掉「签到成功」前缀,只留奖励;没有奖励时写「今日已签」/「签到成功」
 function reward(msg) {
     const m = String(msg || "").trim();
     if (/^今日已签/.test(m)) return "今日已签";
     return m.replace(/^签到成功\s*/, "") || "签到成功";
+}
+
+// 资产数值(如「积分 735」);奖励文字里已经写了就不重复
+function assetText(r) {
+    return r.asset && !String(r.msg || "").includes(r.asset) ? ` · ${r.asset}` : "";
 }
 
 // 北京时间 MM-DD

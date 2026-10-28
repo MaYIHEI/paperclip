@@ -95,6 +95,8 @@ script-providers:
 | 2026-05 | 适配新接口: `cardlist` → `container_timeline_topicsub`(POST+since_id);双 cookie 模式适配 X-Validator |
 | 2026-05-24 | tag 统一为 `微博超话 Cookie` / `微博超话签到`,加 img-url 图标 |
 | 2026-10-15 | 记录每次签到结果,可用「[Cookie 体检](../summary/)」一条通知查看是否需要重新抓取 |
+| 2026-10-27 | 签到结果按签到状态协议 v1 记录,并登记到公共索引,供签到汇总和桌面小组件读取 |
+| 2026-10-28 | 当天重复运行时,保留早上的奖励记录并补上本次查到的资产等信息 |
 
 ## 已知限制
 

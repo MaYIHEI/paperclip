@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-18
+ * @Updated: 2026-10-28
  *
  * ===== Loon =====
  * [MITM]
@@ -56,7 +56,11 @@ const $ = new Env("北京华联");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
+// 补签入口:请求 http://1.1.1.1/checkin/bhg 时现跑一次签到,跑完把本脚本的签到状态作为响应返回
+const CHECKIN_RUN = typeof $request !== "undefined" && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
+if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" }, body: $.getdata("bhg_status") || "{}" } }); }
+
+const SCRIPT_VERSION = "2026-10-28.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 const CK_NAME = "bhg_token";
 const MALL_KEY = "bhg_mallid"; // 华联是连锁,mall_id 不在 JWT 里,从抓取 URL 提取后存这里
@@ -163,7 +167,8 @@ async function checkin() {
     }
 
     // 真实积分余额签到接口里没有,单独拉会员信息(member.info)取 —— 此时已签完,余额是最新的
-    const balLine = await balanceLine(mallId, payload.sub);
+    const { line: balLine, point } = await balanceLine(mallId, payload.sub);
+    const asset = point != null ? `积分 ${point}` : undefined;
 
     // 成功:checkInRecord 的 data 字段含义混乱(extra 是逐日累加器、total_point 不是余额),
     // 改从 checkInForm 取准确数字 —— 签到后再拉一次拿到更新后的连签/累计/本月
@@ -177,7 +182,7 @@ async function checkin() {
             (res.data && (res.data.point_total || res.data.point)) ||
             (sum && sum.todayEarned) ||
             0;
-        saveStatus("ok", `签到成功 +${earned} 分`);
+        saveStatus("ok", `签到成功 +${earned} 分`, asset);
         $.messages.push(`✅ 签到成功: +${earned} 分${statLine(sum)}${balLine}`);
         return;
     }
@@ -186,7 +191,7 @@ async function checkin() {
     if (res.code === 400 || res.code === 422 || /已签|已经签到/.test(res.msg || "")) {
         const sum = summarizeForm(formRes);
         const earned = sum && sum.todayEarned ? ` (+${sum.todayEarned} 分)` : "";
-        saveStatus("ok", "今日已签到");
+        saveStatus("ok", "今日已签到", asset);
         $.messages.push(`✨ 今日已签到${earned}${statLine(sum)}${balLine}`);
         return;
     }
@@ -224,15 +229,15 @@ function summarizeForm(formRes) {
 // 拉会员信息取真实积分余额:member.info = restful/mall/{mall}/member/{member}
 //   member_id = JWT 的 sub;余额字段优先 data.balance,否则 data.point;data.level_name = 会员等级
 async function balanceLine(mallId, memberId) {
-    if (!memberId) return "";
+    if (!memberId) return { line: "", point: null };
     const res = await request("GET", `restful/mall/${mallId}/member/${memberId}`, null);
     debug(res, "member.info");
     const d = res && res.data;
-    if (!d || typeof d !== "object") return "";
+    if (!d || typeof d !== "object") return { line: "", point: null };
     const point =
         typeof d.balance === "number" ? d.balance : typeof d.point === "number" ? d.point : null;
-    if (point == null) return "";
-    return `\n💰 当前积分: ${point}${d.level_name ? ` · ${d.level_name}` : ""}`;
+    if (point == null) return { line: "", point: null };
+    return { line: `\n💰 当前积分: ${point}${d.level_name ? ` · ${d.level_name}` : ""}`, point };
 }
 
 // 拼装连签/累计/本月附加行,字段缺失时自动省略
@@ -250,18 +255,19 @@ function statLine(sum) {
 // ============ 请求 ============
 
 // 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
-function saveStatus(s, msg) {
+function saveStatus(s, msg, asset) {
     msg = String(msg).slice(0, 100);
     // 服务器明确提示登录过期的失败,按需要重新抓取处理
     if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
-    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它的奖励文字,只合并本次的资产等信息
+    let keep = null;
     if (s === "ok" && /^今日已/.test(msg)) {
         const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
         let old = null;
         try { old = JSON.parse($.getdata("bhg_status") || "null"); } catch (e) {}
-        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) keep = old;
     }
-    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), "bhg_status");
+    checkinReport("bhg_status", keep ? keepReward(keep, { s, msg, asset, exp: cookieExp() }) : { s, msg, asset, exp: cookieExp() }, { name: "北京华联", author: "MaYIHEI", run: "http://1.1.1.1/checkin/bhg", open: "weixin://" });
 }
 
 function request(method, path, body) {
@@ -464,7 +470,7 @@ function hmacSHA256Hex(message, key) {
 
 // ============ 入口 ============
 
-if (typeof $request !== "undefined") {
+if (typeof $request !== "undefined" && !CHECKIN_RUN) {
     getCookie();
     $.done();
 } else {
@@ -495,6 +501,32 @@ if (typeof $request !== "undefined") {
             await sendMsg($.messages.join("\n"));
             $.done();
         });
+}
+
+// Cookie(token 是 JWT)的过期时间,毫秒;JWT 里没有 exp 就不写
+function cookieExp() {
+    const p = parseJWT($.token || "");
+    return p && typeof p.exp === "number" ? p.exp * 1000 : undefined;
+}
+
+// 保留当天带奖励的旧记录(状态、奖励文字、时间),合并本次拿到的资产、过期时间等;本次没有的沿用旧值
+function keepReward(old, rec) {
+    const out = { s: old.s, msg: old.msg, t: old.t, asset: old.asset, exp: old.exp };
+    for (const k in rec) if (rec[k] !== undefined && k !== "s" && k !== "msg") out[k] = rec[k];
+    return out;
+}
+
+// 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
+function checkinReport(key, rec, info) {
+    const read = (k) => (typeof $prefs !== "undefined" ? $prefs.valueForKey(k) : $persistentStore.read(k));
+    const write = (v, k) => (typeof $prefs !== "undefined" ? $prefs.setValueForKey(v, k) : $persistentStore.write(v, k));
+    const registry = () => { try { return JSON.parse(read("checkin_registry") || "{}") || {}; } catch (e) { return {}; } };
+    write(JSON.stringify(Object.assign({ v: 1, t: Date.now(), name: info.name, author: info.author }, rec)), key);
+    const reg = registry();
+    if (JSON.stringify(reg[key]) === JSON.stringify(info)) return;
+    reg[key] = info;
+    write(JSON.stringify(reg), "checkin_registry");
+    if (!registry()[key]) console.log(`[checkin] ${key} 登记没写上,下次运行再补`);
 }
 
 // prettier-ignore

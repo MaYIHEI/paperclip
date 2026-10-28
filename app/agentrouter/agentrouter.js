@@ -7,7 +7,7 @@
  * @Author: @773075692 <https://github.com/773075692/agentrouter-checkin>
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-20
+ * @Updated: 2026-10-28
  *
  * ===== Loon =====
  * [Argument]
@@ -45,7 +45,7 @@ const $ = new Env("AgentRouter");
 // 签到合集开启「统一通知」时不单独弹通知,结果由签到汇总统一发送
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
-const SCRIPT_VERSION = "2026-10-20.r7";
+const SCRIPT_VERSION = "2026-10-28.r3";
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const USER_KEY = "agentrouter_username";
@@ -109,7 +109,7 @@ async function run() {
     const failed = results.find((result) => result.title === "❌ 运行失败");
     if (loginFailed) saveStatus("cookie", "登录失败,请检查账号密码");
     else if (failed) saveStatus("fail", failed.content);
-    else saveStatus("ok", results.map((result) => result.content.split("\n")[0].replace(/^🎁\s*/, "")).join(" · "));
+    else saveStatus("ok", results.map((result) => result.content.split("\n")[0].replace(/^🎁\s*/, "")).join(" · "), results.length === 1 ? results[0].balance : undefined); // 多账号不合并余额
     if (results.length === 1) {
         $.msg($.name, results[0].title, `👤 账号：${maskAccount(accounts[0].username)}\n${results[0].content}`);
     } else {
@@ -174,7 +174,7 @@ async function checkin({ username, password }, quotaUnit) {
         Cookie: cookie,
         "New-API-User": String(data.id),
     };
-    let stats;
+    let stats, balance;
     try {
         const profile = await request("GET", "/api/user/self", userHeaders, undefined, "余额查询");
         const quota = profile.json.data && profile.json.data.quota;
@@ -183,6 +183,7 @@ async function checkin({ username, password }, quotaUnit) {
         }
         const user = profile.json.data;
         stats = `${formatAmount("💳 当前余额", quota, quotaUnit)}\n${formatAmount("📉 累计消耗", user.used_quota, quotaUnit)}`;
+        balance = quotaUnit === null ? `额度 ${quota}` : `余额 $${(quota / quotaUnit).toFixed(2)}`;
         if (Number.isInteger(user.request_count) && user.request_count >= 0) {
             stats += `\n⚡ 累计调用：${user.request_count} 次`;
         }
@@ -213,26 +214,27 @@ async function checkin({ username, password }, quotaUnit) {
         // 新增标记与本次登录期间的记录同时成立，才将奖励归于本次运行。
         const isNew = data.checked_in === true && checkinRecord.created_at >= loginStarted && checkinRecord.created_at <= loginFinished;
         const reward = formatCheckinReward(checkinRecord.content, isNew);
-        return { title: "✅ 今日签到已确认", content: `${reward}\n${stats}\n🕒 签到时间：${clock}` };
+        return { title: "✅ 今日签到已确认", content: `${reward}\n${stats}\n🕒 签到时间：${clock}`, balance };
     } else {
         const state = data.checked_in === true ? "服务端返回已签到，但日志尚未确认" : "登录成功，签到状态尚未确认";
-        return { title: "⚠️ 签到待确认", content: `🎁 签到奖励：待确认\n${stats}\n\n${state}\n${detail}` };
+        return { title: "⚠️ 签到待确认", content: `🎁 签到奖励：待确认\n${stats}\n\n${state}\n${detail}`, balance };
     }
 }
 
 // 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
-function saveStatus(s, msg) {
+function saveStatus(s, msg, asset) {
     msg = String(msg).slice(0, 100);
     // 服务器明确提示登录过期的失败,按需要重新抓取处理
     if (s === "fail" && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = "cookie";
-    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它的奖励文字,只合并本次的资产等信息
+    let keep = null;
     if (s === "ok" && /^今日已/.test(msg)) {
         const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
         let old = null;
         try { old = JSON.parse($.getdata("agentrouter_status") || "null"); } catch (e) {}
-        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+        if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) keep = old;
     }
-    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), "agentrouter_status");
+    checkinReport("agentrouter_status", keep ? keepReward(keep, { s, msg, asset }) : { s, msg, asset }, { name: "AgentRouter", author: "MaYIHEI" });
 }
 
 function maskAccount(username) {
@@ -316,6 +318,26 @@ function request(method, path, headers, body, label) {
 
 function debug(message) {
     if (PLUGIN.debug === true || $.getdata(DEBUG_KEY) === "true") $.log(`[DEBUG] ${message}`);
+}
+
+// 保留当天带奖励的旧记录(状态、奖励文字、时间),合并本次拿到的资产、过期时间等;本次没有的沿用旧值
+function keepReward(old, rec) {
+    const out = { s: old.s, msg: old.msg, t: old.t, asset: old.asset, exp: old.exp };
+    for (const k in rec) if (rec[k] !== undefined && k !== "s" && k !== "msg") out[k] = rec[k];
+    return out;
+}
+
+// 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
+function checkinReport(key, rec, info) {
+    const read = (k) => (typeof $prefs !== "undefined" ? $prefs.valueForKey(k) : $persistentStore.read(k));
+    const write = (v, k) => (typeof $prefs !== "undefined" ? $prefs.setValueForKey(v, k) : $persistentStore.write(v, k));
+    const registry = () => { try { return JSON.parse(read("checkin_registry") || "{}") || {}; } catch (e) { return {}; } };
+    write(JSON.stringify(Object.assign({ v: 1, t: Date.now(), name: info.name, author: info.author }, rec)), key);
+    const reg = registry();
+    if (JSON.stringify(reg[key]) === JSON.stringify(info)) return;
+    reg[key] = info;
+    write(JSON.stringify(reg), "checkin_registry");
+    if (!registry()[key]) console.log(`[checkin] ${key} 登记没写上,下次运行再补`);
 }
 
 function Env(s) {

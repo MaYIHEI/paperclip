@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-18
+ * @Updated: 2026-10-28
  *
  * ===== Loon =====
  * [MITM]
@@ -56,7 +56,11 @@ const $ = new Env("一点万象");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-18.r3"; // 改一次 +1,确认拉到最新版
+// 补签入口:请求 http://1.1.1.1/checkin/newmixc 时现跑一次签到,跑完把本脚本的签到状态作为响应返回
+const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
+if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('newmixc_status') || '{}' } }); }
+
+const SCRIPT_VERSION = "2026-10-28.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'newmixc_data';
@@ -115,7 +119,7 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
         debug(`sign 完整返回: ${JSON.stringify(r)}`);
         if (!r || r.code !== 0) {
             const m = (r && (r.message || r.msg)) || JSON.stringify(r).slice(0, 200);
-            saveStatus(/已签|签过|不可重复/.test(m) ? 'ok' : 'fail', m);
+            saveStatus(/已签|签过|不可重复/.test(m) ? 'ok' : 'fail', m, st.balance != null ? `积分 ${st.balance}` : undefined);
             if (/已签|签过|不可重复/.test(m)) {
                 $.msg('一点万象', `✨ ${phoneMasked} 今日已签`, `${m}${statTail(st)}`);
             } else if (/频繁|稍后|过于/.test(m)) {
@@ -131,7 +135,6 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
         const sd = (r.data && r.data.signDataMap) || {};
         const todayPoint = sd.todayPoint || r.data.point || 0;
         $.log(`✅ 签到成功 +${todayPoint} 积分`);
-        saveStatus('ok', `签到成功 +${todayPoint} 积分`);
 
         // 3. 尝试领阶段奖(签到接口本身已发主积分,nextStep 可能有连签奖)
         let extraMsg = '';
@@ -153,6 +156,7 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
         // 签到后重查一次,拿更新后的真实积分 + 连签(签到响应里 userPoints 不是余额)
         const after = parseStatus(await call(ck, 'mixc.app.memberSign.latticeList'));
         const tail = statTail(after.balance != null || after.streak != null ? after : st);
+        saveStatus('ok', `签到成功 +${todayPoint} 积分`, after.balance != null ? `积分 ${after.balance}` : undefined);
         const body = `+${todayPoint} 积分${tail}${extraMsg}`;
         $.msg('一点万象', `✅ ${phoneMasked} 签到成功`, body);
     } catch (e) {
@@ -167,18 +171,19 @@ if (JSON.parse($.getdata("newmixc_clear") || "false")) {
 
 // 从 latticeList 响应提取真实积分余额(remaindPoints)和当前连签(currentStep)
 // 记录本次结果,供「签到汇总」:ok 正常 / cookie 需重新抓取 / fail 其他失败 / none 未使用
-function saveStatus(s, msg) {
+function saveStatus(s, msg, asset) {
     msg = String(msg).slice(0, 100);
     // 服务器明确提示登录过期的失败,按需要重新抓取处理
     if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
-    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它的奖励文字,只合并本次的资产等信息
+    let keep = null;
     if (s === 'ok' && /^今日已/.test(msg)) {
         const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
         let old = null;
         try { old = JSON.parse($.getdata('newmixc_status') || 'null'); } catch (e) {}
-        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) keep = old;
     }
-    $.setdata(JSON.stringify({ s, msg, t: Date.now() }), 'newmixc_status');
+    checkinReport('newmixc_status', keep ? keepReward(keep, { s, msg, asset }) : { s, msg, asset }, { name: '一点万象', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/newmixc', open: 'https://apps.apple.com/app/id1142151719' });
 }
 
 function parseStatus(status) {
@@ -467,6 +472,26 @@ function md5(str) {
 function debug(content) {
     if (($.getdata("newmixc_debug") || "false") !== "true") return;
     $.log(`[DEBUG] ${typeof content === "string" ? content : JSON.stringify(content)}`);
+}
+
+// 保留当天带奖励的旧记录(状态、奖励文字、时间),合并本次拿到的资产、过期时间等;本次没有的沿用旧值
+function keepReward(old, rec) {
+    const out = { s: old.s, msg: old.msg, t: old.t, asset: old.asset, exp: old.exp };
+    for (const k in rec) if (rec[k] !== undefined && k !== 's' && k !== 'msg') out[k] = rec[k];
+    return out;
+}
+
+// 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
+function checkinReport(key, rec, info) {
+    const read = (k) => (typeof $prefs !== 'undefined' ? $prefs.valueForKey(k) : $persistentStore.read(k));
+    const write = (v, k) => (typeof $prefs !== 'undefined' ? $prefs.setValueForKey(v, k) : $persistentStore.write(v, k));
+    const registry = () => { try { return JSON.parse(read('checkin_registry') || '{}') || {}; } catch (e) { return {}; } };
+    write(JSON.stringify(Object.assign({ v: 1, t: Date.now(), name: info.name, author: info.author }, rec)), key);
+    const reg = registry();
+    if (JSON.stringify(reg[key]) === JSON.stringify(info)) return;
+    reg[key] = info;
+    write(JSON.stringify(reg), 'checkin_registry');
+    if (!registry()[key]) console.log(`[checkin] ${key} 登记没写上,下次运行再补`);
 }
 
 function Env(s) {
