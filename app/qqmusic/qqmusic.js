@@ -74,7 +74,7 @@ const $ = new Env("QQ音乐");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = "qqmusic_data"; // { uin, authst, refresh_key, login_type, coin_act_id, coin_scene_id, ts }
@@ -271,7 +271,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata("qqmusic_status") || "null"); } catch (e) {}
         if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport("qqmusic_status", { s, msg }, { name: "QQ音乐", author: "MaYIHEI" });
+    checkinReport("qqmusic_status", { s, msg }, { name: "QQ音乐", author: "MaYIHEI", open: "https://apps.apple.com/app/id414603431" });
 }
 
 async function checkCoinSignIn(snap, uin) {
