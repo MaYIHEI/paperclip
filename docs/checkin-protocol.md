@@ -159,6 +159,27 @@ request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/all(\?|$)/i then script("<�
 | 北京华联 `bhg` | 抓到的 token（JWT） |
 | 龙德广场 `longde` | 抓到的 token（JWT） |
 | 泡泡玛特 `ppmt` | 各账号 PopVip-Auth（JWT），取最早过期的 |
+| 名创优品 `miniso` | 抓到的 skey（JWT） |
+
+带 `asset` 的脚本：
+
+| 脚本 | asset | 来源 |
+|---|---|---|
+| 追觅 `dreame` | `积分 735` | 积分查询 |
+| 灵狐灵购 `linghu` | `积分 N` | 积分查询（与追觅同一套接口） |
+| 一点万象 `newmixc` | `积分 N` | 签到状态里的积分余额 |
+| 味多美 `wedome` | `积分 N` | 签到前后本来就查的积分 |
+| 北京华联 `bhg` / 龙德广场 `longde` | `积分 N` | 会员信息里的积分余额 |
+| 途虎养车 `tuhu` | `积分 N` | 积分查询（单账号时） |
+| 中国移动 `cmcc` | `积分 N` | 积分查询（单账号时） |
+| 网上国网 `sgcc` | `签到金 N` | 签到金余额查询 |
+| 听听FM `tingtingfm` | `金币 N` | 金币查询 |
+| 名创优品 `miniso` | `mini币 N` | mini币余额查询 |
+| 林里 `linli` | `鸭币 N` | 积分商城商品详情里的当前鸭币 |
+| 海底捞 `haidilao` | `碎片 N` | 碎片总数查询（单账号时） |
+| 百度网盘 `baidunetdisk` | `成长值 N` | 会员成长值查询 |
+| NodeSeek `nodeseek` | `鸡腿 N` | 签到返回的当前鸡腿 |
+| AgentRouter `agentrouter` | `余额 $12.30` | 余额查询（单账号时；没有换算比例时为 `额度 N`） |
 
 没有补签入口（不提供 `run`）的脚本：
 
