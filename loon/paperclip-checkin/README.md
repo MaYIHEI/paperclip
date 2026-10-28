@@ -31,6 +31,7 @@ https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/pape
 - 「统一通知」开关默认打开：各脚本不再单独弹通知，11:30 一条汇总，只统计打开了签到开关的脚本，未使用的只计数；关闭后各脚本各自通知
 - 账号、任务开关等设置都在 BoxJS 里填（AgentRouter、网上国网账号、WPS 各项任务等）
 - 补签入口：桌面小组件（或浏览器）打开 `http://1.1.1.1/checkin/<脚本>` 会现跑一次该脚本的签到，返回签到结果；地址见 BoxJS 里 `checkin_registry` 各项的 `run`，跟随该脚本的签到开关
+- 签到数据：打开 `http://1.1.1.1/checkin/all` 一次拿到全部脚本的登记信息和最近签到结果（JSON），只读不签到，签到开关关掉的脚本也会列出
 
 ## 维护记录
 
@@ -43,6 +44,7 @@ https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/pape
 | 2026-10-22 | 加入中国移动（🧪 待验证） |
 | 2026-10-22 | 加入小黑盒（🧪 待验证） |
 | 2026-10-28 | 加入补签入口（25 个脚本），小组件可一键现跑签到 |
+| 2026-10-28 | 加入签到数据地址 `http://1.1.1.1/checkin/all` |
 
 ## 已知限制
 

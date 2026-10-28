@@ -80,6 +80,8 @@ cron "10 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/papercl
 cron "8 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/bhg/bhg.js", {${merge}}) with tag="北京华联签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/bhg.png", enable=${bhg}
 cron "0 10 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/miniprogram/linli/linli.js", {${merge}}) with tag="林里签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/linli.png", enable=${linli}
 
+# 签到数据:小组件请求 http://1.1.1.1/checkin/all 时返回登记索引和全部签到状态 JSON(只读,不跑签到)
+request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/all(\?|$)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/summary/summary.js") with tag="签到数据", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip-checkin.png", timeout=10
 # 补签入口:小组件请求 http://1.1.1.1/checkin/<脚本> 时现跑一次签到,返回签到状态 JSON(慢脚本不提供)
 request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/tenvideo(\?|$)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/tenvideo/tenvideo.js", {${merge}}) with tag="腾讯视频补签", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png", timeout=60, enable=${tenvideo}
 request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/mihoyo(\?|$)/i then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/mihoyo/mihoyo.js", {${merge}}) with tag="米游社补签", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png", timeout=60, enable=${mihoyo}
