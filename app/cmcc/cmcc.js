@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Version: 2026-10-26.r10
+ * @Version: 2026-10-28.r3
  * @Updated: 2026-10-28
  *
  * ===== Loon =====
@@ -72,7 +72,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 // 补签入口:请求 http://1.1.1.1/checkin/cmcc 时现跑一次签到,跑完把本脚本的签到状态作为响应返回
 const CHECKIN_RUN = typeof $request !== "undefined" && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" }, body: $.getdata("cmcc_status") || "{}" } }); }
-const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r3"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const K_LOGIN = "cmcc_login";    // 登录信封数组(JSON 数组,每元素一个账号;单一数据源)
@@ -146,6 +146,9 @@ function capture() {
       const obj = JSON.parse(J);
       if (!obj.xk) throw new Error("登录信封缺 xk");
       const tel = obj.tel || "";
+      const old = loadAccounts().find((x) => telOf(x) === tel);
+      // 同账号凭证没变(小组件等续登请求也会命中),不覆盖、不清签到记录、不弹通知
+      if (old && JSON.parse(old).xk === obj.xk) { $.log("[INFO] 登录凭证未变化,跳过"); $.done(); return; }
       const arr = loadAccounts().filter((x) => telOf(x) !== tel);
       arr.push(J);
       $.setdata(JSON.stringify(arr), K_LOGIN);
