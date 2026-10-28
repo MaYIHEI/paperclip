@@ -63,7 +63,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== "undefined" && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" }, body: $.getdata("nodeseek_status") || "{}" } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r1";
+const SCRIPT_VERSION = "2026-10-28.r2";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
@@ -134,7 +134,7 @@ function saveStatus(s, msg, asset) {
         try { old = JSON.parse($.getdata("nodeseek_status") || "null"); } catch (e) {}
         if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport("nodeseek_status", { s, msg, asset }, { name: "NodeSeek", author: "MaYIHEI", run: "http://1.1.1.1/checkin/nodeseek" });
+    checkinReport("nodeseek_status", { s, msg, asset }, { name: "NodeSeek", author: "MaYIHEI", run: "http://1.1.1.1/checkin/nodeseek", open: "https://www.nodeseek.com" });
 }
 
 // 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
