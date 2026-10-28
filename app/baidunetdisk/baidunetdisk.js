@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('baidunetdisk_status') || '{}' } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY    = 'baidunetdisk_data';
@@ -187,7 +187,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('baidunetdisk_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('baidunetdisk_status', { s, msg }, { name: '百度网盘', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/baidunetdisk' });
+    checkinReport('baidunetdisk_status', { s, msg }, { name: '百度网盘', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/baidunetdisk', open: 'https://apps.apple.com/app/id547166701' });
 }
 
 // 拼「会员成长值 / 等级 / 距下一级 + 估算天数」尾巴(失败不影响主结果)
