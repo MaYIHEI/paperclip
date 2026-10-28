@@ -34,7 +34,7 @@
 ```json
 {
   "wedome_status": {"name":"味多美","author":"MaYIHEI"},
-  "dreame_status": {"name":"追觅","author":"MaYIHEI","run":"http://1.1.1.1/checkin/dreame"},
+  "dreame_status": {"name":"追觅","author":"MaYIHEI","run":"http://1.1.1.1/checkin/dreame","open":"https://apps.apple.com/app/id1564419343"},
   "foo_status": {"name":"某某签到","author":"someone","url":"https://example.com/foo.js"}
 }
 ```
@@ -45,6 +45,7 @@
 | `author` | 是 | 作者 |
 | `url` | 否 | 脚本地址或主页 |
 | `run` | 否 | 补签入口地址，见第 4 节；没有就表示不支持现跑 |
+| `open` | 否 | 「打开 App」跳转地址，方便用户重新抓 Cookie：优先 App 的 URL scheme，其次 App Store 链接 `https://apps.apple.com/app/id<数字>`，网页类填网址，小程序填 `weixin://`（需要手动进入对应小程序）；核实不了就不填 |
 
 - 脚本写结果时，如果索引里没有自己（或自己那一项过时了），就**读出 → 加上自己 → 写回**，写完再读一次确认；没写上（比如两个脚本同时写互相覆盖）就等下次运行再补。
 - 自己那一项和当前要登记的完全一样就不再写，重复登记是幂等的；不一样（比如新加了 `run`）就覆盖自己那一项。
@@ -110,12 +111,38 @@ if (typeof $request !== "undefined" && !CHECKIN_RUN) {
 
 跑一次超过插件 `timeout` 的脚本（多次抽奖、浏览任务要等几十秒、随机签到时间之类）不要提供 `run`。
 
-## 5. 读取方
+## 5. 数据地址（可选，Loon）
+
+`http://1.1.1.1/checkin/all` 一次返回全部数据，读取方（如桌面小组件）不用逐个 key 去读：
+
+```json
+{"v":1,"t":1793154646718,"registry":{...checkin_registry 原样...},"status":{"<状态 key>":{...该 key 的状态记录...}}}
+```
+
+- `status` 包含索引里登记的所有 key（不论作者），没有值的 key 不出现；只读，不跑签到，不发通知。
+- `all` 不是任何脚本的 id，和各脚本的 `checkin/<id>` 规则不会冲突。
+
+插件规则（实现见签到汇总脚本里的 `$request` 分支）：
+
+```ini
+[Script]
+request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/all(\?|$)/i then script("<签到汇总脚本地址>") with tag="签到数据", timeout=10
+```
+
+其他工具：
+
+- **Surge**：http-request 脚本同样支持 `$done({response: {status, headers, body}})`，数据地址和补签入口的脚本可以原样使用，只是规则要写成 Surge 格式，例如 `签到数据 = type=http-request,pattern=^http:\/\/1\.1\.1\.1\/checkin\/all,script-path=<签到汇总脚本地址>,timeout=10`。没有实测。
+- **Stash**：兼容 Surge 风格的请求脚本，按理可以用，但没有实测，这里不给配置。
+- **Quantumult X**：直接返回响应要用 `script-echo-response`，`$done` 的格式也和 Loon / Surge 不一样（`{status: "HTTP/1.1 200 OK", headers, body}`），现在的脚本不能直接用。
+
+## 6. 读取方
 
 1. 读 `checkin_registry`，得到所有登记过的 key；
 2. 逐个读 key，解析 JSON，空值或解析失败视为没有记录；
 3. 用 `t` 判断是不是今天的结果，非今天的建议标上日期；
-4. 有 `exp` 时可以提示凭证快过期；有 `run` 时可以提供补签按钮，请求后用返回的 JSON 直接刷新。
+4. 有 `exp` 时可以提示凭证快过期；有 `run` 时可以提供补签按钮，请求后用返回的 JSON 直接刷新；有 `open` 时可以提供「打开 App」按钮。
+
+用 Loon 时也可以直接请求第 5 节的数据地址，一次拿全。
 
 在 BoxJS 里，这些 key 都可以通过 `/query/data/<key>` 读取。
 
@@ -145,3 +172,31 @@ if (typeof $request !== "undefined" && !CHECKIN_RUN) {
 | 名创优品 `miniso` | 浏览任务每个要等 21～30 秒 |
 | 微博超话 `weibotalk` | 按关注的超话逐个签，数量不定 |
 | 龙湖天街 App `lhtj_app` | 按当天随机时间签到，没到点会直接退出；签完还要把抽奖次数抽完 |
+
+`open` 地址（App Store 编号都用 Apple 官方查询接口 `itunes.apple.com/lookup` 核实过名称、开发商和 bundle id；仓库里没有现成的 URL scheme 依据，所以 App 一律用 App Store 链接）：
+
+| 脚本 | open | 依据 |
+|---|---|---|
+| 小米有品 `youpin` | `https://apps.apple.com/app/id1212182562` | App Store「小米有品」，com.xiaomi.youpin |
+| 一点万象 `newmixc` | `https://apps.apple.com/app/id1142151719` | App Store「一点万象」，com.crland.newMixc |
+| 追觅 `dreame` | `https://apps.apple.com/app/id1564419343` | App Store「DREAME」（追觅生活），com.dreame.smarthome；脚本基于其 2.x 版本 |
+| 徕芬 `laifen` | `https://apps.apple.com/app/id6463205325` | App Store「徕芬」，开发商 Shenzhen Shuye，和脚本的 shuye.com 接口一致 |
+| 小米抽奖 `milottery` | `https://apps.apple.com/app/id1024958046` | 活动在小米商城 App 里，App Store「小米商城」，com.xiaomi.mishop |
+| 小米商城 `mishop` | `https://apps.apple.com/app/id1024958046` | 同上 |
+| 万达电影 `wanda` | `https://apps.apple.com/app/id517644732` | App Store「万达影城」，com.wandafilm.appname，和脚本的 wandafilm.com 接口一致 |
+| QQ 音乐 `qqmusic` | `https://apps.apple.com/app/id414603431` | App Store「QQ音乐」，com.tencent.QQMusic |
+| 123社区 `pan1` | `https://pan1.me` | 网页登录抓取，网址取自脚本 |
+| 中国移动 `cmcc` | `https://apps.apple.com/app/id583700738` | App Store「中国移动（手机营业厅）」，cn.10086.app |
+| 听听FM `tingtingfm` | `https://apps.apple.com/app/id885422779` | App Store「听听FM」，com.tingting.fm |
+| 米游社 `mihoyo` | `https://apps.apple.com/app/id1470182559` | App Store「米游社」，com.miHoYo.mhybbs |
+| WPS `wps` | `https://apps.apple.com/app/id599852710` | App Store「WPS Office」，com.kingsoft.www.office.wpsoffice |
+| 腾讯视频 `tenvideo` | `https://apps.apple.com/app/id458318329` | App Store「腾讯视频」，com.tencent.live4iphone |
+| 小黑盒 `heybox` | `https://apps.apple.com/app/id1244505010` | App Store「小黑盒」，com.max.xiaoheihe |
+| 灵狐灵购 `linghu` | `https://apps.apple.com/app/id6753839135` | App Store「灵狐灵购」，com.dreame.yx |
+| 龙湖天街 App `lhtj_app` | `https://apps.apple.com/app/id6636468806` | App Store「龙湖」，com.longfor.supera，官方描述写明涵盖龙湖天街会员服务 |
+| 百度网盘 `baidunetdisk` | `https://apps.apple.com/app/id547166701` | App Store「百度网盘」，com.baidu.netdisk |
+| NodeSeek `nodeseek` | `https://www.nodeseek.com` | 网页登录抓取，网址取自脚本 README |
+| 扫描全能王 `camscanner` | `https://apps.apple.com/app/id388627783` | App Store「扫描全能王」，com.intsig.CamScannerLite |
+| 微博超话 `weibotalk` | `https://apps.apple.com/app/id350962117` | App Store「微博」，com.sina.weibo |
+| 海底捞、味多美、惠省红包墙、龙湖天街（小程序）、北京华联、途虎养车、名创优品、龙德广场、林里、泡泡玛特 | `weixin://` | 微信小程序，打开微信后需要手动进入对应小程序 |
+| 网上国网 `sgcc`、AgentRouter `agentrouter` | 不填 | 用账号密码自动登录，不需要重新抓 Cookie |
