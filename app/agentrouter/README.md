@@ -85,7 +85,7 @@ cron "0 9 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/papercli
 
 ### 其他平台
 
-Surge、Quantumult X、Stash 继续使用 [BoxJS testing 订阅](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/paperclip.boxjs.json)中的 **AgentRouter（Surge / QX / Stash）**，填写账号密码并按下方配置添加任务。BoxJS 提供调试开关，以及运行一次后生效并复位的「清除账号信息」。
+Surge、Quantumult X、Stash 继续使用 [BoxJS 订阅](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/paperclip.boxjs.json)中的 **AgentRouter（Surge / QX / Stash）**，填写账号密码并按下方配置添加任务。BoxJS 提供调试开关，以及运行一次后生效并复位的「清除账号信息」。
 
 ## Surge
 
