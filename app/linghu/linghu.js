@@ -60,7 +60,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('linghu_status') || '{}' } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_KEY = 'linghu_data';
@@ -263,7 +263,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('linghu_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('linghu_status', { s, msg, exp: cookieExp() }, { name: '灵狐灵购', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/linghu' });
+    checkinReport('linghu_status', { s, msg, exp: cookieExp() }, { name: '灵狐灵购', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/linghu', open: 'https://apps.apple.com/app/id6753839135' });
 }
 
 // 签名: 把盐塞进 security_key 字段, 所有 key 排序后拼 "k=v&k=v..." 再 md5
