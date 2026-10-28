@@ -62,7 +62,7 @@ if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string"
 const CHECKIN_RUN = typeof $request !== 'undefined' && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
 if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8' }, body: $.getdata('tuhu_status') || '{}' } }); }
 
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 $.is_debug = ($.isNode() ? process.env['IS_DEDUG'] : $.getdata('is_debug')) || 'false';  // 调试模式
 $.token = ($.isNode() ? process.env['TUHU_TOKEN'] : $.getdata('tuhu_token')) || '';  // Token
@@ -230,7 +230,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('tuhu_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('tuhu_status', { s, msg }, { name: '途虎养车', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/tuhu' });
+    checkinReport('tuhu_status', { s, msg }, { name: '途虎养车', author: 'MaYIHEI', run: 'http://1.1.1.1/checkin/tuhu', open: 'weixin://' });
 }
 
 // 获取用户积分
