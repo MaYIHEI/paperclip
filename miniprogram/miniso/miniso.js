@@ -56,7 +56,7 @@ const $ = new Env('名创优品');
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-28.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r4"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_NAME = 'miniso_data';
@@ -193,7 +193,7 @@ function saveStatus(s, msg, asset) {
         try { old = JSON.parse($.getdata('miniso_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('miniso_status', { s, msg, asset }, { name: '名创优品', author: 'MaYIHEI', open: 'weixin://' });
+    checkinReport('miniso_status', { s, msg, asset, exp: cookieExp() }, { name: '名创优品', author: 'MaYIHEI', open: 'weixin://' });
 }
 
 // 查任务列表,返回所有未完成的浏览任务(taskType=5)
@@ -531,6 +531,12 @@ if (typeof $request !== "undefined") {
         });
 }
 
+
+// Cookie(skey 是 JWT)的过期时间,毫秒;JWT 里没有 exp 就不写
+function cookieExp() {
+    const p = $.userData && $.userData.skey ? parseJWT($.userData.skey) : null;
+    return p && typeof p.exp === 'number' ? p.exp * 1000 : undefined;
+}
 
 // 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
 function checkinReport(key, rec, info) {
