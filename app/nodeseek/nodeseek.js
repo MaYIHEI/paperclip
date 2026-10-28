@@ -6,7 +6,7 @@
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-27
+ * @Updated: 2026-10-28
  *
  * ===== Loon =====
  * [MITM]
@@ -59,7 +59,11 @@ const $ = new Env("NodeSeek");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-27.r1";
+// 补签入口:请求 http://1.1.1.1/checkin/nodeseek 时现跑一次签到,跑完把本脚本的签到状态作为响应返回
+const CHECKIN_RUN = typeof $request !== "undefined" && /^http:\/\/1\.1\.1\.1\/checkin\//.test($request.url);
+if (CHECKIN_RUN) { const end = $.done.bind($); $.done = () => end({ response: { status: 200, headers: { "Content-Type": "application/json; charset=utf-8" }, body: $.getdata("nodeseek_status") || "{}" } }); }
+
+const SCRIPT_VERSION = "2026-10-28.r1";
 $.log("[INFO] 脚本版本 " + SCRIPT_VERSION);
 
 const UA_FALLBACK = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
@@ -130,7 +134,7 @@ function saveStatus(s, msg, asset) {
         try { old = JSON.parse($.getdata("nodeseek_status") || "null"); } catch (e) {}
         if (old && old.s === "ok" && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport("nodeseek_status", { s, msg, asset }, { name: "NodeSeek", author: "MaYIHEI" });
+    checkinReport("nodeseek_status", { s, msg, asset }, { name: "NodeSeek", author: "MaYIHEI", run: "http://1.1.1.1/checkin/nodeseek" });
 }
 
 // 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
@@ -140,7 +144,7 @@ function checkinReport(key, rec, info) {
     const registry = () => { try { return JSON.parse(read("checkin_registry") || "{}") || {}; } catch (e) { return {}; } };
     write(JSON.stringify(Object.assign({ v: 1, t: Date.now(), name: info.name, author: info.author }, rec)), key);
     const reg = registry();
-    if (reg[key]) return;
+    if (JSON.stringify(reg[key]) === JSON.stringify(info)) return;
     reg[key] = info;
     write(JSON.stringify(reg), "checkin_registry");
     if (!registry()[key]) console.log(`[checkin] ${key} 登记没写上,下次运行再补`);
