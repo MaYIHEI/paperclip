@@ -58,7 +58,7 @@ const $ = new Env("微博超话");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-28.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 $.delete_cookie = false;
@@ -344,7 +344,7 @@ function saveStatus(s, msg) {
         try { old = JSON.parse($.getdata('weibotalk_status') || 'null'); } catch (e) {}
         if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
     }
-    checkinReport('weibotalk_status', { s, msg }, { name: '微博超话', author: 'MaYIHEI' });
+    checkinReport('weibotalk_status', { s, msg }, { name: '微博超话', author: 'MaYIHEI', open: 'https://apps.apple.com/app/id350962117' });
 }
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
