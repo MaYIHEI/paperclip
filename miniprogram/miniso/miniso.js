@@ -56,7 +56,7 @@ const $ = new Env('名创优品');
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-28.r4"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-10-28.r5"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 const CK_NAME = 'miniso_data';
@@ -186,14 +186,15 @@ function saveStatus(s, msg, asset) {
     msg = String(msg).slice(0, 100);
     // 服务器明确提示登录过期的失败,按需要重新抓取处理
     if (s === 'fail' && /过期|重新登录|未登录|请登录|登录失效|登录已失效|token\s*(失效|过期|无效)|not\s*login/i.test(msg)) s = 'cookie';
-    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它
+    // 同一天已有带奖励的成功记录时,再次运行得到的「今日已签」不覆盖它的奖励文字,只合并本次的资产等信息
+    let keep = null;
     if (s === 'ok' && /^今日已/.test(msg)) {
         const day = (t) => new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
         let old = null;
         try { old = JSON.parse($.getdata('miniso_status') || 'null'); } catch (e) {}
-        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) return;
+        if (old && old.s === 'ok' && !/^今日已/.test(old.msg) && day(old.t) === day(Date.now())) keep = old;
     }
-    checkinReport('miniso_status', { s, msg, asset, exp: cookieExp() }, { name: '名创优品', author: 'MaYIHEI', open: 'weixin://' });
+    checkinReport('miniso_status', keep ? keepReward(keep, { s, msg, asset, exp: cookieExp() }) : { s, msg, asset, exp: cookieExp() }, { name: '名创优品', author: 'MaYIHEI', open: 'weixin://' });
 }
 
 // 查任务列表,返回所有未完成的浏览任务(taskType=5)
@@ -536,6 +537,13 @@ if (typeof $request !== "undefined") {
 function cookieExp() {
     const p = $.userData && $.userData.skey ? parseJWT($.userData.skey) : null;
     return p && typeof p.exp === 'number' ? p.exp * 1000 : undefined;
+}
+
+// 保留当天带奖励的旧记录(状态、奖励文字、时间),合并本次拿到的资产、过期时间等;本次没有的沿用旧值
+function keepReward(old, rec) {
+    const out = { s: old.s, msg: old.msg, t: old.t, asset: old.asset, exp: old.exp };
+    for (const k in rec) if (rec[k] !== undefined && k !== 's' && k !== 'msg') out[k] = rec[k];
+    return out;
 }
 
 // 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
