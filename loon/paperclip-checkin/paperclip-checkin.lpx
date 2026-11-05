@@ -41,9 +41,13 @@ lhtj = switch,true,tag=【龙湖天街】签到
 wedome = switch,true,tag=【味多美】签到
 bhg = switch,true,tag=【北京华联】签到
 linli = switch,true,tag=【林里】签到
+push_key = input,"",tag=【小组件推送】推送密钥,desc=选填。在 Scripting 签到小组件设置里点「复制 Loon 插件参数」获得；留空则不推送，汇总照常
+widget_targets = input,"",tag=【小组件推送】小组件 ID,desc=选填。汇总后刷新这些桌面小组件，多个用英文逗号分隔
+activity_start_target = input,"",tag=【小组件推送】实时活动 ID,desc=选填。填了会在锁屏开启或更新当天的签到实时活动
+template_version = input,"",tag=【小组件推送】实时活动模板版本,desc=选填。和实时活动 ID 一起填
 
 [Script]
-cron "30 11 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/summary/summary.js", {${weibotalk}, ${tenvideo}, ${mihoyo}, ${newmixc}, ${mishop}, ${milottery}, ${youpin}, ${lhtj_app}, ${qqmusic}, ${wanda}, ${tingtingfm}, ${wps}, ${camscanner}, ${dreame}, ${linghu}, ${nodeseek}, ${pan1}, ${agentrouter}, ${sgcc}, ${cmcc}, ${heybox}, ${baidunetdisk}, ${laifen}, ${ppmt}, ${tuhu}, ${haidilao}, ${huisheng}, ${miniso}, ${longde}, ${lhtj}, ${wedome}, ${bhg}, ${linli}}) with tag="签到汇总", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip-checkin.png", enable=${merge}
+cron "30 11 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/summary/summary.js", {${weibotalk}, ${tenvideo}, ${mihoyo}, ${newmixc}, ${mishop}, ${milottery}, ${youpin}, ${lhtj_app}, ${qqmusic}, ${wanda}, ${tingtingfm}, ${wps}, ${camscanner}, ${dreame}, ${linghu}, ${nodeseek}, ${pan1}, ${agentrouter}, ${sgcc}, ${cmcc}, ${heybox}, ${baidunetdisk}, ${laifen}, ${ppmt}, ${tuhu}, ${haidilao}, ${huisheng}, ${miniso}, ${longde}, ${lhtj}, ${wedome}, ${bhg}, ${linli}, ${push_key}, ${widget_targets}, ${activity_start_target}, ${template_version}}) with tag="签到汇总", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/paperclip-checkin.png", timeout=60, enable=${merge}
 cron "0 8 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/weibotalk/weibotalk.js", {${merge}}) with tag="微博超话签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/weibo.png", enable=${weibotalk}
 cron "10 0 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/tenvideo/tenvideo.js", {${merge}}) with tag="腾讯视频签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/tenvideo.png", enable=${tenvideo}
 cron "13 6 * * *" then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/app/mihoyo/mihoyo.js", {${merge}}) with tag="米游社签到", img_url="https://raw.githubusercontent.com/MaYIHEI/pin/refs/heads/main/app/mihoyo.png", enable=${mihoyo}
