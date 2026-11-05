@@ -4,11 +4,11 @@
  * 由 Safari 本地报告页按需调用；$argument 是固定模块名，不依赖插件参数插值。
  *
  * @Author: MaYIHEI <https://github.com/MaYIHEI/paperclip>
- * @Updated: 2026-08-04
+ * @Updated: 2026-11-05
  */
 
-const TEST_VERSION = "2026-08-04.poc12";
-const SOURCE_URL = "https://raw.githubusercontent.com/MaYIHEI/paperclip/eaa04fe0a9f37ccfafdd11930d28fd5ff3f04718/loon/ipquality/ipquality.js";
+const TEST_VERSION = "2026-11-05.poc14";
+const SOURCE_URL = "https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-core.js";
 const SESSION_KEY = "paperclip.ipquality.web.session";
 const SESSION_TTL_MS = 30 * 60 * 1000;
 
@@ -33,6 +33,10 @@ const MODULES = {
         enabled: ["执行媒体与 AI 检测", "显示地区一致性"],
     },
     status: { title: "数据状态", enabled: ["显示数据状态"] },
+    dnsbl: { title: "IP 黑名单", enabled: ["检测 IP 黑名单"] },
+    dnsleak: { title: "DNS 泄漏", enabled: ["检测 DNS 泄漏"] },
+    backhaul: { title: "近似回程", enabled: ["测试近似回程"] },
+    multispeed: { title: "多连接测速", enabled: ["测试多连接测速"] },
 };
 
 const moduleName = normalizeModule(typeof $argument !== "undefined" ? $argument : "");
@@ -85,7 +89,7 @@ function runModule(session) {
                 "$done",
                 "$persistentStore",
                 "$environment",
-                `${body}\n//# sourceURL=paperclip-ipquality-r32-${moduleName}.js`
+                `${body}\n//# sourceURL=paperclip-ipquality-core-${moduleName}.js`
             );
             execute((result) => {
                 if (!result || !result.htmlMessage) {

@@ -8,16 +8,27 @@
 
 导入测试插件：
 
-`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc13`
+`https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc14`
 
 节点或策略组页面提供四个入口：基础信息、风险、流媒体与 AI 三项快捷检测直接显示 Loon 原生结果；“IP 自选检测 · 网页”通过通知进入 Safari，可选择一项或多项。
 
+网页入口新增四个项目，默认关闭：
+
+| 项目 | 用途 |
+|---|---|
+| IP 黑名单 | 查询出口 IP 是否被 6 个公共 DNSBL 收录；主要反映邮件滥用记录，命中不等于节点不可用 |
+| DNS 泄漏 | 列出经所选节点访问时实际发起解析的 DNS 服务器及其地区、组织 |
+| 近似回程 | 用与出口同 ASN（找不到时同城市、同国家）的外部探针 traceroute 到上海三网；探针不是节点本机，结果仅供参考 |
+| 多连接测速 | 经所选节点用 4 个连接同时下载，显示下载速度；每次约消耗 16 MB 流量 |
+
+“流媒体与 AI”同时检测 Claude、Gemini，无需额外开启。
+
 ## 实现
 
-- 三个快捷入口固定传入模块名，直接复用 r32 生成原生报告。
+- 三个快捷入口固定传入模块名，由 `ipquality-core.js` 生成原生报告。
 - 自选入口保存本次检测 ID、目标节点与时间并发送通知；Loon 强制显示 generic 结果弹窗，因此返回简短的“检测页面已准备”提示，避免 `empty content`。
 - 报告外壳使用 Rewrite v2 内联 `response.body.mock("html", ...)`，响应 Header 使用 3.5.1(980) 批量数组参数；不连接真实报告服务器。
-- 16 个检测项目对应 16 个本地 GET 接口；常规模块固定 `argument="模块名"`，不依赖插件参数插值。
+- 20 个检测项目对应 20 个本地 GET 接口；常规模块固定 `argument="模块名"`，不依赖插件参数插值。
 - 每个接口恢复节点页保存的目标节点，并由 `$httpClient` 显式绑定该节点。
 - “节点 HTTPS 轻量测速”通过目标节点访问 Cloudflare 官方 HTTPS/443 测速端点；下载按实际接收字节计算，上传仅在服务端成功响应后显示，整体最多约 14 秒。
 - “三网探针延迟”由 Globalping 分别选择电信 AS4134、联通 AS4837、移动 AS9808 的中国探针，测量探针到节点出口 IP 的 ICMP 往返延迟、丢包与抖动；它不经过手机到节点的代理隧道。
@@ -29,6 +40,6 @@
 
 ## 当前边界
 
-这是架构 PoC。除 HTTPS 轻量测速外，其余模块暂时独立执行一次 r32，因此同时开启很多项目会重复请求基础来源；真机确认方案可行后，再拆出共享基础数据和更多模块专用探测，减少重复请求与 API 限流。
+这是架构 PoC。除 HTTPS 轻量测速和 DNS 解析与污染外，其余模块暂时独立执行一次检测核心，因此同时开启很多项目会重复请求基础来源；真机确认方案可行后，再拆出共享基础数据和更多模块专用探测，减少重复请求与 API 限流。
 
 HTTPS 轻量测速是目标节点到 Cloudflare Edge 的端到端小样本估算；三网探针延迟是外部探针到出口 IP 的入站往返测量，出口不响应 ICMP 时可能失败。两者都不等同于 xykt NetQuality 在 VPS 本机调用 Ookla CLI 的多服务器测速；xykt IPQuality 本身不包含三网带宽测试。
