@@ -33,7 +33,7 @@
 
 const $ = new Env("Paperclip 签到汇总");
 
-const SCRIPT_VERSION = "2026-11-05.r1"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-11-05.r2"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 // 本仓库脚本 [显示名, 状态 key]:登记索引里还没有它们时兜底;没装或从未运行的脚本没有记录,自动跳过
@@ -172,7 +172,8 @@ async function pushUpdates() {
     $.setdata(JSON.stringify(saved), "checkin_push");
 }
 
-// 实时活动的状态,口径和小组件一致:只算 7 天内有更新的 ok/cookie/fail;需处理按需重抓 → 失败排,最多 3 条
+// 实时活动的状态,按小组件固定的 schema:只算 7 天内有更新的 ok/cookie/fail;计数和奖励都是整数;
+// 需处理按需重抓 → 失败排,最多 3 条,文字按上限截断,run/open 没有(或超长)就不带
 function liveState() {
     const now = Date.now(), list = [];
     for (const key of keys) {
@@ -187,9 +188,15 @@ function liveState() {
         return n + (m ? Number(m[1]) : 0);
     }, 0);
     const issues = list.filter((e) => e.r.s !== "ok").sort((a, b) => (a.r.s === "cookie" ? 0 : 1) - (b.r.s === "cookie" ? 0 : 1));
+    const cut = (v, n) => Array.from(String(v == null ? "" : v)).slice(0, n).join(""); // 按 Unicode 字符数截断
+    const link = (v, n) => (typeof v === "string" && v && Array.from(v).length <= n ? v : undefined); // 截断的链接打不开,超长就不带
+    const count = (st) => list.filter((e) => e.r.s === st).length;
     return {
-        v: 1, t: now, done: list.filter((e) => e.r.s === "ok").length, total: list.length, reward, issueCount: issues.length,
-        issues: issues.slice(0, 3).map((e) => ({ key: e.key, name: e.reg.name || e.r.name || own.get(e.key) || e.key, s: e.r.s, msg: e.r.msg, run: e.reg.run, open: e.reg.open })),
+        v: 1, t: now, done: count("ok"), total: list.length, cookie: count("cookie"), fail: count("fail"), reward: Math.round(reward), issueCount: issues.length,
+        issues: issues.slice(0, 3).map((e) => ({
+            key: cut(e.key, 64), name: cut(e.reg.name || e.r.name || own.get(e.key) || e.key, 32), s: e.r.s, msg: cut(e.r.msg, 60),
+            run: link(e.reg.run, 200), open: link(e.reg.open, 300),
+        })),
     };
 }
 
