@@ -31,7 +31,12 @@ https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/pape
 - 「统一通知」开关默认打开：各脚本不再单独弹通知，11:30 一条汇总，只统计打开了签到开关的脚本，未使用的只计数；关闭后各脚本各自通知
 - 账号、任务开关等设置都在 BoxJS 里填（AgentRouter、网上国网账号、WPS 各项任务等）
 - 补签入口：桌面小组件（或浏览器）打开 `http://1.1.1.1/checkin/<脚本>` 会现跑一次该脚本的签到，返回签到结果；地址见 BoxJS 里 `checkin_registry` 各项的 `run`，跟随该脚本的签到开关
-- 小组件推送（选填）：在 Scripting 签到小组件设置里点「复制 Loon 插件参数」，把推送密钥、小组件 ID、实时活动 ID、模板版本填进插件对应的四个参数。11:30 汇总后会刷新桌面小组件，并在锁屏开启或更新当天的签到实时活动（需打开「统一通知」）；留空则不推送
+- 小组件推送（选填）：11:30 汇总后刷新 Scripting 桌面小组件，并在锁屏开启或更新当天的签到实时活动（需打开「统一通知」）；推送密钥留空则不推送。在 Scripting 签到小组件设置里点「复制 Loon 插件参数」会得到 4 行 `key=value`，Loon 插件设置里是 4 个独立输入框，只能逐项填，每行 `=` 后面的值填进同名参数：
+  - `push_key=…` → 【小组件推送】推送密钥
+  - `widget_targets=…` → 【小组件推送】小组件 ID
+  - `activity_start_target=…` → 【小组件推送】实时活动 ID
+  - `template_version=…` → 【小组件推送】实时活动模板版本
+- 推送密钥要用发送密钥（不是主密钥），创建时勾选 5 项：`widgets:reload`、`activities:start`、`activities:read-state`、`activities:update`、`activities:end`
 - 签到数据：打开 `http://1.1.1.1/checkin/all` 一次拿到全部脚本的登记信息和最近签到结果（JSON），只读不签到，签到开关关掉的脚本也会列出
 
 ## 维护记录
