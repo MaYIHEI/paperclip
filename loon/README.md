@@ -12,6 +12,7 @@ Loon 专用插件文件,后缀 `.lpx`(Loon Plugin Extension,旧称 `.plugin`,内
 | [`paperclip-cookie/`](./paperclip-cookie/) | 集中抓取全部在用签到脚本的 Cookie(29 个),规则常开,抓完关掉插件;签到用签到合集 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/paperclip-cookie/paperclip-cookie.lpx) |
 | [`nodecheck/`](./nodecheck/) | 在节点/策略组页面检测代理出口、本机网络与远端 TCP 可达性，辅助判断节点阻断或离线 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/nodecheck/nodecheck.lpx) |
 | [`ipquality-web-test/`](./ipquality-web-test/) | 节点 IP 质量检测：单项快速原生报告、多项网页报告、轻量测速与三网探针 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/ipquality-web-test/ipquality-web-test.lpx?v=poc13) |
+| [Loon 面板](https://github.com/MaYIHEI/patch/tree/main/scripting/loon-panel) | Scripting 小组件配套插件：机场流量、节点检测与切换，代码在 patch 仓库 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/patch/refs/heads/main/scripting/loon-panel/loon/loon-panel.lpx) |
 | [`agentrouter/`](./agentrouter/) | AgentRouter 每日登录签到，插件内配置单账号或多账号 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/agentrouter/agentrouter.lpx) |
 | [`sgcc/`](./sgcc/) | 网上国网积分每日签到，插件内填写手机号和密码，无需抓包 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/sgcc/sgcc.lpx) |
 | [`cmcc/`](./cmcc/) | 中国移动签到赢好礼每日签到，自动续登免短信，顺带查询积分 | ✅ 维护中 | [点击复制](https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/heads/testing/loon/cmcc/cmcc.lpx) |
