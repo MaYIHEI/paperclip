@@ -1,5 +1,5 @@
 #!name=节点 IP 质量检测 · 混合模式
-#!desc=常用单项直接显示原生结果；多项检测进入 Rewrite v2 网页按需选择并合并展示。不修改现有 IP 质量检测插件。
+#!desc=常用单项直接显示原生结果；多项检测进入 Rewrite v2 网页按需选择并合并展示。
 #!openUrl=
 #!author=MaYIHEI[https://github.com/MaYIHEI]
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/loon/ipquality-web-test
