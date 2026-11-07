@@ -1,5 +1,5 @@
 #!name=节点 IP 质量检测
-#!desc=检测节点出口 IPv4、类型、原始风险、媒体与 AI 端点可达性、BGP 控制面及外部探针网络质量；缺失数据不参与判断。
+#!desc=已归档，请改用「节点 IP 质量检测 · 混合模式」。检测节点出口 IPv4、类型、原始风险、媒体与 AI 端点可达性、BGP 控制面及外部探针网络质量；缺失数据不参与判断。
 #!openUrl=
 #!author=MaYIHEI[https://github.com/MaYIHEI]
 #!homepage=https://github.com/MaYIHEI/paperclip/tree/testing/loon/ipquality
