@@ -1,6 +1,6 @@
 # 节点 IP 质量检测
 
-> ✅ 维护中 · 仅支持 Loon
+> 📦 **已归档** · 不再维护，仅保留历史。IP 检测请改用[节点 IP 质量检测 · 混合模式](../ipquality-web-test/)
 
 在 Loon 的节点或策略组页面查看所选节点的出口 IP、IP 类型与风险信息，并检测常见流媒体和 AI 服务可用性。结果按 VPS `IP.Check.Place` / `xykt/IPQuality` 的多源展示口径呈现，不生成自定义综合评分。
 
@@ -54,6 +54,7 @@ generic then script("https://raw.githubusercontent.com/MaYIHEI/paperclip/refs/he
 
 | 日期 | 变更 |
 |---|---|
+| 2026-11-07 | 归档，IP 检测统一到混合模式插件 |
 | 2026-07-19 | r8：补充 ASN/组织、IPPure 分流出口识别、Apple 地图通知与多源稳定性修复 |
 | 2026-07-18 | r1：初版进入 testing |
 
