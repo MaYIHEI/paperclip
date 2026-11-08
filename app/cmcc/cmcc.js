@@ -92,18 +92,16 @@ const SIGN_SRCID = "026033";
 const SIGN_H5URL = "https://h5.bj.10086.cn/cmcc_app/checkin/index.html#/index";
 const H5_REFERER = "https://h5.bj.10086.cn/cmcc_app/checkin/index.html";
 const H5_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
-const SALT = "Leadeon/SecurityOrganization";
-const LK = "tVkdaRWRY0ZkV1Vr", LSK = "RYV0hCV1lV25KYVJ", LIV = "VjFSQ1ZtVkQxRTlQ";
-const BK = "bAIgvwAuA4tbDr9d", BSK = "GS7VelkJl5IT1uwQ", BIV = "9791027341711819";
-const TK = "bAIgvwAuA4tbDr9d", TIV = "9791027341711819";
+const [SALT, LK, LSK, LIV, BK, BSK, BIV] = _s("+PCLr01mAGD/6IG2UmgSPuv3/Zq2UGQeKNT9ndpFQBww1Ni8mnA+NSf7s7WyK1Q+EpXS2K7oUklOaPnKpps8QR4T+drZk1pZBxza0bStdw0GBBPc7o6fSl1JJtHUg+9THjIZnN6MokRGAXfq1NCzUFVvQ2yBqM7tCy5GYoegx+8FLA==").split("\n");
+const TK = BK, TIV = BIV;
 
 const ARG = typeof $argument === "object" && $argument ? $argument : {};
 const DEBUG = ARG.debug === true || ARG.debug === "true" || $.getdata("cmcc_debug") === "true";
 
 const post = (opt) => new Promise((ok) => $.post(opt, (err, resp, data) => ok({ err, status: resp && resp.status, headers: (resp && resp.headers) || {}, data })));
 const httpGet = (opt) => new Promise((ok) => $.get(opt, (err, resp, data) => ok({ err, status: resp && resp.status, headers: (resp && resp.headers) || {}, data })));
-const decBiz = (data) => { for (const kv of [[BSK, BIV], [LSK, LIV]]) { try { const x = decStr(data || "", kv[0], kv[1]); if (/^\s*[{[]/.test(x)) return x; } catch (e) {} } return ""; };
-const peelJson = (s) => { s = String(s || ""); if (/^\s*[{[]/.test(s)) return s; try { const p = u8s(b64dec(s)); if (/^\s*[{[]/.test(p)) return p; } catch (e) {} return s; };
+const decBiz = (data) => { for (const kv of [[BSK, BIV], [LSK, LIV]]) { try { const x = _d(data || "", kv[0], kv[1]); if (/^\s*[{[]/.test(x)) return x; } catch (e) {} } return ""; };
+const peelJson = (s) => { s = String(s || ""); if (/^\s*[{[]/.test(s)) return s; try { const p = a1(a4(s)); if (/^\s*[{[]/.test(p)) return p; } catch (e) {} return s; };
 const maskPhone = (p) => (p && p.length === 11 ? p.slice(0, 3) + "****" + p.slice(7) : p || "");
 const saveStatus = (s, msg, asset) => checkinReport(K_STATUS, { s, msg, asset }, { name: "中国移动", author: "MaYIHEI", run: "http://1.1.1.1/checkin/cmcc", open: "https://apps.apple.com/app/id583700738" });
 
@@ -116,13 +114,13 @@ function pickCookie(headers) {
 }
 
 function headersFor(host, path, J, sid, qen) {
-  const t = String(Date.now()), n = nonce8();
+  const t = String(Date.now()), n = _n();
   const o = JSON.parse(J);
   const xk = o.xk || "";
   const ua = "ChinaMobile/" + (o.cv || "12.5.6") + " (iPhone; iOS " + (o.sv || "26.1") + "; Scale/3.00)"; // 跟随抓取时的 App 版本
-  const xs = md5hex("https://" + host + path + "_" + J + "_" + SALT);
-  const xtoken = encB64(xk + "_" + path + "_" + t + "_" + n, TK, TIV);
-  const xsign = md5hex(xtoken + "_" + t + "_" + n + "_" + sid);
+  const xs = _h("https://" + host + path + "_" + J + "_" + SALT);
+  const xtoken = _e(xk + "_" + path + "_" + t + "_" + n, TK, TIV);
+  const xsign = _h(xtoken + "_" + t + "_" + n + "_" + sid);
   return { "Content-Type": "application/Json", "User-Agent": ua, "x-qen": qen, "x-time": t, "x-nonce": n, "xs": xs, "x-token": xtoken, "x-sign": xsign };
 }
 
@@ -142,7 +140,7 @@ function capture() {
   try {
     const url = $request.url, body = $request.body || "";
     if (/uam(onekey|randcode)login\/autoLogin/.test(url)) {
-      const J = decStr(body, LK, LIV);
+      const J = _d(body, LK, LIV);
       const obj = JSON.parse(J);
       if (!obj.xk) throw new Error("登录信封缺 xk");
       const tel = obj.tel || "";
@@ -169,14 +167,14 @@ function capture() {
 // ---------- 续登,返回会话 cookie ----------
 async function refresh(saved) {
   const lo = JSON.parse(saved);
-  lo.reqBody = Object.assign({}, lo.reqBody, { cellNum: cellNumFor(lo.tel), sysTime: String(Math.floor(Date.now() / 1000)) });
+  lo.reqBody = Object.assign({}, lo.reqBody, { cellNum: _c(lo.tel), sysTime: String(Math.floor(Date.now() / 1000)) });
   const loginJ = JSON.stringify(lo);
   // 显式带会话 cookie 并按它签名,避免客户端自动回带上次的会话导致签名不符
   const sid = [8, 4, 4, 4, 12].map((n) => Array.from({ length: n }, () => ((Math.random() * 16) | 0).toString(16)).join("")).join("-");
   const h = headersFor(HOST_LOGIN, P_AUTOLOGIN, loginJ, sid, "14");
   h["Cookie"] = "JSESSIONID=" + sid;
-  const r = await post({ url: "https://" + HOST_LOGIN + P_AUTOLOGIN, headers: h, body: encB64(loginJ, LK, LIV) });
-  const out = JSON.parse(decStr(r.data || "", LSK, LIV) || "{}");
+  const r = await post({ url: "https://" + HOST_LOGIN + P_AUTOLOGIN, headers: h, body: _e(loginJ, LK, LIV) });
+  const out = JSON.parse(_d(r.data || "", LSK, LIV) || "{}");
   if (DEBUG) $.log("[DEBUG] autoLogin " + (out.retCode || r.status) + " " + (out.retDesc || ""), "[DEBUG] req " + JSON.stringify(h), "[DEBUG] resp " + r.status + " " + JSON.stringify(r.headers));
   if (out.retCode !== "000000") throw new Error(`续登失败 ${out.retDesc || ""} [${out.retCode || r.status}]`);
   const cookie = pickCookie(r.headers);
@@ -190,8 +188,8 @@ async function queryPoints(cookie, loginJ) {
   const sid = (cookie.match(/JSESSIONID=([^;]+)/) || [, ""])[1];
   const h = headersFor(HOST_BIZ, P_SCORE, J, sid, "2");
   h["Cookie"] = cookie;
-  const r = await post({ url: "https://" + HOST_BIZ + P_SCORE, headers: h, body: encB64(J, BK, BIV) });
-  const out = JSON.parse(decStr(r.data || "", BSK, BIV) || "{}");
+  const r = await post({ url: "https://" + HOST_BIZ + P_SCORE, headers: h, body: _e(J, BK, BIV) });
+  const out = JSON.parse(_d(r.data || "", BSK, BIV) || "{}");
   if (DEBUG) $.log("[DEBUG] getScoreQuery " + (out.retCode || r.status) + " " + (out.retDesc || ""));
   if (out.retCode !== "000000") return { err: `${out.retDesc || ""} [${out.retCode || r.status}]` };
   return { point: out.rspBody && out.rspBody.pointValue };
@@ -205,7 +203,7 @@ async function sign(cookie, loginJ) {
   const lo = JSON.parse(loginJ);
   const gJ = JSON.stringify(Object.assign({}, lo, { reqBody: { sourceid: SIGN_SRCID, appId: "", url: SIGN_H5URL, cellNum: lo.tel } }));
   const gh = headersFor(HOST_LOGIN, P_BIGNET, gJ, jsid, "14"); gh["Cookie"] = cookie;
-  const gr = await post({ url: "https://" + HOST_LOGIN + P_BIGNET, headers: gh, body: encB64(gJ, LK, LIV) });
+  const gr = await post({ url: "https://" + HOST_LOGIN + P_BIGNET, headers: gh, body: _e(gJ, LK, LIV) });
   const gout = JSON.parse(decBiz(gr.data) || "{}");
   if (DEBUG) $.log("[DEBUG] getBigNetToken " + (gout.retCode || gr.status));
   const sso = gout.rspBody && gout.rspBody.token;
@@ -271,33 +269,34 @@ async function main() {
 }
 
 // ==================== 工具函数 ====================
-function u8(s){if(s instanceof Uint8Array)return s;const o=[];for(let i=0;i<s.length;i++){let c=s.charCodeAt(i);if(c>=0xd800&&c<0xdc00&&i+1<s.length){const d=s.charCodeAt(i+1);if(d>=0xdc00&&d<0xe000){c=0x10000+((c-0xd800)<<10)+(d-0xdc00);i++;}}if(c<0x80)o.push(c);else if(c<0x800)o.push(0xc0|(c>>6),0x80|(c&63));else if(c<0x10000)o.push(0xe0|(c>>12),0x80|((c>>6)&63),0x80|(c&63));else o.push(0xf0|(c>>18),0x80|((c>>12)&63),0x80|((c>>6)&63),0x80|(c&63));}return new Uint8Array(o);}
-function u8s(b){let s='';for(let i=0;i<b.length;){const c=b[i++];let cp;if(c<0x80)cp=c;else if(c<0xe0)cp=((c&31)<<6)|(b[i++]&63);else if(c<0xf0)cp=((c&15)<<12)|((b[i++]&63)<<6)|(b[i++]&63);else cp=((c&7)<<18)|((b[i++]&63)<<12)|((b[i++]&63)<<6)|(b[i++]&63);if(cp>0xffff){cp-=0x10000;s+=String.fromCharCode(0xd800+(cp>>10),0xdc00+(cp&1023));}else s+=String.fromCharCode(cp);}return s;}
-function toHex(b){let s='';for(let i=0;i<b.length;i++)s+=b[i].toString(16).padStart(2,'0');return s;}
-const B64A='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-function b64(b){let s='',i=0;for(;i+2<b.length;i+=3){const n=(b[i]<<16)|(b[i+1]<<8)|b[i+2];s+=B64A[(n>>18)&63]+B64A[(n>>12)&63]+B64A[(n>>6)&63]+B64A[n&63];}if(i<b.length){const n=(b[i]<<16)|((i+1<b.length?b[i+1]:0)<<8);s+=B64A[(n>>18)&63]+B64A[(n>>12)&63]+(i+1<b.length?B64A[(n>>6)&63]:'=')+'=';}return s;}
-function b64dec(s){s=String(s).replace(/[^A-Za-z0-9+/]/g,'');const out=[];let buf=0,bits=0;for(const ch of s){buf=(buf<<6)|B64A.indexOf(ch);bits+=6;if(bits>=8){bits-=8;out.push((buf>>bits)&0xff);}}return new Uint8Array(out);}
-function md5(input){const msg=u8(input);const S=[7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];const K=[];for(let i=0;i<64;i++)K[i]=Math.floor(Math.abs(Math.sin(i+1))*4294967296)>>>0;let a0=0x67452301,b0=0xefcdab89,c0=0x98badcfe,d0=0x10325476;const ml=msg.length,withOne=ml+1,total=withOne+((56-withOne%64+64)%64)+8,m=new Uint8Array(total);m.set(msg);m[ml]=0x80;const bitLen=ml*8,dv=new DataView(m.buffer);dv.setUint32(total-8,bitLen>>>0,true);dv.setUint32(total-4,Math.floor(bitLen/4294967296)>>>0,true);for(let off=0;off<total;off+=64){const M=[];for(let i=0;i<16;i++)M[i]=dv.getUint32(off+i*4,true);let A=a0,B=b0,C=c0,D=d0;for(let i=0;i<64;i++){let F,g;if(i<16){F=(B&C)|(~B&D);g=i;}else if(i<32){F=(D&B)|(~D&C);g=(5*i+1)%16;}else if(i<48){F=B^C^D;g=(3*i+5)%16;}else{F=C^(B|~D);g=(7*i)%16;}F=(F+A+K[i]+M[g])>>>0;A=D;D=C;C=B;const rot=(F<<S[i])|(F>>>(32-S[i]));B=(B+rot)>>>0;}a0=(a0+A)>>>0;b0=(b0+B)>>>0;c0=(c0+C)>>>0;d0=(d0+D)>>>0;}const out=new Uint8Array(16),o=new DataView(out.buffer);o.setUint32(0,a0,true);o.setUint32(4,b0,true);o.setUint32(8,c0,true);o.setUint32(12,d0,true);return out;}
-const md5hex=x=>toHex(md5(x));
-const ASB=(()=>{const s=new Uint8Array(256);let p=1,q=1;do{p=p^(p<<1)^((p&0x80)?0x11b:0);p&=0xff;q^=q<<1;q^=q<<2;q^=q<<4;q&=0xff;if(q&0x80)q^=0x09;const x=q^((q<<1)|(q>>>7))^((q<<2)|(q>>>6))^((q<<3)|(q>>>5))^((q<<4)|(q>>>4));s[p]=(x^0x63)&0xff;}while(p!==1);s[0]=0x63;return s;})();
-const AISB=(()=>{const inv=new Uint8Array(256);for(let i=0;i<256;i++)inv[ASB[i]]=i;return inv;})();
+function _s(bl){const A='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';bl=String(bl).replace(/[^A-Za-z0-9+/]/g,'');const by=[];let buf=0,bits=0;for(const ch of bl){buf=(buf<<6)|A.indexOf(ch);bits+=6;if(bits>=8){bits-=8;by.push((buf>>bits)&0xff);}}let o='';for(let i=0;i<by.length;i++)o+=String.fromCharCode(by[i]^0xA5^((i*31+17)&0xff));return o;}
+function a0(s){if(s instanceof Uint8Array)return s;const o=[];for(let i=0;i<s.length;i++){let c=s.charCodeAt(i);if(c>=0xd800&&c<0xdc00&&i+1<s.length){const d=s.charCodeAt(i+1);if(d>=0xdc00&&d<0xe000){c=0x10000+((c-0xd800)<<10)+(d-0xdc00);i++;}}if(c<0x80)o.push(c);else if(c<0x800)o.push(0xc0|(c>>6),0x80|(c&63));else if(c<0x10000)o.push(0xe0|(c>>12),0x80|((c>>6)&63),0x80|(c&63));else o.push(0xf0|(c>>18),0x80|((c>>12)&63),0x80|((c>>6)&63),0x80|(c&63));}return new Uint8Array(o);}
+function a1(b){let s='';for(let i=0;i<b.length;){const c=b[i++];let cp;if(c<0x80)cp=c;else if(c<0xe0)cp=((c&31)<<6)|(b[i++]&63);else if(c<0xf0)cp=((c&15)<<12)|((b[i++]&63)<<6)|(b[i++]&63);else cp=((c&7)<<18)|((b[i++]&63)<<12)|((b[i++]&63)<<6)|(b[i++]&63);if(cp>0xffff){cp-=0x10000;s+=String.fromCharCode(0xd800+(cp>>10),0xdc00+(cp&1023));}else s+=String.fromCharCode(cp);}return s;}
+function a2(b){let s='';for(let i=0;i<b.length;i++)s+=b[i].toString(16).padStart(2,'0');return s;}
+const Q='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+function a3(b){let s='',i=0;for(;i+2<b.length;i+=3){const n=(b[i]<<16)|(b[i+1]<<8)|b[i+2];s+=Q[(n>>18)&63]+Q[(n>>12)&63]+Q[(n>>6)&63]+Q[n&63];}if(i<b.length){const n=(b[i]<<16)|((i+1<b.length?b[i+1]:0)<<8);s+=Q[(n>>18)&63]+Q[(n>>12)&63]+(i+1<b.length?Q[(n>>6)&63]:'=')+'=';}return s;}
+function a4(s){s=String(s).replace(/[^A-Za-z0-9+/]/g,'');const out=[];let buf=0,bits=0;for(const ch of s){buf=(buf<<6)|Q.indexOf(ch);bits+=6;if(bits>=8){bits-=8;out.push((buf>>bits)&0xff);}}return new Uint8Array(out);}
+function m(input){const msg=a0(input);const S=[7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];const K=[];for(let i=0;i<64;i++)K[i]=Math.floor(Math.abs(Math.sin(i+1))*4294967296)>>>0;let a0_=0x67452301,b0=0xefcdab89,c0=0x98badcfe,d0=0x10325476;const ml=msg.length,withOne=ml+1,total=withOne+((56-withOne%64+64)%64)+8,mm=new Uint8Array(total);mm.set(msg);mm[ml]=0x80;const bitLen=ml*8,dv=new DataView(mm.buffer);dv.setUint32(total-8,bitLen>>>0,true);dv.setUint32(total-4,Math.floor(bitLen/4294967296)>>>0,true);for(let off=0;off<total;off+=64){const M=[];for(let i=0;i<16;i++)M[i]=dv.getUint32(off+i*4,true);let A=a0_,B=b0,C=c0,D=d0;for(let i=0;i<64;i++){let F,g;if(i<16){F=(B&C)|(~B&D);g=i;}else if(i<32){F=(D&B)|(~D&C);g=(5*i+1)%16;}else if(i<48){F=B^C^D;g=(3*i+5)%16;}else{F=C^(B|~D);g=(7*i)%16;}F=(F+A+K[i]+M[g])>>>0;A=D;D=C;C=B;const rot=(F<<S[i])|(F>>>(32-S[i]));B=(B+rot)>>>0;}a0_=(a0_+A)>>>0;b0=(b0+B)>>>0;c0=(c0+C)>>>0;d0=(d0+D)>>>0;}const out=new Uint8Array(16),o=new DataView(out.buffer);o.setUint32(0,a0_,true);o.setUint32(4,b0,true);o.setUint32(8,c0,true);o.setUint32(12,d0,true);return out;}
+const _h=x=>a2(m(x));
+const S0=(()=>{const s=new Uint8Array(256);let p=1,q=1;do{p=p^(p<<1)^((p&0x80)?0x11b:0);p&=0xff;q^=q<<1;q^=q<<2;q^=q<<4;q&=0xff;if(q&0x80)q^=0x09;const x=q^((q<<1)|(q>>>7))^((q<<2)|(q>>>6))^((q<<3)|(q>>>5))^((q<<4)|(q>>>4));s[p]=(x^0x63)&0xff;}while(p!==1);s[0]=0x63;return s;})();
+const S1=(()=>{const inv=new Uint8Array(256);for(let i=0;i<256;i++)inv[S0[i]]=i;return inv;})();
 function xt(a){return ((a<<1)^((a&0x80)?0x11b:0))&0xff;}
 function mul(a,b){let r=0;for(let i=0;i<8;i++){if(b&1)r^=a;const hi=a&0x80;a=(a<<1)&0xff;if(hi)a^=0x1b;b>>=1;}return r&0xff;}
-function expand128(key){const Nk=4,Nr=10,w=new Uint8Array(16*(Nr+1));w.set(key);const rcon=[0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36];let i=Nk;const t=new Uint8Array(4);while(i<4*(Nr+1)){for(let k=0;k<4;k++)t[k]=w[(i-1)*4+k];if(i%Nk===0){const tmp=t[0];t[0]=ASB[t[1]]^rcon[i/Nk-1];t[1]=ASB[t[2]];t[2]=ASB[t[3]];t[3]=ASB[tmp];}for(let k=0;k<4;k++)w[i*4+k]=w[(i-Nk)*4+k]^t[k];i++;}return {w,Nr};}
-function encBlock(st,w,Nr){const s=st.slice();for(let k=0;k<16;k++)s[k]^=w[k];for(let r=1;r<Nr;r++){for(let k=0;k<16;k++)s[k]=ASB[s[k]];shiftRows(s);mixCols(s);for(let k=0;k<16;k++)s[k]^=w[r*16+k];}for(let k=0;k<16;k++)s[k]=ASB[s[k]];shiftRows(s);for(let k=0;k<16;k++)s[k]^=w[Nr*16+k];return s;}
-function decBlock(st,w,Nr){const s=st.slice();for(let k=0;k<16;k++)s[k]^=w[Nr*16+k];for(let r=Nr-1;r>=1;r--){invShiftRows(s);for(let k=0;k<16;k++)s[k]=AISB[s[k]];for(let k=0;k<16;k++)s[k]^=w[r*16+k];invMixCols(s);}invShiftRows(s);for(let k=0;k<16;k++)s[k]=AISB[s[k]];for(let k=0;k<16;k++)s[k]^=w[k];return s;}
-function shiftRows(s){const t=[s[0],s[5],s[10],s[15],s[4],s[9],s[14],s[3],s[8],s[13],s[2],s[7],s[12],s[1],s[6],s[11]];for(let i=0;i<16;i++)s[i]=t[i];}
-function invShiftRows(s){const t=[s[0],s[13],s[10],s[7],s[4],s[1],s[14],s[11],s[8],s[5],s[2],s[15],s[12],s[9],s[6],s[3]];for(let i=0;i<16;i++)s[i]=t[i];}
-function mixCols(s){for(let c=0;c<4;c++){const o=c*4,a0=s[o],a1=s[o+1],a2=s[o+2],a3=s[o+3];s[o]=xt(a0)^(xt(a1)^a1)^a2^a3;s[o+1]=a0^xt(a1)^(xt(a2)^a2)^a3;s[o+2]=a0^a1^xt(a2)^(xt(a3)^a3);s[o+3]=(xt(a0)^a0)^a1^a2^xt(a3);}}
-function invMixCols(s){for(let c=0;c<4;c++){const o=c*4,a0=s[o],a1=s[o+1],a2=s[o+2],a3=s[o+3];s[o]=mul(a0,14)^mul(a1,11)^mul(a2,13)^mul(a3,9);s[o+1]=mul(a0,9)^mul(a1,14)^mul(a2,11)^mul(a3,13);s[o+2]=mul(a0,13)^mul(a1,9)^mul(a2,14)^mul(a3,11);s[o+3]=mul(a0,11)^mul(a1,13)^mul(a2,9)^mul(a3,14);}}
-function aesCbcEnc(plainBytes,keyText,ivText){const {w,Nr}=expand128(u8(keyText)),iv=u8(ivText),pad=16-(plainBytes.length%16),buf=new Uint8Array(plainBytes.length+pad);buf.set(plainBytes);for(let i=plainBytes.length;i<buf.length;i++)buf[i]=pad;const out=new Uint8Array(buf.length);let prev=iv;for(let i=0;i<buf.length;i+=16){const blk=buf.subarray(i,i+16).slice();for(let k=0;k<16;k++)blk[k]^=prev[k];const ct=encBlock(blk,w,Nr);out.set(ct,i);prev=ct;}return out;}
-function aesCbcDec(cipherBytes,keyText,ivText){const {w,Nr}=expand128(u8(keyText)),iv=u8(ivText),out=new Uint8Array(cipherBytes.length);let prev=iv;for(let i=0;i<cipherBytes.length;i+=16){const blk=cipherBytes.subarray(i,i+16),pt=decBlock(blk.slice(),w,Nr);for(let k=0;k<16;k++)pt[k]^=prev[k];out.set(pt,i);prev=blk;}const pad=out[out.length-1];return out.slice(0,out.length-(pad>0&&pad<=16?pad:0));}
-const encB64=(plainStr,keyText,ivText)=>b64(aesCbcEnc(u8(plainStr),keyText,ivText));
-const decStr=(b64str,keyText,ivText)=>u8s(aesCbcDec(b64dec(b64str),keyText,ivText));
-const RSA_N=BigInt("0x968e9acf9e59b4e2e1bb24266ee39043788a45f788ecdc5c971f4964c3267cf20afd3b7f029b68a9a9b65d77d0306b8319df0c174f3dd82ef3894a6c38e23634f6095a81901ad7e6650911c0910f12c7de50a6fcee3ae3563cc5985c46a965db2af49e94f69b62f67ff3d5c0f79782572375e5f8b44aa43c0ca6d48e8a969beb");
-function modpow(b,e,m){let r=1n;b%=m;while(e>0n){if(e&1n)r=(r*b)%m;e>>=1n;b=(b*b)%m;}return r;}
-function cellNumFor(tel){const d=new Date(),p=x=>String(x).padStart(2,'0');const m=u8('leadeon'+tel+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds()));const eb=[0,2];while(eb.length<128-m.length-1)eb.push(1+Math.floor(Math.random()*255));eb.push(0,...m);const h=modpow(BigInt('0x'+toHex(eb)),65537n,RSA_N).toString(16).padStart(256,'0');const o=new Uint8Array(128);for(let i=0;i<128;i++)o[i]=parseInt(h.substr(i*2,2),16);return b64(o);}
-function nonce8(){let s='';for(let i=0;i<8;i++)s+=Math.floor(Math.random()*10);return s;}
+function kx(key){const Nk=4,Nr=10,w=new Uint8Array(16*(Nr+1));w.set(key);const rcon=[0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36];let i=Nk;const t=new Uint8Array(4);while(i<4*(Nr+1)){for(let k=0;k<4;k++)t[k]=w[(i-1)*4+k];if(i%Nk===0){const tmp=t[0];t[0]=S0[t[1]]^rcon[i/Nk-1];t[1]=S0[t[2]];t[2]=S0[t[3]];t[3]=S0[tmp];}for(let k=0;k<4;k++)w[i*4+k]=w[(i-Nk)*4+k]^t[k];i++;}return {w,Nr};}
+function eb(st,w,Nr){const s=st.slice();for(let k=0;k<16;k++)s[k]^=w[k];for(let r=1;r<Nr;r++){for(let k=0;k<16;k++)s[k]=S0[s[k]];sr(s);mc(s);for(let k=0;k<16;k++)s[k]^=w[r*16+k];}for(let k=0;k<16;k++)s[k]=S0[s[k]];sr(s);for(let k=0;k<16;k++)s[k]^=w[Nr*16+k];return s;}
+function db(st,w,Nr){const s=st.slice();for(let k=0;k<16;k++)s[k]^=w[Nr*16+k];for(let r=Nr-1;r>=1;r--){isr(s);for(let k=0;k<16;k++)s[k]=S1[s[k]];for(let k=0;k<16;k++)s[k]^=w[r*16+k];imc(s);}isr(s);for(let k=0;k<16;k++)s[k]=S1[s[k]];for(let k=0;k<16;k++)s[k]^=w[k];return s;}
+function sr(s){const t=[s[0],s[5],s[10],s[15],s[4],s[9],s[14],s[3],s[8],s[13],s[2],s[7],s[12],s[1],s[6],s[11]];for(let i=0;i<16;i++)s[i]=t[i];}
+function isr(s){const t=[s[0],s[13],s[10],s[7],s[4],s[1],s[14],s[11],s[8],s[5],s[2],s[15],s[12],s[9],s[6],s[3]];for(let i=0;i<16;i++)s[i]=t[i];}
+function mc(s){for(let c=0;c<4;c++){const o=c*4,a0_=s[o],a1_=s[o+1],a2_=s[o+2],a3_=s[o+3];s[o]=xt(a0_)^(xt(a1_)^a1_)^a2_^a3_;s[o+1]=a0_^xt(a1_)^(xt(a2_)^a2_)^a3_;s[o+2]=a0_^a1_^xt(a2_)^(xt(a3_)^a3_);s[o+3]=(xt(a0_)^a0_)^a1_^a2_^xt(a3_);}}
+function imc(s){for(let c=0;c<4;c++){const o=c*4,a0_=s[o],a1_=s[o+1],a2_=s[o+2],a3_=s[o+3];s[o]=mul(a0_,14)^mul(a1_,11)^mul(a2_,13)^mul(a3_,9);s[o+1]=mul(a0_,9)^mul(a1_,14)^mul(a2_,11)^mul(a3_,13);s[o+2]=mul(a0_,13)^mul(a1_,9)^mul(a2_,14)^mul(a3_,11);s[o+3]=mul(a0_,11)^mul(a1_,13)^mul(a2_,9)^mul(a3_,14);}}
+function ce(plainBytes,keyText,ivText){const {w,Nr}=kx(a0(keyText)),iv=a0(ivText),pad=16-(plainBytes.length%16),buf=new Uint8Array(plainBytes.length+pad);buf.set(plainBytes);for(let i=plainBytes.length;i<buf.length;i++)buf[i]=pad;const out=new Uint8Array(buf.length);let prev=iv;for(let i=0;i<buf.length;i+=16){const blk=buf.subarray(i,i+16).slice();for(let k=0;k<16;k++)blk[k]^=prev[k];const ct=eb(blk,w,Nr);out.set(ct,i);prev=ct;}return out;}
+function cd(cipherBytes,keyText,ivText){const {w,Nr}=kx(a0(keyText)),iv=a0(ivText),out=new Uint8Array(cipherBytes.length);let prev=iv;for(let i=0;i<cipherBytes.length;i+=16){const blk=cipherBytes.subarray(i,i+16),pt=db(blk.slice(),w,Nr);for(let k=0;k<16;k++)pt[k]^=prev[k];out.set(pt,i);prev=blk;}const pad=out[out.length-1];return out.slice(0,out.length-(pad>0&&pad<=16?pad:0));}
+const _e=(plainStr,keyText,ivText)=>a3(ce(a0(plainStr),keyText,ivText));
+const _d=(b64str,keyText,ivText)=>a1(cd(a4(b64str),keyText,ivText));
+const _N=BigInt('0x'+_s('jaPSrhFoDSmV6Nf6QjUDdcG0+JnqDSxJatj3wOkBIkRjjbKK/BxoWHSV54CkQjMEfZKL/czgCCsfboClx7JQJUQ0zO/bqxlpXH+b4db5Rz4FfDiNrZ3pCHhNYYOmk+4EJUwuzbiK/xg4C3HH5Nn0QmJWQmKM+Mi8DyUXYYOnxeNSI1pynejW/hU9UyLEtoPxEjAqQmmI/c/lDCIVYYP1wLBQP1spn+iMqUgxAiWSs9H3RlkuQWGL/MjrUypGZNL1xrRMP1Esl7uK+xthVnPAsdOjvAh8TD2P+srrBChDY4Cmxv0ebVwol+7Z9kJhVXXEtIab7VwtRjqE/MvlCXMTNQ=='));
+function mp(b,e,mo){let r=1n;b%=mo;while(e>0n){if(e&1n)r=(r*b)%mo;e>>=1n;b=(b*b)%mo;}return r;}
+function _c(tel){const d=new Date(),p=x=>String(x).padStart(2,'0');const msg=a0(_s('2PCLr01mAA==')+tel+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds()));const eb_=[0,2];while(eb_.length<128-msg.length-1)eb_.push(1+Math.floor(Math.random()*255));eb_.push(0,...msg);const h=mp(BigInt('0x'+a2(eb_)),65537n,_N).toString(16).padStart(256,'0');const o=new Uint8Array(128);for(let i=0;i<128;i++)o[i]=parseInt(h.substr(i*2,2),16);return a3(o);}
+function _n(){let s='';for(let i=0;i<8;i++)s+=Math.floor(Math.random()*10);return s;}
 
 // 签到状态协议 v1:写本次结果,并把自己登记进公共索引 checkin_registry(Loon/Surge/QX/Stash 通用,不依赖 Env)
 function checkinReport(key, rec, info) {
