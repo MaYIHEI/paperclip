@@ -8,7 +8,7 @@
  * @Author: @Evilbutcher (https://github.com/evilbutcher) / @toulanboy (https://github.com/toulanboy/scripts)
  * @Modifier: MaYIHEI <https://github.com/MaYIHEI/paperclip>
  * @Channel: Telegram 频道 https://t.me/mayihei
- * @Updated: 2026-10-28
+ * @Updated: 2026-11-09
  *
  * ===== Loon =====
  * [MITM]
@@ -58,7 +58,7 @@ const $ = new Env("微博超话");
 $.merge = typeof $argument === "object" && !!$argument && $argument.merge === true;
 if ($.merge) $.msg = (...a) => console.log(a.filter((x) => typeof x === "string" && x).join("\n"));
 
-const SCRIPT_VERSION = "2026-10-28.r3"; // 改一次 +1,确认拉到最新版
+const SCRIPT_VERSION = "2026-11-09.r1"; // 改一次 +1,确认拉到最新版
 $.log(`[INFO] 脚本版本 ${SCRIPT_VERSION}`);
 
 $.delete_cookie = false;
@@ -180,9 +180,12 @@ function initState() {
 
 function fetchTopicPage(sinceId) {
     return new Promise((resolve) => {
-        let body = $.listBody;
+        // 抓到的可能是下滑翻页的请求,先还原成第一页
+        let body = $.listBody
+            .replace(/(^|&)(page|since_id)=[^&]*/g, '')
+            .replace(/^&/, '')
+            .replace(/(^|&)taskType=loadMore(?=&|$)/, '$1taskType=refresh');
         if (sinceId) {
-            body = body.replace(/&?since_id=[^&]*/g, '');
             body += (body ? '&' : '') + `since_id=${encodeURIComponent(sinceId)}`;
         }
         const cleanedHeaders = cleanHeaders($.listHeaders);
