@@ -93,7 +93,7 @@ checkinReport("foo_status", { s: "none", msg: "未抓取 Cookie" }, INFO);
 
 ```ini
 [Script]
-request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/foo(\?|$)/i then script("https://example.com/foo.js") with tag="小组件 · 某某签到", timeout=60
+request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/foo(\?|$)/i then script("https://example.com/foo.js") with tag="小组件 · 某某", img_url="square.grid.2x2.system", timeout=60
 ```
 
 脚本里加一个触发分支：命中地址时不走抓 Cookie，改走签到流程，结束时把状态记录作为响应返回（以 Env.js 的 `$.done` 为例）：
