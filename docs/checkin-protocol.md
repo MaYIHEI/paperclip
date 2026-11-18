@@ -44,7 +44,7 @@
 | `name` | 是 | 显示名 |
 | `author` | 是 | 作者 |
 | `url` | 否 | 脚本地址或主页 |
-| `run` | 否 | 补签入口地址，见第 4 节；没有就表示不支持现跑 |
+| `run` | 否 | 立即签到入口地址，见第 4 节；没有就表示不支持现跑 |
 | `open` | 否 | 「打开 App」跳转地址，方便用户重新抓 Cookie：优先 App 的 URL scheme，其次 App Store 链接 `https://apps.apple.com/app/id<数字>`，网页类填网址，小程序填 `weixin://`（需要手动进入对应小程序）；核实不了就不填 |
 
 - 脚本写结果时，如果索引里没有自己（或自己那一项过时了），就**读出 → 加上自己 → 写回**，写完再读一次确认；没写上（比如两个脚本同时写互相覆盖）就等下次运行再补。
@@ -81,19 +81,19 @@ checkinReport("foo_status", { s: "fail", msg: "网络错误" }, INFO);
 checkinReport("foo_status", { s: "none", msg: "未抓取 Cookie" }, INFO);
 ```
 
-## 4. 补签入口（可选，Loon）
+## 4. 立即签到入口（可选，Loon）
 
-让小组件一键现跑某个脚本的签到：
+让小组件一键现跑某个脚本的签到。只在小组件请求这个地址时运行，和定时签到互不影响：
 
 - 地址统一为 `http://1.1.1.1/checkin/<脚本 id>`，`<脚本 id>` 是状态 key 去掉 `_status`。用 IP、明文 http，不依赖 DNS，也不需要 MITM；请求会被 Loon 的脚本拦下，不会真的发到 1.1.1.1。
-- 脚本在登记项里写上 `run`，读取方据此知道能不能补签、该请求哪个地址。
+- 脚本在登记项里写上 `run`，读取方据此知道能不能立即签到、该请求哪个地址。
 - 请求返回的是这次运行后的状态记录（第 1 节的 JSON），`Content-Type: application/json`。
 
 插件规则（Loon 新语法；每个脚本一条，路径各不相同，所以不会互相抢；同一个地址只会命中一条规则，同一脚本别在两个插件里同时开）：
 
 ```ini
 [Script]
-request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/foo(\?|$)/i then script("https://example.com/foo.js") with tag="某某补签", timeout=60
+request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/foo(\?|$)/i then script("https://example.com/foo.js") with tag="小组件 · 某某签到", timeout=60
 ```
 
 脚本里加一个触发分支：命中地址时不走抓 Cookie，改走签到流程，结束时把状态记录作为响应返回（以 Env.js 的 `$.done` 为例）：
@@ -131,7 +131,7 @@ request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/all(\?|$)/i then script("<�
 
 其他工具：
 
-- **Surge**：http-request 脚本同样支持 `$done({response: {status, headers, body}})`，数据地址和补签入口的脚本可以原样使用，只是规则要写成 Surge 格式，例如 `签到数据 = type=http-request,pattern=^http:\/\/1\.1\.1\.1\/checkin\/all,script-path=<签到汇总脚本地址>,timeout=10`。没有实测。
+- **Surge**：http-request 脚本同样支持 `$done({response: {status, headers, body}})`，数据地址和立即签到入口的脚本可以原样使用，只是规则要写成 Surge 格式，例如 `签到数据 = type=http-request,pattern=^http:\/\/1\.1\.1\.1\/checkin\/all,script-path=<签到汇总脚本地址>,timeout=10`。没有实测。
 - **Stash**：兼容 Surge 风格的请求脚本，按理可以用，但没有实测，这里不给配置。
 - **Quantumult X**：直接返回响应要用 `script-echo-response`，`$done` 的格式也和 Loon / Surge 不一样（`{status: "HTTP/1.1 200 OK", headers, body}`），现在的脚本不能直接用。
 
@@ -140,7 +140,7 @@ request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/all(\?|$)/i then script("<�
 1. 读 `checkin_registry`，得到所有登记过的 key；
 2. 逐个读 key，解析 JSON，空值或解析失败视为没有记录；
 3. 用 `t` 判断是不是今天的结果，非今天的建议标上日期；
-4. 有 `exp` 时可以提示凭证快过期；有 `run` 时可以提供补签按钮，请求后用返回的 JSON 直接刷新；有 `open` 时可以提供「打开 App」按钮。
+4. 有 `exp` 时可以提示凭证快过期；有 `run` 时可以提供「立即签到」按钮，请求后用返回的 JSON 直接刷新；有 `open` 时可以提供「打开 App」按钮。
 
 用 Loon 时也可以直接请求第 5 节的数据地址，一次拿全。
 
@@ -181,7 +181,7 @@ request if ${url} ~= /^http:\/\/1\.1\.1\.1\/checkin\/all(\?|$)/i then script("<�
 | NodeSeek `nodeseek` | `鸡腿 N` | 签到返回的当前鸡腿 |
 | AgentRouter `agentrouter` | `余额 $12.30` | 余额查询（单账号时；没有换算比例时为 `额度 N`） |
 
-没有补签入口（不提供 `run`）的脚本：
+没有立即签到入口（不提供 `run`）的脚本：
 
 | 脚本 | 原因 |
 |---|---|
